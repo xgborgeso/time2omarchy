@@ -1,3 +1,5 @@
+"use client"
+
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useEffect, useState } from "react"
 import { Activity } from "@/components/Activity"
@@ -11,11 +13,13 @@ import { SiteHeader } from "@/components/SiteHeader"
 import { StatsPage } from "@/components/stats/StatsPage"
 import { useTRPC } from "@/lib/trpc"
 import type { BoardEntry, RankSuccess } from "@/lib/types"
+import { usePresence } from "@/lib/use-presence"
 import { hashForView, type View, viewFromHash } from "@/lib/view"
 
 export function App() {
   const queryClient = useQueryClient()
   const trpc = useTRPC()
+  usePresence()
   const { data, isLoading } = useQuery(
     trpc.board.queryOptions(undefined, { refetchInterval: 10_000 }),
   )

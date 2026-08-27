@@ -7,7 +7,6 @@ import { captureError } from "../sentry"
 import { touchPresence } from "../stats"
 import { issueClaim } from "../verify"
 import { visitorIdFrom } from "../visitor"
-import type { Context } from "./init"
 import { publicProcedure, router, throttled } from "./init"
 
 const MINUTE = 60 * 1000
@@ -18,26 +17,29 @@ const readLimit = new Limiter({ windowMs: MINUTE, max: 300 })
 const claimLimit = new Limiter({ windowMs: HOUR, max: 12 })
 const rankLimit = new Limiter({ windowMs: HOUR, max: 8 })
 
-/** Counting a visit must never be the reason a page fails to load. */
-async function countVisit(ctx: Context, countView: boolean): Promise<void> {
-  await touchPresence(visitorIdFrom(ctx.headers, ctx.resHeaders, ctx.secure), countView)
-}
-
 export const appRouter = router({
   health: publicProcedure.query(() => ({ ok: true as const, name: "time2omarchy" })),
 
+  // Pure reads. They used to record presence too, but a query that writes
+  // cannot be prerendered: a static render happens once per revalidation with
+  // no visitor headers, so it would count one visit per rebuild rather than
+  // one per person, and could not set the visitor cookie at all.
   board: publicProcedure
     .use(throttled(readLimit, "Too many requests."))
-    .query(async ({ ctx }) => {
-      await countVisit(ctx, true)
-      return loadBoard()
-    }),
+    .query(() => loadBoard()),
 
   stats: publicProcedure
     .use(throttled(readLimit, "Too many requests."))
-    .query(async ({ ctx }) => {
-      await countVisit(ctx, false)
-      return loadStats()
+    .query(() => loadStats()),
+
+  /** Records that someone is here. The write half of what board used to do. */
+  visit: publicProcedure
+    .use(throttled(readLimit, "Too many requests."))
+    .input(z.object({ countView: z.boolean() }))
+    .mutation(async ({ ctx, input }) => {
+      const visitorId = visitorIdFrom(ctx.headers, ctx.resHeaders, ctx.secure)
+      await touchPresence(visitorId, input.countView)
+      return { ok: true as const }
     }),
 
   claim: publicProcedure
