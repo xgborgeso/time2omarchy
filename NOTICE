@@ -1,0 +1,57 @@
+# Third-party notices
+
+time2omarchy is MIT licensed (see LICENSE). It also redistributes the
+following third-party material, under the terms below.
+
+## Omarchy wordmark
+
+`src/components/OmarchyLogo.tsx` embeds the Omarchy wordmark verbatim from
+`/usr/share/omarchy/logo.svg`, shipped with the Omarchy operating system.
+
+    Source:  https://github.com/basecamp/omarchy
+    License: MIT
+
+    Copyright (c) David Heinemeier Hansson
+    
+    Permission is hereby granted, free of charge, to any person obtaining
+    a copy of this software and associated documentation files (the
+    "Software"), to deal in the Software without restriction, including
+    without limitation the rights to use, copy, modify, merge, publish,
+    distribute, sublicense, and/or sell copies of the Software, and to
+    permit persons to whom the Software is furnished to do so, subject to
+    the following conditions:
+    
+    The above copyright notice and this permission notice shall be
+    included in all copies or substantial portions of the Software.
+    
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+    EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+    MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+    NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+    LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+    OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+    WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+Use of the wordmark here is nominative: this project is a community
+leaderboard and is not affiliated with, endorsed by, or sponsored by Omarchy
+or David Heinemeier Hansson. Trademark rights, if any, are not licensed by the
+MIT grant above and remain with their owner.
+
+## JetBrains Mono
+
+Bundled into the production build via `@fontsource-variable/jetbrains-mono`.
+
+    Source:  https://github.com/JetBrains/JetBrainsMono
+    License: SIL Open Font License 1.1
+             https://github.com/JetBrains/JetBrainsMono/blob/master/OFL.txt
+
+## Bundled dependencies
+
+Runtime and build dependencies are listed in `package.json` with their
+licenses resolved in `pnpm-lock.yaml`. The set is permissive throughout — MIT,
+Apache-2.0, ISC, BSD and 0BSD — with two exceptions worth naming:
+
+  - `lightningcss` (MPL-2.0), reached through Tailwind. MPL-2.0 is file-level
+    copyleft: it attaches to the covered files, not to this project, and those
+    files are used unmodified.
+  - `caniuse-lite` (CC-BY-4.0), build-time browser data, attributed here.

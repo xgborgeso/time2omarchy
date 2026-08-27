@@ -1,0 +1,87 @@
+import { z } from "zod"
+import { handleSchema, timeSchema } from "../../lib/validation"
+import { loadBoard, loadStats } from "../board"
+import { submitRank } from "../rank"
+import { Limiter } from "../ratelimit"
+import { captureError } from "../sentry"
+import { touchPresence } from "../stats"
+import { issueClaim } from "../verify"
+import { visitorIdFrom } from "../visitor"
+import type { Context } from "./init"
+import { publicProcedure, router, throttled } from "./init"
+
+const MINUTE = 60 * 1000
+const HOUR = 60 * MINUTE
+
+/** Reads are generous; writes are cheap to send and expensive to serve. */
+const readLimit = new Limiter({ windowMs: MINUTE, max: 300 })
+const claimLimit = new Limiter({ windowMs: HOUR, max: 12 })
+const rankLimit = new Limiter({ windowMs: HOUR, max: 8 })
+
+/** Counting a visit must never be the reason a page fails to load. */
+async function countVisit(ctx: Context, countView: boolean): Promise<void> {
+  await touchPresence(visitorIdFrom(ctx.headers, ctx.resHeaders, ctx.secure), countView)
+}
+
+export const appRouter = router({
+  health: publicProcedure.query(() => ({ ok: true as const, name: "time2omarchy" })),
+
+  board: publicProcedure
+    .use(throttled(readLimit, "Too many requests."))
+    .query(async ({ ctx }) => {
+      await countVisit(ctx, true)
+      return loadBoard()
+    }),
+
+  stats: publicProcedure
+    .use(throttled(readLimit, "Too many requests."))
+    .query(async ({ ctx }) => {
+      await countVisit(ctx, false)
+      return loadStats()
+    }),
+
+  claim: publicProcedure
+    .use(throttled(claimLimit, "Too many verification attempts. Try again later."))
+    .input(z.object({ handle: handleSchema }))
+    .mutation(async ({ input }) => {
+      try {
+        return { ok: true as const, ...(await issueClaim(input.handle)) }
+      } catch (err) {
+        await captureError(err)
+        return {
+          ok: false as const,
+          error: "Could not start verification",
+          field: "handle",
+        }
+      }
+    }),
+
+  rank: publicProcedure
+    .use(throttled(rankLimit, "Slow down. Try again in an hour."))
+    .input(
+      z.object({
+        handle: handleSchema,
+        // Parsed here so "1:12" and "43s" keep working; the client sends text.
+        time: timeSchema,
+        bootScreenUrl: z.string().min(1),
+        nonce: z.string().optional(),
+        postUrl: z.string().optional(),
+      }),
+    )
+    .mutation(async ({ input }) => {
+      try {
+        return await submitRank({
+          handle: input.handle,
+          timeSeconds: input.time,
+          bootScreenUrl: input.bootScreenUrl,
+          nonce: input.nonce,
+          postUrl: input.postUrl,
+        })
+      } catch (err) {
+        await captureError(err)
+        return { ok: false as const, error: "Ranking failed", field: "form" as const }
+      }
+    }),
+})
+
+export type AppRouter = typeof appRouter

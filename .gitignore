@@ -1,0 +1,17 @@
+node_modules
+.next
+next-env.d.ts
+*.tsbuildinfo
+
+# PGlite's local database and the boot screens uploaded into it.
+data
+public/uploads/*
+!public/uploads/.gitkeep
+
+# Nothing sets these today, but they must be ignored before the first one
+# exists, not after.
+.env
+.env.local
+.env*.local
+
+.DS_Store

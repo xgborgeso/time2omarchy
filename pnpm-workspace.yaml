@@ -1,0 +1,5 @@
+# esbuild fetches its native binary in a postinstall script, and pnpm blocks
+# lifecycle scripts unless the package is named here. Vitest and tsx both
+# reach for it, so nothing tests or runs without this.
+allowBuilds:
+  esbuild: true
