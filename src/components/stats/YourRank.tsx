@@ -60,7 +60,7 @@ export function YourRank({ stats }: { stats: StatsResponse }) {
       ) : (
         <>
           <div className="flex items-end gap-3">
-            <span className="text-[40px] font-bold leading-none text-accent">
+            <span className="text-[40px] font-bold leading-none text-primary">
               {formatTime(seconds)}
             </span>
           </div>
@@ -74,7 +74,7 @@ export function YourRank({ stats }: { stats: StatsResponse }) {
             </div>
             <div className="h-1.5 overflow-hidden rounded-full bg-background">
               <div
-                className="h-full rounded-full bg-accent"
+                className="h-full rounded-full bg-primary"
                 style={{ width: `${Math.max(2, 100 - (percentile ?? 0))}%` }}
               />
             </div>
@@ -88,7 +88,7 @@ export function YourRank({ stats }: { stats: StatsResponse }) {
               "That matches the record."
             ) : gap != null ? (
               <>
-                Shave <span className="text-accent">{formatTime(gap)}</span> to match the
+                Shave <span className="text-primary">{formatTime(gap)}</span> to match the
                 record.
               </>
             ) : (

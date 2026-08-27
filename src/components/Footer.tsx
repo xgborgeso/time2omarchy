@@ -31,7 +31,7 @@ export function Footer({ onNavigate }: Props) {
       >
         GitHub
       </a>
-      <span className="text-dim" aria-hidden="true">
+      <span className="text-muted-foreground" aria-hidden="true">
         ·
       </span>
       <span className="text-muted-foreground">

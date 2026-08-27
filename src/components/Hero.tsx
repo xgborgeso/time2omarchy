@@ -15,12 +15,12 @@ export function Hero({ counters }: { counters: Counters | undefined }) {
         <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 rounded-lg border border-border bg-card px-4 py-2 text-[11px] text-muted-foreground sm:text-xs">
           <span className="inline-flex items-center gap-2">
             <span className="relative flex size-1.5">
-              <span className="absolute inline-flex size-full animate-ping rounded-full bg-accent opacity-40" />
-              <span className="relative inline-flex size-1.5 rounded-full bg-accent" />
+              <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-40" />
+              <span className="relative inline-flex size-1.5 rounded-full bg-primary" />
             </span>
-            <span className="font-medium text-accent">{online} ONLINE</span>
+            <span className="font-medium text-primary">{online} ONLINE</span>
           </span>
-          <span className="text-dim" aria-hidden="true">
+          <span className="text-muted-foreground" aria-hidden="true">
             ·
           </span>
           <span>{entries.toLocaleString()} RANKED</span>
@@ -32,7 +32,7 @@ export function Hero({ counters }: { counters: Counters | undefined }) {
           <span className="text-3xl font-light sm:text-[44px]">
             {fastest != null ? "BEAT" : "BE"}
           </span>
-          <span className="text-[76px] font-bold leading-[0.9] tracking-tighter text-accent sm:text-[116px]">
+          <span className="text-[76px] font-bold leading-[0.9] tracking-tighter text-primary sm:text-[116px]">
             {fastest != null ? formatTime(fastest) : "FIRST"}
           </span>
         </div>

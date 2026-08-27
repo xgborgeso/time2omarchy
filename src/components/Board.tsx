@@ -50,20 +50,20 @@ export function Board({ entries, loading, onOpen }: Props) {
             key={entry.handle}
             className={cn(
               `${ROW} border-b border-card px-3 py-3 sm:px-5`,
-              leads && "bg-accent/5",
+              leads && "bg-muted/50",
             )}
           >
             <span
               className={cn(
                 "text-xs tabular-nums sm:text-[13px]",
-                leads ? "font-medium text-accent" : "text-muted-foreground",
+                leads ? "font-medium text-primary" : "text-muted-foreground",
               )}
             >
               #{entry.rank}
             </span>
             <span
               className={cn(
-                "font-medium text-accent tabular-nums",
+                "font-medium text-primary tabular-nums",
                 leads ? "text-2xl sm:text-3xl" : "text-xl sm:text-2xl",
               )}
             >
@@ -81,7 +81,7 @@ export function Board({ entries, loading, onOpen }: Props) {
               {entry.verified ? (
                 <BadgeCheck
                   aria-label="Handle verified on X"
-                  className="size-3.5 shrink-0 text-accent sm:size-4"
+                  className="size-3.5 shrink-0 text-primary sm:size-4"
                 />
               ) : null}
             </span>
@@ -92,7 +92,7 @@ export function Board({ entries, loading, onOpen }: Props) {
               type="button"
               onClick={() => onOpen(entry)}
               aria-label={`Open boot screen for @${entry.handle}`}
-              className="justify-self-end overflow-hidden rounded-[3px] border border-border bg-deep hover:border-muted-foreground"
+              className="justify-self-end overflow-hidden rounded-[3px] border border-border bg-muted hover:border-muted-foreground"
             >
               {/* biome-ignore lint/performance/noImgElement: boot screens are remote user uploads; next/image needs images.remotePatterns for the host, and the upload pipeline moves to UploadThing next */}
               <img

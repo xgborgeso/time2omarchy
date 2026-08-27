@@ -183,7 +183,7 @@ export function RankForm({ onSuccess }: Props) {
           >
             time
             {parsed ? (
-              <span className={parsed.inRange ? "text-accent" : "text-destructive"}>
+              <span className={parsed.inRange ? "text-primary" : "text-destructive"}>
                 → {formatTime(parsed.seconds)}
               </span>
             ) : null}
@@ -211,7 +211,7 @@ export function RankForm({ onSuccess }: Props) {
           className={cn(
             "flex h-11 shrink-0 items-center justify-center gap-2 overflow-hidden rounded-lg border border-dashed px-3.5 text-xs transition-colors",
             dragging
-              ? "border-accent bg-accent/5 text-accent"
+              ? "border-primary bg-muted/50 text-primary"
               : "border-border text-muted-foreground hover:border-primary",
           )}
         >
@@ -262,7 +262,7 @@ export function RankForm({ onSuccess }: Props) {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <code className="min-w-0 flex-1 truncate rounded border border-border bg-deep px-3 py-2 text-xs text-foreground">
+            <code className="min-w-0 flex-1 truncate rounded border border-border bg-muted px-3 py-2 text-xs text-foreground">
               {claim.text}
             </code>
             <a
@@ -295,7 +295,7 @@ export function RankForm({ onSuccess }: Props) {
 
       {notice ? (
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-          <p role="status" className="text-xs text-accent">
+          <p role="status" className="text-xs text-primary">
             {notice}
           </p>
           {placed ? (

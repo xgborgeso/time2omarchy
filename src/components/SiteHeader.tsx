@@ -50,7 +50,7 @@ export function SiteHeader({ active, onNavigate }: Props) {
           aria-label="time2omarchy home"
         >
           <span className="text-lg font-bold tracking-tight sm:text-xl">time2</span>
-          <OmarchyLogo width={64} className="text-accent" fill="currentColor" />
+          <OmarchyLogo width={64} className="text-primary" fill="currentColor" />
         </button>
         <nav className="flex items-center gap-4 text-xs font-medium uppercase text-muted-foreground sm:gap-5">
           {NAV.map(({ view, label }) => (

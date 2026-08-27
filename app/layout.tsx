@@ -1,6 +1,10 @@
 import type { Metadata, Viewport } from "next"
 import "@/index.css"
+import { Inter } from "next/font/google"
+import { cn } from "@/lib/utils"
 import { Providers } from "./providers"
+
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
 
 const TITLE = "time2omarchy — fastest Omarchy installs"
 const DESCRIPTION =
@@ -41,7 +45,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className={cn("font-sans", inter.variable)}>
       <body>
         <Providers>{children}</Providers>
       </body>

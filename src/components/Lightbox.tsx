@@ -26,7 +26,7 @@ export function Lightbox({ entry, onClose }: Props) {
             </DialogDescription>
             {/* Reserve space before the image decodes, so opening the dialog
                 does not shift the caption underneath it. */}
-            <div className="flex aspect-video max-h-[75vh] w-full items-center justify-center overflow-hidden rounded-sm bg-deep">
+            <div className="flex aspect-video max-h-[75vh] w-full items-center justify-center overflow-hidden rounded-sm bg-muted">
               {/* biome-ignore lint/performance/noImgElement: boot screens are remote user uploads; next/image needs images.remotePatterns for the host, and the upload pipeline moves to UploadThing next */}
               <img
                 src={entry.bootScreenUrl}
@@ -35,7 +35,7 @@ export function Lightbox({ entry, onClose }: Props) {
               />
             </div>
             <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm">
-              <span className="text-2xl font-bold text-accent">
+              <span className="text-2xl font-bold text-primary">
                 {formatTime(entry.timeSeconds)}
               </span>
               <span className="rounded border border-border px-1.5 py-0.5 text-xs text-muted-foreground">

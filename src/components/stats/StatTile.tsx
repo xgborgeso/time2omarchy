@@ -13,7 +13,7 @@ export function StatTile({ label, value, note, accent }: Props) {
     <div
       className={cn(
         "flex flex-col gap-2 rounded-lg border bg-card px-4 py-4",
-        accent ? "border-accent" : "border-border",
+        accent ? "border-primary" : "border-border",
       )}
     >
       <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
@@ -22,7 +22,7 @@ export function StatTile({ label, value, note, accent }: Props) {
       <span
         className={cn(
           "text-2xl font-bold leading-none tabular-nums sm:text-[34px]",
-          accent ? "text-accent" : "text-foreground",
+          accent ? "text-primary" : "text-foreground",
         )}
       >
         {value}

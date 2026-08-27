@@ -62,12 +62,12 @@ export function Distribution({ buckets, total, medianSeconds }: Props) {
         {median != null ? (
           <>
             <div
-              className="absolute bottom-8 top-6 z-20 w-px bg-terminal-cyan/70"
+              className="absolute bottom-8 top-6 z-20 w-px bg-chart-2/70"
               style={{ left: `${median * 100}%` }}
               aria-hidden="true"
             />
             <span
-              className="absolute top-0 z-20 translate-x-2 whitespace-nowrap text-[11px] text-terminal-cyan"
+              className="absolute top-0 z-20 translate-x-2 whitespace-nowrap text-[11px] text-chart-2"
               style={{ left: `${median * 100}%` }}
             >
               median {formatTime(medianSeconds!)}

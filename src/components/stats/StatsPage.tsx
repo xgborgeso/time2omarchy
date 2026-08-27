@@ -62,7 +62,7 @@ export function StatsPage() {
           label="Online"
           value={
             <span className="inline-flex items-center gap-2.5">
-              <span className="size-2 rounded-full bg-accent" />
+              <span className="size-2 rounded-full bg-primary" />
               {data.online}
             </span>
           }

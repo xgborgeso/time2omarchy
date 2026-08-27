@@ -14,7 +14,7 @@ export function Activity({ items, onStats }: Props) {
     <section className="mt-10 flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <h2 className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
-          <span className="size-1.5 rounded-full bg-accent" />
+          <span className="size-1.5 rounded-full bg-primary" />
           Latest
         </h2>
         <button
@@ -54,7 +54,7 @@ export function Activity({ items, onStats }: Props) {
               @{item.handle}
             </a>
             <span className="text-xs text-muted-foreground">
-              <span className="text-accent">{formatTime(item.timeSeconds)}</span> ·{" "}
+              <span className="text-primary">{formatTime(item.timeSeconds)}</span> ·{" "}
               {relativeTime(item.updatedAt)}
             </span>
           </li>
