@@ -1,12 +1,13 @@
-import { readFile } from "node:fs/promises"
-import { PGlite } from "@electric-sql/pglite"
+import { mkdtemp, rm } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import path from "node:path"
+import type { PGlite } from "@electric-sql/pglite"
 import { describe, expect, it } from "vitest"
+import { openDatabase } from "../src/server/pglite"
 
-/** Applies the real schema to a throwaway in-process Postgres. */
-async function freshDb() {
-  const client = new PGlite()
-  await client.waitReady
-  await client.exec(await readFile("drizzle/0000_init.sql", "utf8"))
+/** Migrated, in-memory, thrown away afterwards. */
+async function freshDb(): Promise<PGlite> {
+  const { client } = await openDatabase()
   return client
 }
 
@@ -30,20 +31,35 @@ describe("schema", () => {
         "UNIQUE (handle)",
         "UNIQUE (id)",
         "UNIQUE (identity_key)",
-        "(updated_at DESC)",
+        // drizzle-kit emits NULLS LAST; updated_at is NOT NULL, so it never applies.
+        "(updated_at DESC NULLS LAST)",
       ].sort(),
     )
     await client.close()
   })
 
-  it("replays cleanly, since the server applies it on every boot", async () => {
-    const client = await freshDb()
-    const sql = await readFile("drizzle/0000_init.sql", "utf8")
-    await client.exec(sql)
-    await client.exec(sql)
-    expect((await indexesOn(client, "entries")).length).toBe(5)
-    await client.close()
-  })
+  it("re-opening an existing database keeps its data and its schema", async () => {
+    // The server opens the database on every boot. The migration journal is
+    // what stops that re-running DDL over live rows.
+    const dir = await mkdtemp(path.join(tmpdir(), "t2o-schema-"))
+    try {
+      const first = await openDatabase(dir)
+      await first.client.query(
+        "INSERT INTO entries (handle, time_seconds, boot_screen_url) VALUES ('kept', 43, '/a.png')",
+      )
+      await first.client.close()
+
+      const second = await openDatabase(dir)
+      const rows = await second.client.query<{ handle: string }>(
+        "SELECT handle FROM entries",
+      )
+      expect(rows.rows.map((r) => r.handle)).toEqual(["kept"])
+      expect((await indexesOn(second.client, "entries")).length).toBe(5)
+      await second.client.close()
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  }, 30_000)
 
   it("keeps identity_key nullable so unverified rows can coexist", async () => {
     const client = await freshDb()

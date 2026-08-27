@@ -1,19 +1,12 @@
-import { readFile } from "node:fs/promises"
-import { PGlite } from "@electric-sql/pglite"
 import { eq } from "drizzle-orm"
-import { drizzle } from "drizzle-orm/pglite"
 import { describe, expect, it } from "vitest"
 import { shouldReplace } from "../src/lib/ranking"
-import * as schema from "../src/server/schema"
+import { openDatabase } from "../src/server/pglite"
 import { entries } from "../src/server/schema"
 
 describe("local PGlite", () => {
   it("applies the schema and keeps the best time per handle", async () => {
-    const sql = await readFile("drizzle/0000_init.sql", "utf8")
-    const client = new PGlite()
-    await client.waitReady
-    await client.exec(sql)
-    const db = drizzle(client, { schema })
+    const { db } = await openDatabase()
 
     async function upsert(handle: string, timeSeconds: number) {
       const existing = await db

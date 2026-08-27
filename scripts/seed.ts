@@ -7,8 +7,8 @@ import { execFile } from "node:child_process"
 import { mkdir, readFile, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { promisify } from "node:util"
-import { PGlite } from "@electric-sql/pglite"
 import { formatTime } from "../src/lib/time"
+import { openDatabase } from "../src/server/pglite"
 
 const run = promisify(execFile)
 
@@ -86,11 +86,9 @@ async function bootScreen(handle: string, seconds: number): Promise<string> {
 }
 
 const clear = process.argv.includes("--clear")
-const db = new PGlite("./data/dev")
-await db.waitReady
-// The schema is normally applied by the server on boot. Apply it here too so
-// seeding works against a brand-new ./data/dev without starting the app first.
-await db.exec(await readFile("drizzle/0000_init.sql", "utf8"))
+// Migrations run on open, so seeding works against a brand-new ./data/dev
+// without starting the app first.
+const { client: db } = await openDatabase("./data/dev")
 
 if (clear) {
   const handles = SAMPLE.map(([h]) => h)

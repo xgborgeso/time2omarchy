@@ -6,6 +6,7 @@
   "description": "Fastest verified Omarchy installs leaderboard",
   "scripts": {
     "build": "next build",
+    "db:generate": "drizzle-kit generate",
     "db:reset": "rm -rf data/dev",
     "db:studio": "drizzle-kit studio",
     "dev": "next dev",

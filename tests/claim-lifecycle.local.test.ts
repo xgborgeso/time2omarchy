@@ -1,16 +1,14 @@
-import { readFile } from "node:fs/promises"
-import { PGlite } from "@electric-sql/pglite"
+import type { PGlite } from "@electric-sql/pglite"
 import { describe, expect, it } from "vitest"
+import { openDatabase } from "../src/server/pglite"
 
 /**
  * The claim lifecycle against real PGlite. Only the network is stubbed — the
  * nonce is public once posted, so single-use and expiry are what stand between
  * a reader of that post and someone else's row.
  */
-async function freshDb() {
-  const client = new PGlite()
-  await client.waitReady
-  await client.exec(await readFile("drizzle/0000_init.sql", "utf8"))
+async function freshDb(): Promise<PGlite> {
+  const { client } = await openDatabase()
   return client
 }
 
