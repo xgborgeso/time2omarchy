@@ -44,6 +44,14 @@ describe("Board", () => {
     expect(screen.queryByText("#3")).not.toBeInTheDocument()
   })
 
+  it("explains the mark to sighted users, not only to screen readers", () => {
+    render(<Board entries={TIED} loading={false} onOpen={() => {}} />)
+    expect(within(rowFor("ada")).getByLabelText("Handle verified on X")).toHaveAttribute(
+      "title",
+      expect.stringContaining("Verified on X"),
+    )
+  })
+
   it("marks only the verified handle", () => {
     render(<Board entries={TIED} loading={false} onOpen={() => {}} />)
     expect(within(rowFor("ada")).getByLabelText("Handle verified on X")).toBeInTheDocument()

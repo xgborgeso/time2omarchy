@@ -159,6 +159,31 @@ describe("RankForm", () => {
     ).toBeInTheDocument()
   })
 
+  it("lets you ask for proof without being refused first", async () => {
+    // The badge is meant to be a reward, so it has to be reachable by someone
+    // who wants it — not only offered as a consolation when a handle is taken.
+    claimFn.mockResolvedValue({
+      ok: true,
+      nonce: "t2o-abc123",
+      text: "Verifying my time2omarchy entry: t2o-abc123",
+      expiresAt: "2026-01-01T00:00:00.000Z",
+    })
+    const user = userEvent.setup()
+    render(<RankForm onSuccess={() => {}} />, { wrapper })
+    await user.type(screen.getByLabelText(/handle/i), "ada")
+    await user.click(screen.getByRole("button", { name: /verify @ada/i }))
+
+    expect(
+      await screen.findByText("Verifying my time2omarchy entry: t2o-abc123"),
+    ).toBeInTheDocument()
+    expect(rankFn).not.toHaveBeenCalled()
+  })
+
+  it("only offers to verify once a handle has been typed", async () => {
+    render(<RankForm onSuccess={() => {}} />, { wrapper })
+    expect(screen.queryByRole("button", { name: /verify @/i })).toBeNull()
+  })
+
   it("refuses to submit without a boot screen", async () => {
     const user = userEvent.setup()
     render(<RankForm onSuccess={() => {}} />, { wrapper })

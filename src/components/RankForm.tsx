@@ -89,6 +89,21 @@ export function RankForm({ onSuccess }: Props) {
     if (next) takeFile(next)
   }
 
+  /**
+   * Starts verification on request.
+   *
+   * The badge is a reward, not a toll, so it has to be reachable by someone who
+   * simply wants it. Without this the only route to proof is being refused,
+   * which means the people most motivated to verify cannot.
+   */
+  async function startClaim() {
+    setError(null)
+    setNotice(null)
+    const issued = await claimHandle.mutateAsync({ handle }).catch(() => null)
+    if (issued?.ok) setClaim(issued)
+    else setError("Could not start verification. Try again.")
+  }
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
     if (!file) {
@@ -247,6 +262,19 @@ export function RankForm({ onSuccess }: Props) {
       {error ? (
         <p role="alert" className="mt-3 text-xs text-destructive">
           {error}
+        </p>
+      ) : null}
+      {!claim && handle.trim() ? (
+        <p className="mt-3 text-xs text-muted-foreground">
+          Already ranked, or want the verified mark?{" "}
+          <button
+            type="button"
+            onClick={startClaim}
+            disabled={claimHandle.isPending}
+            className="font-medium text-foreground underline underline-offset-4 hover:no-underline disabled:opacity-50"
+          >
+            Verify @{handle.trim()}
+          </button>
         </p>
       ) : null}
       {claim ? (

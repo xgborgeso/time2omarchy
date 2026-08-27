@@ -79,10 +79,19 @@ export function Board({ entries, loading, onOpen }: Props) {
                 @{entry.handle}
               </a>
               {entry.verified ? (
-                <BadgeCheck
+                <span
+                  role="img"
                   aria-label="Handle verified on X"
-                  className="size-3.5 shrink-0 text-primary sm:size-4"
-                />
+                  // Sighted users never see an aria-label, and without this the
+                  // mark is unexplained decoration. Lucide icons take no title.
+                  title="Verified on X — this handle proved it owns the entry"
+                  className="inline-flex shrink-0"
+                >
+                  <BadgeCheck
+                    aria-hidden="true"
+                    className="size-3.5 text-primary sm:size-4"
+                  />
+                </span>
               ) : null}
             </span>
             <span className="hidden text-xs text-muted-foreground sm:block">
