@@ -22,7 +22,8 @@ export function RulesPage() {
           <li className="pl-2">One time per X handle. A faster one replaces it.</li>
           <li className="pl-2">A boot screen is required, shown publicly as proof.</li>
           <li className="pl-2">
-            Times are self-reported. Verifying your handle is optional.
+            Times are self-reported. Verifying your handle on X is optional — it earns the
+            check mark and keeps the entry yours to update.
           </li>
         </ol>
       </section>
