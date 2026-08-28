@@ -3,7 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
-import { SpecsFields } from "@/components/SpecsFields"
+import { SEARCH_EXAMPLES, SpecsFields } from "@/components/SpecsFields"
 import { searchCpus } from "@/lib/cpus"
 
 // The real search, reached the way the component reaches it: this suite is
@@ -64,6 +64,22 @@ describe("SpecsFields CPU picker", () => {
   it("says what to do with the empty list", async () => {
     await openPicker()
     expect(screen.getByText(/type to search/i)).toBeVisible()
+    for (const example of SEARCH_EXAMPLES) {
+      expect(screen.getByText(new RegExp(example, "i"))).toBeVisible()
+    }
+  })
+
+  it("suggests searches that actually land", async () => {
+    // A hint naming a chip the catalogue does not have would teach someone
+    // the search is broken on their very first keystroke.
+    for (const example of SEARCH_EXAMPLES) {
+      expect(searchCpus(example).length).toBeGreaterThan(0)
+    }
+  })
+
+  it("names one chip per vendor, so no vendor reads as missing", async () => {
+    const vendors = SEARCH_EXAMPLES.map((e) => searchCpus(e)[0]?.vendor)
+    expect([...vendors].sort()).toEqual(["AMD", "Apple", "Intel"])
   })
 
   it("does not ask the server for an empty query", async () => {

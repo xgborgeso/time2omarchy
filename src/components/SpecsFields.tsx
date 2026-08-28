@@ -33,6 +33,16 @@ type Props = {
   onChange: (next: Specs) => void
 }
 
+/**
+ * What the empty picker suggests typing.
+ *
+ * One chip per vendor, so none of the three reads as missing, and the ones
+ * people actually run in 2026: the 9800X3D is the default enthusiast build,
+ * Arrow Lake is Intel's current desktop line, M4 Pro the common Mac. They are
+ * examples of how to search, not a shortlist — every one must return a hit.
+ */
+export const SEARCH_EXAMPLES = ["9800X3D", "Core Ultra 7", "M4 Pro"] as const
+
 /** Matches the labels on the form above, so the two rows read as one form. */
 const LABEL = "text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground"
 
@@ -107,7 +117,7 @@ export function SpecsFields({ value, onChange }: Props) {
                     enough to read as the only chips there are. */}
                 {!query.trim() && (
                   <p className="px-3 py-4 text-center text-muted-foreground text-xs">
-                    Type to search — 7950X, M4 Pro, Core Ultra 9…
+                    Type to search — {SEARCH_EXAMPLES.join(", ")}…
                   </p>
                 )}
                 <CommandEmpty>
