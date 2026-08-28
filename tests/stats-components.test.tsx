@@ -13,6 +13,7 @@ const buckets = TIME_BUCKETS.map((b, i) => ({ ...b, count: i === 0 ? 3 : 1 }))
 function stats(over: Partial<StatsResponse> = {}): StatsResponse {
   return {
     distribution: buckets,
+    hardware: { storage: [], vendor: [], ram: [] },
     daily: [
       { day: "2026-01-01", count: 2 },
       { day: "2026-01-02", count: 5 },

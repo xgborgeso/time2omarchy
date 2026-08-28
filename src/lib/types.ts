@@ -1,3 +1,4 @@
+import type { Benchmark } from "./benchmark"
 import type { DayCount, TimeBucket } from "./stats"
 
 export type BoardEntry = {
@@ -43,6 +44,8 @@ export type BoardResponse = {
 
 export type StatsResponse = {
   distribution: TimeBucket[]
+  /** Install time against the hardware it ran on. */
+  hardware: Benchmark
   daily: DayCount[]
   entries: number
   fastestSeconds: number | null

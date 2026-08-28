@@ -122,19 +122,30 @@ function filler(): Entry[] {
     if (used.has(handle)) continue
     used.add(handle)
 
-    // Weighted towards the fast end, with a long tail: that is the shape real
-    // install times take, and a uniform spread would flatten the chart.
-    const roll = next()
-    const seconds = Math.round(
-      roll < 0.5 ? 25 + next() * 40 : roll < 0.85 ? 65 + next() * 55 : 120 + next() * 280,
-    )
+    const specs = CPUS[Math.floor(next() * CPUS.length)] as Specs
+    const [cpuId, ramGb, storage] = specs
+
+    /**
+     * The time follows the hardware, because the benchmark page reads it back.
+     *
+     * Drawing a time and a machine independently produced a board where SATA
+     * SSDs beat NVMe — which makes the hardware tables look broken rather than
+     * making the fake data look fake. The drive dominates, the chip adjusts,
+     * and eight gigabytes of memory hurts; a little noise keeps the ties real.
+     */
+    const base = storage === "nvme" ? 34 : storage === "ssd" ? 62 : 210
+    const chip = cpuId === "other" ? 1.35 : cpuId.startsWith("intel") ? 1.12 : 1
+    const memory = ramGb <= 8 ? 1.4 : ramGb <= 16 ? 1.08 : 1
+    const spread = 0.75 + next() * 0.6
+    const seconds = Math.max(15, Math.round(base * chip * memory * spread))
+
     entries.push([
       handle,
       seconds,
       Number((next() * 9).toFixed(3)),
       // Roughly a third proven, so both badge states are on screen at once.
       next() < 0.34,
-      CPUS[Math.floor(next() * CPUS.length)] as Specs,
+      specs,
     ])
   }
   return entries

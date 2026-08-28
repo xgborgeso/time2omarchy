@@ -32,9 +32,24 @@ export const appRouter = router({
     .input(z.object({ page: z.number().int().min(1).max(10_000).default(1) }).optional())
     .query(({ input }) => loadBoard(input?.page ?? 1)),
 
+  /**
+   * The benchmark, optionally narrowed to one kind of machine.
+   *
+   * The hardware tables always describe the whole board; the filter only
+   * changes the figures above them, so the row you would click to change your
+   * mind never disappears.
+   */
   stats: publicProcedure
     .use(throttled(readLimit, "Too many requests."))
-    .query(() => loadStats()),
+    .input(
+      z
+        .object({
+          dimension: z.enum(["storage", "vendor", "ram"]),
+          id: z.string().max(32),
+        })
+        .optional(),
+    )
+    .query(({ input }) => loadStats(input)),
 
   /**
    * The CPU catalogue, searched on the server.

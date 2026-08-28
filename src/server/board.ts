@@ -1,4 +1,5 @@
-import { asc, avg, count, desc, eq, gte, lt, sql } from "drizzle-orm"
+import { and, asc, count, desc, eq, lt, sql } from "drizzle-orm"
+import { benchmark, matchesSpec, median, type SpecFilter } from "../lib/benchmark"
 import { rankEntries } from "../lib/ranking"
 import { bucketTimes, dailySeries } from "../lib/stats"
 import type { BoardEntry, BoardResponse, StatsResponse } from "../lib/types"
@@ -21,7 +22,7 @@ export async function loadBoard(page = 1): Promise<BoardResponse> {
   const current = Math.max(1, Math.trunc(page) || 1)
   const offset = (current - 1) * PER_PAGE
 
-  const [rows, activityRows, total, counters, leader] = await Promise.all([
+  const [rows, activityRows, total, counters, leader, anyone] = await Promise.all([
     db
       .select()
       .from(entries)
@@ -40,19 +41,34 @@ export async function loadBoard(page = 1): Promise<BoardResponse> {
       .limit(8),
     db.select({ n: count() }).from(entries),
     readCounters(),
-    // The leader belongs to the board, not to the page being looked at.
+    /**
+     * The leader the hero quotes, and it must be a claimed one.
+     *
+     * An unclaimed entry can hold rank 1 on the board — ranking is open, and
+     * that is deliberate — but the hero's number is the figure the homepage
+     * puts its name to. Nothing stands behind a time someone typed, so a
+     * doctored screenshot must not be able to become the headline.
+     *
+     * The leader belongs to the whole board, not to the page being read.
+     */
     db
-      .select({
-        handle: entries.handle,
-        timeSeconds: entries.timeSeconds,
-        verified: entries.verified,
-      })
+      .select({ handle: entries.handle, timeSeconds: entries.timeSeconds })
       .from(entries)
-      .orderBy(asc(entries.timeSeconds), desc(entries.verified), asc(entries.createdAt))
+      .where(eq(entries.verified, true))
+      .orderBy(asc(entries.timeSeconds), asc(entries.createdAt))
+      .limit(1),
+    // Until anyone has claimed anything there is nothing to quote, and an
+    // empty hero above a full board would read as broken.
+    db
+      .select({ handle: entries.handle, timeSeconds: entries.timeSeconds })
+      .from(entries)
+      .orderBy(asc(entries.timeSeconds), asc(entries.createdAt))
       .limit(1),
   ])
 
-  const fastest = leader[0]?.timeSeconds ?? null
+  const headline = leader[0] ?? anyone[0] ?? null
+  const fastest = headline?.timeSeconds ?? null
+  const claimedHeadline = leader.length > 0
 
   const [faster, tied] = await Promise.all([
     // How many distinct times beat this page's first entry: the rank it holds
@@ -63,9 +79,18 @@ export async function loadBoard(page = 1): Promise<BoardResponse> {
           .select({ n: sql<number>`count(distinct ${entries.timeSeconds})` })
           .from(entries)
           .where(lt(entries.timeSeconds, rows[0].timeSeconds)),
+    // Counted over the same set the headline came from, or a claimed leader
+    // would be reported as tied with everyone who merely typed that time.
     fastest === null
       ? Promise.resolve([{ n: 0 }])
-      : db.select({ n: count() }).from(entries).where(eq(entries.timeSeconds, fastest)),
+      : db
+          .select({ n: count() })
+          .from(entries)
+          .where(
+            claimedHeadline
+              ? and(eq(entries.timeSeconds, fastest), eq(entries.verified, true))
+              : eq(entries.timeSeconds, fastest),
+          ),
   ])
 
   const ranked: BoardEntry[] = rankEntries(
@@ -95,7 +120,7 @@ export async function loadBoard(page = 1): Promise<BoardResponse> {
     })),
     counters: {
       fastestSeconds: fastest,
-      leaderHandle: leader[0]?.handle ?? null,
+      leaderHandle: headline?.handle ?? null,
       leaderCount: Number(tied[0]?.n ?? 0),
       entries: total[0]?.n ?? ranked.length,
       visitorsToday: counters.visitorsToday,
@@ -104,55 +129,73 @@ export async function loadBoard(page = 1): Promise<BoardResponse> {
   }
 }
 
-export async function loadStats(): Promise<StatsResponse> {
+/**
+ * Everything the stats page shows, optionally narrowed to one kind of machine.
+ *
+ * One query, then every figure computed from those rows. Vendor is not a
+ * column — it is derived from the chip catalogue — so filtering by it cannot
+ * happen in SQL anyway, and doing all of it in one place keeps the filtered
+ * and unfiltered numbers guaranteed consistent with each other.
+ */
+export async function loadStats(filter?: SpecFilter): Promise<StatsResponse> {
   const db = await getDb()
   const since = new Date(Date.now() - DAILY_DAYS * 24 * 60 * 60 * 1000)
-  const [times, counters, todayCount, aggregate, recent] = await Promise.all([
-    db.select({ t: entries.timeSeconds }).from(entries).orderBy(asc(entries.timeSeconds)),
-    readCounters(),
-    rankedToday(),
+
+  const [rows, counters, todayCount] = await Promise.all([
     db
       .select({
-        n: count(),
-        mean: avg(entries.timeSeconds),
+        t: entries.timeSeconds,
+        cpuId: entries.cpuId,
+        ramGb: entries.ramGb,
+        storage: entries.storage,
+        updatedAt: entries.updatedAt,
       })
-      .from(entries),
-    db
-      .select({ updatedAt: entries.updatedAt })
       .from(entries)
-      .where(gte(entries.updatedAt, since)),
+      .orderBy(asc(entries.timeSeconds)),
+    readCounters(),
+    rankedToday(),
   ])
 
-  const values = times.map((row) => row.t)
-  let median: number | null = null
-  if (values.length > 0) {
-    const mid = Math.floor(values.length / 2)
-    median =
-      values.length % 2 === 0
-        ? Math.round((values[mid - 1]! + values[mid]!) / 2)
-        : values[mid]!
-  }
+  const all = rows.map((row) => ({
+    timeSeconds: row.t,
+    cpuId: row.cpuId,
+    ramGb: row.ramGb,
+    storage: row.storage,
+    updatedAt: row.updatedAt,
+  }))
 
-  const meanRaw = aggregate[0]?.mean
-  const mean = meanRaw == null ? null : Math.round(Number(meanRaw))
+  // Measured over everything, always. Narrowing these to the current filter
+  // would hide the row you need in order to change your mind.
+  const hardware = benchmark(all)
+  const selected = filter ? all.filter((row) => matchesSpec(row, filter)) : all
+
+  const values = selected.map((row) => row.timeSeconds)
+  const mean =
+    values.length > 0
+      ? Math.round(values.reduce((sum, v) => sum + v, 0) / values.length)
+      : null
 
   const perDay = new Map<string, number>()
-  for (const row of recent) {
+  for (const row of selected) {
+    if (row.updatedAt < since) continue
     const day = toIso(row.updatedAt).slice(0, 10)
     perDay.set(day, (perDay.get(day) ?? 0) + 1)
   }
 
   return {
     distribution: bucketTimes(values),
+    hardware,
     daily: dailySeries(
       [...perDay].map(([day, n]) => ({ day, count: n })),
       DAILY_DAYS,
       utcDay(),
     ),
-    entries: Number(aggregate[0]?.n ?? values.length),
+    entries: values.length,
     fastestSeconds: values[0] ?? null,
-    medianSeconds: median,
-    meanSeconds: Number.isFinite(mean) ? mean : null,
+    medianSeconds: median(values),
+    meanSeconds: mean,
+    // Traffic, not hardware: these describe who is here, so a filter on the
+    // machines people ranked with has nothing to say about them.
     visitorsToday: counters.visitorsToday,
     viewsToday: counters.viewsToday,
     rankedToday: todayCount,

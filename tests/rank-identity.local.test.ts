@@ -258,3 +258,41 @@ describe("paging the board", () => {
     expect(far.total).toBe(1)
   })
 })
+
+describe("the number the hero puts on the homepage", () => {
+  it("headlines the fastest claimed time, not the fastest typed one", async () => {
+    // The hero number is the marketing surface. An unclaimed entry can hold
+    // rank 1 on the board — that is the rule — but it must not become the
+    // figure the homepage quotes, because nothing stands behind it.
+    await submitRank(input({ handle: "faker", timeSeconds: 16 }))
+    await submitRank(input({ handle: "ada", timeSeconds: 43, identity: ADA }))
+
+    const board = await loadBoard(1)
+
+    expect(board.counters.fastestSeconds).toBe(43)
+    expect(board.counters.leaderHandle).toBe("ada")
+    // The board itself still ranks by time alone.
+    expect(board.entries[0]?.handle).toBe("faker")
+    expect(board.entries[0]?.rank).toBe(1)
+  })
+
+  it("falls back to the fastest overall while nobody has claimed anything", async () => {
+    // A brand-new board has no claimed entry to quote, and an empty hero
+    // above fifty real entries would read as broken.
+    await submitRank(input({ handle: "first", timeSeconds: 61 }))
+
+    const board = await loadBoard(1)
+
+    expect(board.counters.fastestSeconds).toBe(61)
+    expect(board.counters.leaderHandle).toBe("first")
+  })
+
+  it("counts only the claimed entries sharing the headline time", async () => {
+    await submitRank(input({ handle: "ada", timeSeconds: 43, identity: ADA }))
+    await submitRank(input({ handle: "bob", timeSeconds: 43 }))
+
+    const board = await loadBoard(1)
+
+    expect(board.counters.leaderCount).toBe(1)
+  })
+})
