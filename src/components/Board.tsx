@@ -1,5 +1,4 @@
 import { BadgeCheck } from "lucide-react"
-import type * as React from "react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { xUrl } from "@/lib/handle"
 import { formatSpecsShort } from "@/lib/specs"
@@ -12,15 +11,6 @@ type Props = {
   loading: boolean
   onOpen: (entry: BoardEntry) => void
   onClaim?: (entry: BoardEntry) => void
-  /**
-   * Entries matched by a search, shown above the board.
-   *
-   * Fifty to a page; past that this is the only way someone sees their own
-   * entry, and the only way they can claim it.
-   */
-  found?: BoardEntry[]
-  /** A control belonging to the board, drawn inside its own frame. */
-  toolbar?: React.ReactNode
 }
 
 // minmax(0,1fr) rather than 1fr: a grid item defaults to min-width:auto,
@@ -35,7 +25,7 @@ const ROW =
  * five entries and a rule drawn after the tenth can land mid-tie. Only the
  * leader is marked, because that one is unambiguous.
  */
-export function Board({ entries, loading, onOpen, onClaim, found = [], toolbar }: Props) {
+export function Board({ entries, loading, onOpen, onClaim }: Props) {
   if (loading && entries.length === 0) {
     return (
       <div className="mt-6 flex flex-col gap-px">
@@ -47,18 +37,10 @@ export function Board({ entries, loading, onOpen, onClaim, found = [], toolbar }
     )
   }
 
-  if (entries.length === 0 && found.length === 0) return null
+  if (entries.length === 0) return null
 
   return (
-    <section className="mt-12 flex flex-col border-t border-border sm:mt-16">
-      {/* Inside the frame, sharing the entries' own inset, so it lines up with
-          every column rather than floating above the board. */}
-      {toolbar ? (
-        <div className="flex justify-end border-b border-card px-3 py-3 sm:px-5">
-          {toolbar}
-        </div>
-      ) : null}
-
+    <section className="flex flex-col border-t border-border">
       <div
         className={`${ROW} border-b border-card px-3 py-2.5 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground sm:px-5`}
       >
@@ -67,20 +49,6 @@ export function Board({ entries, loading, onOpen, onClaim, found = [], toolbar }
         <span>handle</span>
         <span className="text-right">boot</span>
       </div>
-
-      {found.length > 0 ? (
-        <div data-testid="found-entry">
-          {found.map((entry) => (
-            <Entry
-              key={entry.handle}
-              entry={entry}
-              onOpen={onOpen}
-              onClaim={onClaim}
-              className="bg-muted/30"
-            />
-          ))}
-        </div>
-      ) : null}
 
       {entries.map((entry) => (
         <Entry key={entry.handle} entry={entry} onOpen={onOpen} onClaim={onClaim} />

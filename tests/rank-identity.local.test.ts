@@ -331,10 +331,20 @@ describe("searching for a handle", () => {
     expect(await searchEntries("")).toEqual([])
   })
 
-  it("caps what it returns, so a common fragment cannot pull the board", async () => {
-    for (let i = 0; i < 12; i++) {
+  it("caps what it returns at a page, not at the whole board", async () => {
+    // The results replace the board rather than sitting above it, so a page
+    // is the right size — but a common fragment still must not return 10,000.
+    for (let i = 0; i < 60; i++) {
       await submitRank(input({ handle: `voidone${i}`, timeSeconds: 30 + i }))
     }
-    expect((await searchEntries("void")).length).toBeLessThanOrEqual(5)
+    expect((await searchEntries("void")).length).toBe(50)
+  })
+
+  it("ranks each match against the whole board, not against the others", async () => {
+    await submitRank(input({ handle: "fastest", timeSeconds: 20 }))
+    await submitRank(input({ handle: "voidnomad", timeSeconds: 90 }))
+
+    const found = await searchEntries("void")
+    expect(found[0]?.rank).toBe(2)
   })
 })

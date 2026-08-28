@@ -6,6 +6,7 @@ import { toast } from "sonner"
 import { Activity } from "@/components/Activity"
 import { Board } from "@/components/Board"
 import { BoardPager } from "@/components/BoardPager"
+import { BoardSearch } from "@/components/BoardSearch"
 import { Footer } from "@/components/Footer"
 import { Hero } from "@/components/Hero"
 import { Lightbox } from "@/components/Lightbox"
@@ -13,7 +14,6 @@ import { RankDialog } from "@/components/RankDialog"
 import { RulesPage } from "@/components/RulesPage"
 import { SiteHeader } from "@/components/SiteHeader"
 import { StatsPage } from "@/components/stats/StatsPage"
-import { Input } from "@/components/ui/input"
 import { signIn } from "@/lib/auth-client"
 import { claimOutcome } from "@/lib/claim-outcome"
 import { useTRPC } from "@/lib/trpc"
@@ -45,12 +45,13 @@ export function App() {
     ...trpc.search.queryOptions({ query: searched }),
     // The server ignores anything shorter; no reason to ask it twice.
     enabled: searched.replace(/^@+/, "").length >= 2,
+    // Keep the last results on screen while the next load, so a keystroke
+    // does not blank the board between characters.
+    placeholderData: (previous) => previous,
   })
 
-  const shown = new Set((data?.entries ?? []).map((e) => e.handle))
-  // Only what this page is not already showing: repeating an entry directly
-  // above itself reads as a duplicate rather than as a result.
-  const found = (matches ?? []).filter((entry) => !shown.has(entry.handle))
+  /** A search replaces the board with its results, the way a table filters. */
+  const searching = searched.replace(/^@+/, "").length >= 2
 
   const [view, setView] = useState<View>("board")
 
@@ -140,6 +141,8 @@ export function App() {
   }
 
   const entries = data?.entries ?? []
+  // One list: the search narrows the board rather than sitting beside it.
+  const shownEntries = searching ? (matches ?? []) : entries
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-5xl flex-col px-4 pb-10 sm:px-6">
@@ -155,34 +158,41 @@ export function App() {
             <Hero counters={data?.counters} />
             <RankDialog onSuccess={onSuccess} />
 
+            {/* Toolbar above the frame, sharing an entry's own inset, so it
+                lines up with the columns instead of floating over them. */}
+            <div className="mt-12 mb-3 px-3 sm:mt-16 sm:px-5">
+              <BoardSearch
+                value={lookup}
+                onChange={setLookup}
+                results={searching ? shownEntries.length : null}
+              />
+            </div>
+
             <Board
-              entries={entries}
-              loading={isLoading}
+              entries={shownEntries}
+              loading={isLoading && !searching}
               onOpen={setOpen}
               onClaim={onClaim}
-              found={found}
-              toolbar={
-                <Input
-                  value={lookup}
-                  onChange={(e) => setLookup(e.target.value)}
-                  placeholder="Find a handle"
-                  aria-label="Find an entry by handle"
-                  className="h-9 w-full max-w-[15rem] text-sm"
-                />
-              }
             />
-            <BoardPager
-              page={data?.page ?? 1}
-              perPage={data?.perPage ?? 0}
-              total={data?.total ?? 0}
-              onPage={(next) => {
-                setPage(next)
-                window.scrollTo({ top: 0 })
-              }}
-            />
-            {entries.length === 0 && !isLoading ? (
+
+            {/* Paging is about the whole board; a set of results is not paged. */}
+            {searching ? null : (
+              <BoardPager
+                page={data?.page ?? 1}
+                perPage={data?.perPage ?? 0}
+                total={data?.total ?? 0}
+                onPage={(next) => {
+                  setPage(next)
+                  window.scrollTo({ top: 0 })
+                }}
+              />
+            )}
+
+            {shownEntries.length === 0 && !isLoading ? (
               <p className="border-y border-card py-10 text-center text-sm text-muted-foreground">
-                Nothing ranked yet. Be first.
+                {searching
+                  ? "No entry matches that handle."
+                  : "Nothing ranked yet. Be first."}
               </p>
             ) : null}
             <Activity items={data?.activity ?? []} onStats={() => navigate("stats")} />

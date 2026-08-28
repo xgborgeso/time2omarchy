@@ -240,8 +240,8 @@ export async function findEntryByHandle(handle: string): Promise<BoardEntry | nu
 /** Below this a fragment matches most of the board and narrows nothing. */
 const MIN_QUERY = 2
 
-/** Enough to recognise yours among them, few enough to sit above the board. */
-const MAX_MATCHES = 5
+/** A search replaces the board, so it returns what a page of it would hold. */
+const MAX_MATCHES = PER_PAGE
 
 /**
  * Entries whose handle contains what was typed.
