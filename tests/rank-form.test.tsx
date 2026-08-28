@@ -185,7 +185,15 @@ describe("RankForm", () => {
     })
     await user.click(signIn)
 
-    expect(signInFn).toHaveBeenCalledWith(expect.objectContaining({ provider: "twitter" }))
+    // Both destinations named: declining on X must land back on the board,
+    // not on Better Auth's bare /api/auth/error page.
+    expect(signInFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        provider: "twitter",
+        callbackURL: "/",
+        errorCallbackURL: "/",
+      }),
+    )
   })
 
   it("offers to verify the entry it just put on the board", async () => {

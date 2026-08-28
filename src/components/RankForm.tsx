@@ -102,7 +102,13 @@ export function RankForm({ onSuccess, entries = [] }: Props) {
    */
   async function startSignIn() {
     setError(null)
-    const result = await signIn.social({ provider: "twitter", callbackURL: "/" })
+    const result = await signIn.social({
+      provider: "twitter",
+      callbackURL: "/",
+      // Declining on X is a choice, not a crash: it belongs back on the
+      // board, not on Better Auth's bare /api/auth/error page.
+      errorCallbackURL: "/",
+    })
     if (result?.error) {
       setError(result.error.message ?? "Could not start sign-in with X.")
     }
