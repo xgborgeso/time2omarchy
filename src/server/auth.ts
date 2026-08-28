@@ -12,6 +12,18 @@ import { getDb } from "./db"
 import * as schema from "./schema"
 
 /**
+ * Extra columns on Better Auth's own `user` table.
+ *
+ * Exported because the schema in `schema.ts` has to match what Better Auth
+ * expects exactly, and a test compares the two — a missing column only shows
+ * up otherwise as a failed sign-in after someone has already authorised on X.
+ */
+export const USER_FIELDS = {
+  /** The X handle, lowercased. `input: false` so no client can set it. */
+  handle: { type: "string", required: true, input: false },
+} as const
+
+/**
  * X bills per resource read, so the profile is fetched exactly once.
  *
  * Better Auth's stock provider calls `/2/users/me` twice — a second time only
@@ -35,12 +47,7 @@ function build(db: Awaited<ReturnType<typeof getDb>>) {
     baseURL: process.env.BETTER_AUTH_URL,
     // Nothing here signs in with a password; X is the only door.
     emailAndPassword: { enabled: false },
-    user: {
-      additionalFields: {
-        /** The X handle, lowercased. `input: false` so no client can set it. */
-        handle: { type: "string", required: true, input: false },
-      },
-    },
+    user: { additionalFields: USER_FIELDS },
     socialProviders: {
       twitter: {
         clientId: process.env.TWITTER_CLIENT_ID ?? "",

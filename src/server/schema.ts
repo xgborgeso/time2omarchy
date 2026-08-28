@@ -7,6 +7,7 @@ import {
   primaryKey,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core"
 
@@ -111,6 +112,13 @@ export const account = pgTable(
   "account",
   {
     id: text("id").primaryKey(),
+    /**
+     * Who vouched for the account — for X, a synthetic issuer Better Auth
+     * derives itself. Required by Better Auth, and the CLI that generated the
+     * rest of this omitted it, which failed the callback after the person had
+     * already approved on X.
+     */
+    issuer: text("issuer").notNull(),
     accountId: text("account_id").notNull(),
     providerId: text("provider_id").notNull(),
     userId: text("user_id")
@@ -129,7 +137,11 @@ export const account = pgTable(
       .defaultNow()
       .$onUpdate(() => new Date()),
   },
-  (t) => [index("account_user_id_idx").on(t.userId)],
+  (t) => [
+    index("account_user_id_idx").on(t.userId),
+    // One account per provider identity.
+    uniqueIndex("account_issuer_account_id_idx").on(t.issuer, t.accountId),
+  ],
 )
 
 /** Short-lived OAuth state and PKCE verifiers; Better Auth prunes them. */
