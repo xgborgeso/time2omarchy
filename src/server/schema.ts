@@ -33,11 +33,49 @@ export const entries = pgTable(
     storage: text("storage").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    /**
+     * When this entry was taken down, and null while it is on the board.
+     *
+     * Hidden rather than deleted: a takedown made on a bad report has to be
+     * one command to undo, and the rank has to survive the round trip. A row
+     * is only really removed when the law requires it.
+     */
+    hiddenAt: timestamp("hidden_at", { withTimezone: true }),
   },
   // handle and identityKey are indexed by their UNIQUE constraints already.
   (t) => [
     index("entries_time_idx").on(t.timeSeconds),
     index("entries_updated_at_idx").on(t.updatedAt.desc()),
+    index("entries_hidden_at_idx").on(t.hiddenAt),
+  ],
+)
+
+/**
+ * Someone flagging a boot screen.
+ *
+ * No reason field: the only thing that can be reported is one image, and
+ * whoever reviews it is going to look at the image anyway. A select box would
+ * buy a category nobody acts on differently.
+ */
+export const reports = pgTable(
+  "reports",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    entryId: uuid("entry_id")
+      .notNull()
+      .references(() => entries.id, { onDelete: "cascade" }),
+    /**
+     * The caller, hashed. Enough to tell two reports apart, not enough to
+     * hold onto an address for something nobody will ever need it for.
+     */
+    reporterKey: text("reporter_key").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [
+    // One per person per entry, so the count is people rather than clicks —
+    // otherwise a single reporter holding a key down looks like a consensus.
+    uniqueIndex("reports_entry_reporter_idx").on(t.entryId, t.reporterKey),
+    index("reports_created_at_idx").on(t.createdAt.desc()),
   ],
 )
 

@@ -6,6 +6,7 @@ import { loadBoard, loadStats, searchEntries } from "../board"
 import { identityFrom } from "../identity"
 import { submitRank, verifyEntry } from "../rank"
 import { Limiter } from "../ratelimit"
+import { reportEntry } from "../reports"
 import { captureError } from "../sentry"
 import { touchPresence } from "../stats"
 import { visitorIdFrom } from "../visitor"
@@ -19,6 +20,14 @@ const readLimit = new Limiter({ windowMs: MINUTE, max: 300 })
 const rankLimit = new Limiter({ windowMs: HOUR, max: 8 })
 /** Cheap and idempotent, and a refused verify is a normal thing to retry. */
 const verifyLimit = new Limiter({ windowMs: HOUR, max: 30 })
+/**
+ * Generous, because the table dedupes anyway.
+ *
+ * The limit is here to stop someone writing rows all afternoon, not to ration
+ * honest reports — a person who genuinely finds twenty bad images should be
+ * able to flag all twenty.
+ */
+const reportLimit = new Limiter({ windowMs: HOUR, max: 20 })
 
 export const appRouter = router({
   health: publicProcedure.query(() => ({ ok: true as const, name: "time2omarchy" })),
@@ -114,6 +123,25 @@ export const appRouter = router({
           error: "Could not verify that entry",
           field: "form" as const,
         }
+      }
+    }),
+
+  /**
+   * Flags a boot screen for review.
+   *
+   * Records and notifies; it never hides anything on its own. Auto-hiding on
+   * a count is how a brigade takes the leader off the board, so what a report
+   * buys is a human looking, not an outcome.
+   */
+  report: publicProcedure
+    .use(throttled(reportLimit, "Too many reports. Try again later."))
+    .input(z.object({ handle: handleSchema }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return await reportEntry(input.handle, ctx.clientKey)
+      } catch (err) {
+        await captureError(err)
+        return { ok: false as const, error: "Could not send that report." }
       }
     }),
 

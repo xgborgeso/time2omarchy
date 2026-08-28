@@ -28,6 +28,8 @@ describe("schema", () => {
     expect(await indexesOn(client, "entries")).toEqual(
       [
         "(time_seconds)",
+        // Takedowns are read on every board query, so the flag is indexed.
+        "(hidden_at)",
         "UNIQUE (handle)",
         "UNIQUE (id)",
         "UNIQUE (identity_key)",
@@ -55,7 +57,7 @@ describe("schema", () => {
         "SELECT handle FROM entries",
       )
       expect(rows.rows.map((r) => r.handle)).toEqual(["kept"])
-      expect((await indexesOn(second.client, "entries")).length).toBe(5)
+      expect((await indexesOn(second.client, "entries")).length).toBe(6)
       await second.client.close()
     } finally {
       await rm(dir, { recursive: true, force: true })

@@ -7,17 +7,19 @@
   "scripts": {
     "build": "next build",
     "db:generate": "drizzle-kit generate",
+    "db:migrate": "tsx scripts/migrate.ts",
     "db:reset": "rm -rf data/dev",
     "db:studio": "drizzle-kit studio",
     "dev": "next dev",
     "lint": "biome check",
     "lint:fix": "biome check --write",
+    "reports": "tsx scripts/reports.ts",
     "seed": "tsx scripts/seed.ts",
     "start": "next start",
+    "takedown": "tsx scripts/takedown.ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit",
-    "db:migrate": "drizzle-kit migrate"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.7",

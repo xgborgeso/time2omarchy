@@ -37,6 +37,14 @@ export function App() {
     ),
   )
   const verify = useMutation(trpc.verify.mutationOptions())
+  const report = useMutation(trpc.report.mutationOptions())
+  /**
+   * Handles this viewer has already flagged, so the button can go quiet.
+   *
+   * Held for the session only. The server dedupes for real; this exists so a
+   * second press does not look like it did nothing.
+   */
+  const [reported, setReported] = useState<string[]>([])
   const [open, setOpen] = useState<BoardEntry | null>(null)
   /** A handle searched for, because this page may not be the one holding it. */
   const [lookup, setLookup] = useState("")
@@ -138,6 +146,26 @@ export function App() {
     // Runs once per handle in the url; the ref above is the real guard.
   }, [verify, queryClient, trpc])
 
+  /**
+   * Flags a boot screen.
+   *
+   * Answered the same way whatever happened: a report that is refused, or
+   * already on file, still ends with the person having done the thing they
+   * pressed the button to do, and telling them otherwise only invites a retry.
+   */
+  async function onReport(entry: BoardEntry) {
+    setReported((current) =>
+      current.includes(entry.handle) ? current : [...current, entry.handle],
+    )
+    const result = await report.mutateAsync({ handle: entry.handle }).catch(() => null)
+    if (result && !result.ok) {
+      toast.error(result.error)
+      setReported((current) => current.filter((handle) => handle !== entry.handle))
+      return
+    }
+    toast.success("Reported. Someone will take a look.")
+  }
+
   function navigate(next: View) {
     const hash = hashForView(next)
     if (hash) {
@@ -224,7 +252,12 @@ export function App() {
 
       <Footer onNavigate={navigate} />
 
-      <Lightbox entry={open} onClose={() => setOpen(null)} />
+      <Lightbox
+        entry={open}
+        onClose={() => setOpen(null)}
+        reported={open ? reported.includes(open.handle) : false}
+        onReport={onReport}
+      />
     </div>
   )
 }

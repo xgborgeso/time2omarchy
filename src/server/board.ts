@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, lt, sql } from "drizzle-orm"
+import { and, asc, count, desc, eq, isNull, lt, sql } from "drizzle-orm"
 import { benchmark, matchesSpec, median, type SpecFilter } from "../lib/benchmark"
 import { rankEntries } from "../lib/ranking"
 import { bucketTimes, dailySeries } from "../lib/stats"
@@ -17,6 +17,16 @@ function toIso(value: Date | string): string {
 /** A page the eye can still scan, and the unit the pager counts in. */
 export const PER_PAGE = 50
 
+/**
+ * On the board, as opposed to taken down.
+ *
+ * Every read goes through this. A takedown that removed a row from the page
+ * but left it counted in the total, or ranked behind, or quoted by the hero,
+ * would be a takedown in name only — so the condition lives in one place and
+ * is spread across all of them rather than remembered at each.
+ */
+const visible = isNull(entries.hiddenAt)
+
 export async function loadBoard(page = 1): Promise<BoardResponse> {
   const db = await getDb()
   const current = Math.max(1, Math.trunc(page) || 1)
@@ -26,6 +36,7 @@ export async function loadBoard(page = 1): Promise<BoardResponse> {
     db
       .select()
       .from(entries)
+      .where(visible)
       // Mirrors rankEntries so the page holds the rows it should.
       .orderBy(asc(entries.timeSeconds), desc(entries.verified), asc(entries.createdAt))
       .limit(PER_PAGE)
@@ -37,9 +48,10 @@ export async function loadBoard(page = 1): Promise<BoardResponse> {
         updatedAt: entries.updatedAt,
       })
       .from(entries)
+      .where(visible)
       .orderBy(desc(entries.updatedAt))
       .limit(8),
-    db.select({ n: count() }).from(entries),
+    db.select({ n: count() }).from(entries).where(visible),
     readCounters(),
     /**
      * The leader the hero quotes, and it must be a verified one.
@@ -54,7 +66,7 @@ export async function loadBoard(page = 1): Promise<BoardResponse> {
     db
       .select({ handle: entries.handle, timeSeconds: entries.timeSeconds })
       .from(entries)
-      .where(eq(entries.verified, true))
+      .where(and(visible, eq(entries.verified, true)))
       .orderBy(asc(entries.timeSeconds), asc(entries.createdAt))
       .limit(1),
     // Until anyone has verified anything there is nothing to quote, and an
@@ -62,6 +74,7 @@ export async function loadBoard(page = 1): Promise<BoardResponse> {
     db
       .select({ handle: entries.handle, timeSeconds: entries.timeSeconds })
       .from(entries)
+      .where(visible)
       .orderBy(asc(entries.timeSeconds), asc(entries.createdAt))
       .limit(1),
   ])
@@ -78,7 +91,7 @@ export async function loadBoard(page = 1): Promise<BoardResponse> {
       : db
           .select({ n: sql<number>`count(distinct ${entries.timeSeconds})` })
           .from(entries)
-          .where(lt(entries.timeSeconds, rows[0].timeSeconds)),
+          .where(and(visible, lt(entries.timeSeconds, rows[0].timeSeconds))),
     // Counted over the same set the headline came from, or a verified leader
     // would be reported as tied with everyone who merely typed that time.
     fastest === null
@@ -88,8 +101,8 @@ export async function loadBoard(page = 1): Promise<BoardResponse> {
           .from(entries)
           .where(
             verifiedHeadline
-              ? and(eq(entries.timeSeconds, fastest), eq(entries.verified, true))
-              : eq(entries.timeSeconds, fastest),
+              ? and(visible, eq(entries.timeSeconds, fastest), eq(entries.verified, true))
+              : and(visible, eq(entries.timeSeconds, fastest)),
           ),
   ])
 
@@ -151,6 +164,7 @@ export async function loadStats(filter?: SpecFilter): Promise<StatsResponse> {
         updatedAt: entries.updatedAt,
       })
       .from(entries)
+      .where(visible)
       .orderBy(asc(entries.timeSeconds)),
     readCounters(),
     rankedToday(),
@@ -214,7 +228,11 @@ export async function loadStats(filter?: SpecFilter): Promise<StatsResponse> {
  */
 export async function findEntryByHandle(handle: string): Promise<BoardEntry | null> {
   const db = await getDb()
-  const rows = await db.select().from(entries).where(eq(entries.handle, handle)).limit(1)
+  const rows = await db
+    .select()
+    .from(entries)
+    .where(and(visible, eq(entries.handle, handle)))
+    .limit(1)
   const row = rows[0]
   if (!row) return null
 
@@ -222,7 +240,7 @@ export async function findEntryByHandle(handle: string): Promise<BoardEntry | nu
   const faster = await db
     .select({ n: sql<number>`count(distinct ${entries.timeSeconds})` })
     .from(entries)
-    .where(lt(entries.timeSeconds, row.timeSeconds))
+    .where(and(visible, lt(entries.timeSeconds, row.timeSeconds)))
 
   return {
     rank: Number(faster[0]?.n ?? 0) + 1,
@@ -262,7 +280,7 @@ export async function searchEntries(query: string): Promise<BoardEntry[]> {
   const rows = await db
     .select()
     .from(entries)
-    .where(sql`${entries.handle} LIKE ${`%${escaped}%`} ESCAPE '\\'`)
+    .where(and(visible, sql`${entries.handle} LIKE ${`%${escaped}%`} ESCAPE '\\'`))
     .orderBy(asc(entries.timeSeconds), desc(entries.verified), asc(entries.createdAt))
     .limit(MAX_MATCHES)
 
@@ -273,7 +291,7 @@ export async function searchEntries(query: string): Promise<BoardEntry[]> {
       const faster = await db
         .select({ n: sql<number>`count(distinct ${entries.timeSeconds})` })
         .from(entries)
-        .where(lt(entries.timeSeconds, row.timeSeconds))
+        .where(and(visible, lt(entries.timeSeconds, row.timeSeconds)))
 
       return {
         rank: Number(faster[0]?.n ?? 0) + 1,

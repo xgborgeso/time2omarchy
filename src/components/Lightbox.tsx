@@ -1,4 +1,4 @@
-import { XIcon } from "lucide-react"
+import { FlagIcon, XIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -13,6 +13,10 @@ import type { BoardEntry } from "@/lib/types"
 type Props = {
   entry: BoardEntry | null
   onClose: () => void
+  /** Absent until there is somewhere for a report to go. */
+  onReport?: (entry: BoardEntry) => void
+  /** True once this viewer has flagged the entry being shown. */
+  reported?: boolean
 }
 
 /**
@@ -25,7 +29,7 @@ type Props = {
  *
  * Radix handles focus trap, scroll lock and Escape.
  */
-export function Lightbox({ entry, onClose }: Props) {
+export function Lightbox({ entry, onClose, onReport, reported }: Props) {
   return (
     <Dialog open={entry != null} onOpenChange={(open) => !open && onClose()}>
       {/*
@@ -69,6 +73,32 @@ export function Lightbox({ entry, onClose }: Props) {
                   <span className="sr-only">Close</span>
                 </Button>
               </DialogClose>
+              {/* Under the close, and an icon like it: reporting is a rare
+                  act on someone else's entry, so it sits where a control
+                  already is rather than competing with the image. No count —
+                  a public tally invites the pile-on it appears to measure,
+                  and the number is only useful to whoever reviews it. */}
+              {onReport ? (
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  disabled={reported}
+                  onClick={() => onReport(entry)}
+                  title={
+                    reported
+                      ? "Reported — thanks, someone will look at it"
+                      : "Report this boot screen"
+                  }
+                  aria-label={
+                    reported
+                      ? `Already reported the boot screen for @${entry.handle}`
+                      : `Report the boot screen for @${entry.handle}`
+                  }
+                  className="absolute top-14 right-3 bg-background/70 text-muted-foreground backdrop-blur-sm hover:bg-background hover:text-foreground disabled:opacity-100"
+                >
+                  <FlagIcon className={reported ? "fill-current" : undefined} />
+                </Button>
+              ) : null}
             </div>
           </>
         ) : null}
