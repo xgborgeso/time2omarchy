@@ -9,9 +9,11 @@ import {
   useRef,
   useState,
 } from "react"
+import { SpecsFields } from "@/components/SpecsFields"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import type { Specs } from "@/lib/specs"
 import { formatTime, isTimeInRange, parseTime } from "@/lib/time"
 import { useTRPC } from "@/lib/trpc"
 import type { ClaimIssued, RankSuccess } from "@/lib/types"
@@ -44,6 +46,8 @@ export function RankForm({ onSuccess }: Props) {
   /** Set once the handle is taken: the post text plus where the proof goes. */
   const [claim, setClaim] = useState<ClaimIssued | null>(null)
   const [postUrl, setPostUrl] = useState("")
+  const [showSpecs, setShowSpecs] = useState(false)
+  const [specs, setSpecs] = useState<Specs>({ cpuId: null, ramGb: null, storage: null })
 
   useEffect(() => {
     if (!file) {
@@ -264,6 +268,17 @@ export function RankForm({ onSuccess }: Props) {
           {error}
         </p>
       ) : null}
+      <div className="mt-3 flex flex-col gap-3">
+        <button
+          type="button"
+          onClick={() => setShowSpecs((open) => !open)}
+          aria-expanded={showSpecs}
+          className="self-start text-xs text-muted-foreground underline underline-offset-4 hover:no-underline"
+        >
+          {showSpecs ? "Hide specs" : "Add specs (optional)"}
+        </button>
+        {showSpecs ? <SpecsFields value={specs} onChange={setSpecs} /> : null}
+      </div>
       {!claim && handle.trim() ? (
         <p className="mt-3 text-xs text-muted-foreground">
           Already ranked, or want the verified mark?{" "}

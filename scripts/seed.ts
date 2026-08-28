@@ -17,17 +17,20 @@ const run = promisify(execFile)
  * 43s and 64s are shared, so the board exercises competition ranking and the
  * verified-listed-first order rather than only the happy path.
  */
-const SAMPLE: Array<[handle: string, seconds: number, daysAgo: number, verified: boolean]> =
-  [
-    ["ada", 43, 3, true],
-    ["kernelpanic", 43, 0.2, false],
-    ["bob", 51, 1, true],
-    ["nixgoblin", 64, 2, false],
-    ["hyprfan", 64, 0.008, false],
-    ["archbtw", 64, 4, true],
-    ["ricermaxx", 135, 6, false],
-    ["slowboot", 187, 0.125, true],
-  ]
+type Specs = [cpuId: string | null, ramGb: number | null, storage: string | null]
+
+const SAMPLE: Array<
+  [handle: string, seconds: number, daysAgo: number, verified: boolean, specs: Specs]
+> = [
+  ["ada", 43, 3, true, ["amd-ryzen-9-9950x", 64, "nvme"]],
+  ["kernelpanic", 43, 0.2, false, ["intel-core-i9-14900k", 32, "nvme"]],
+  ["bob", 51, 1, true, ["amd-ryzen-7-7800x3d", 32, "nvme"]],
+  ["nixgoblin", 64, 2, false, [null, 16, "ssd"]],
+  ["hyprfan", 64, 0.008, false, ["apple-m4-pro", 24, "nvme"]],
+  ["archbtw", 64, 4, true, ["intel-core-i7-13700k", 32, "nvme"]],
+  ["ricermaxx", 135, 6, false, [null, null, null]],
+  ["slowboot", 187, 0.125, true, ["intel-core-i7-1260p", 8, "hdd"]],
+]
 
 const UPLOADS = path.resolve("public/uploads")
 
@@ -99,18 +102,22 @@ if (clear) {
   console.log(`removed ${res.rows.length} seeded entries`)
 } else {
   await mkdir(UPLOADS, { recursive: true })
-  for (const [handle, seconds, daysAgo, verified] of SAMPLE) {
+  for (const [handle, seconds, daysAgo, verified, [cpuId, ramGb, storage]] of SAMPLE) {
     const url = await bootScreen(handle, seconds)
     const at = new Date(Date.now() - daysAgo * 86_400_000)
     await db.query(
       `INSERT INTO entries
-         (id, handle, time_seconds, boot_screen_url, verified, identity_key, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $7)
+         (id, handle, time_seconds, boot_screen_url, verified, identity_key,
+          cpu_id, ram_gb, storage, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10)
        ON CONFLICT (handle) DO UPDATE
          SET time_seconds = EXCLUDED.time_seconds,
              boot_screen_url = EXCLUDED.boot_screen_url,
              verified = EXCLUDED.verified,
              identity_key = EXCLUDED.identity_key,
+             cpu_id = EXCLUDED.cpu_id,
+             ram_gb = EXCLUDED.ram_gb,
+             storage = EXCLUDED.storage,
              updated_at = EXCLUDED.updated_at`,
       [
         crypto.randomUUID(),
@@ -119,6 +126,9 @@ if (clear) {
         url,
         verified,
         verified ? `x:${handle}` : null,
+        cpuId,
+        ramGb,
+        storage,
         at,
       ],
     )

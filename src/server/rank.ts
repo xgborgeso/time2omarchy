@@ -18,10 +18,19 @@ export type RankInput = {
   /** Both or neither: proof that the handle is yours. */
   nonce?: string
   postUrl?: string
+  /** Optional hardware, validated against the catalogue by the router. */
+  cpuId?: string | null
+  ramGb?: number | null
+  storage?: string | null
 }
 
 export async function submitRank(input: RankInput): Promise<RankSuccess | RankFailure> {
   const { handle, timeSeconds, bootScreenUrl } = input
+  const specs = {
+    cpuId: input.cpuId ?? null,
+    ramGb: input.ramGb ?? null,
+    storage: input.storage ?? null,
+  }
 
   // The url arrives from the client now, so it has to be one we issued.
   // Without this the board would happily point every visitor at any remote
@@ -83,15 +92,7 @@ export async function submitRank(input: RankInput): Promise<RankSuccess | RankFa
       improved: false,
       keptBest: true,
       bestTimeSeconds: current.timeSeconds,
-      entry: entry ?? {
-        rank: 0,
-        handle,
-        timeSeconds: current.timeSeconds,
-        bootScreenUrl: current.bootScreenUrl,
-        verified: current.verified,
-        createdAt: current.createdAt.toISOString(),
-        updatedAt: current.updatedAt.toISOString(),
-      },
+      entry: entry ?? toEntry(current, board),
       board,
     }
   }
@@ -108,6 +109,7 @@ export async function submitRank(input: RankInput): Promise<RankSuccess | RankFa
         bootScreenUrl,
         verified,
         identityKey,
+        ...specs,
         createdAt: now,
         updatedAt: now,
       })
@@ -134,6 +136,10 @@ export async function submitRank(input: RankInput): Promise<RankSuccess | RankFa
       // A claim promotes the row for good; it never demotes a verified one.
       verified: verified || current.verified,
       identityKey: identityKey ?? current.identityKey,
+      // Only overwrite what was actually supplied this time.
+      cpuId: specs.cpuId ?? current.cpuId,
+      ramGb: specs.ramGb ?? current.ramGb,
+      storage: specs.storage ?? current.storage,
       updatedAt: now,
     })
     .where(eq(entries.handle, handle))
@@ -166,6 +172,9 @@ function toEntry(
     timeSeconds: row.timeSeconds,
     bootScreenUrl: row.bootScreenUrl,
     verified: row.verified,
+    cpuId: row.cpuId,
+    ramGb: row.ramGb,
+    storage: row.storage,
     createdAt: row.createdAt.toISOString(),
     updatedAt: row.updatedAt.toISOString(),
   }

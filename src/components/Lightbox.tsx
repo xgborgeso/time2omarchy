@@ -5,6 +5,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { xUrl } from "@/lib/handle"
+import { formatSpecs } from "@/lib/specs"
 import { formatTime, relativeTime } from "@/lib/time"
 import type { BoardEntry } from "@/lib/types"
 
@@ -15,6 +16,8 @@ type Props = {
 
 /** Radix handles focus trap, scroll lock and Escape. */
 export function Lightbox({ entry, onClose }: Props) {
+  const specs = entry ? formatSpecs(entry) : null
+
   return (
     <Dialog open={entry != null} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-[min(64rem,95vw)] border-border bg-popover p-4 sm:p-5">
@@ -53,6 +56,10 @@ export function Lightbox({ entry, onClose }: Props) {
                 {relativeTime(entry.updatedAt)}
               </span>
             </div>
+            {/* Specs live here rather than on the board: the board's job is
+                time and rank, and three more columns would wreck it on a
+                phone. */}
+            {specs ? <p className="text-xs text-muted-foreground">{specs}</p> : null}
           </>
         ) : null}
       </DialogContent>

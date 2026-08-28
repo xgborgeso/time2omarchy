@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { specsSchema } from "../../lib/specs"
 import { handleSchema, timeSchema } from "../../lib/validation"
 import { loadBoard, loadStats } from "../board"
 import { submitRank } from "../rank"
@@ -61,14 +62,16 @@ export const appRouter = router({
   rank: publicProcedure
     .use(throttled(rankLimit, "Slow down. Try again in an hour."))
     .input(
-      z.object({
-        handle: handleSchema,
-        // Parsed here so "1:12" and "43s" keep working; the client sends text.
-        time: timeSchema,
-        bootScreenUrl: z.string().min(1),
-        nonce: z.string().optional(),
-        postUrl: z.string().optional(),
-      }),
+      z
+        .object({
+          handle: handleSchema,
+          // Parsed here so "1:12" and "43s" keep working; the client sends text.
+          time: timeSchema,
+          bootScreenUrl: z.string().min(1),
+          nonce: z.string().optional(),
+          postUrl: z.string().optional(),
+        })
+        .extend(specsSchema.shape),
     )
     .mutation(async ({ input }) => {
       try {
@@ -78,6 +81,9 @@ export const appRouter = router({
           bootScreenUrl: input.bootScreenUrl,
           nonce: input.nonce,
           postUrl: input.postUrl,
+          cpuId: input.cpuId,
+          ramGb: input.ramGb,
+          storage: input.storage,
         })
       } catch (err) {
         await captureError(err)

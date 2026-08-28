@@ -10,6 +10,9 @@ const entry: BoardEntry = {
   timeSeconds: 64,
   bootScreenUrl: "/uploads/ada.png",
   verified: true,
+  cpuId: "intel-core-i7-13700k",
+  ramGb: 32,
+  storage: "nvme",
   createdAt: "2026-01-01T00:00:00.000Z",
   updatedAt: "2026-01-01T00:00:00.000Z",
 }
@@ -31,6 +34,22 @@ describe("Lightbox", () => {
     render(<Lightbox entry={entry} onClose={() => {}} />)
     expect(screen.getAllByText(/1:04/).length).toBeGreaterThanOrEqual(2)
     expect(screen.queryByText(/64s/)).toBeNull()
+  })
+
+  it("shows the hardware when the ranker gave it", () => {
+    render(<Lightbox entry={entry} onClose={() => {}} />)
+    expect(screen.getByText("Intel Core i7-13700K · 32GB · NVMe SSD")).toBeInTheDocument()
+  })
+
+  it("says nothing about hardware when none was given", () => {
+    // An empty specs line is worse than no line.
+    render(
+      <Lightbox
+        entry={{ ...entry, cpuId: null, ramGb: null, storage: null }}
+        onClose={() => {}}
+      />,
+    )
+    expect(screen.queryByText(/NVMe/)).toBeNull()
   })
 
   it("closes on Escape", async () => {

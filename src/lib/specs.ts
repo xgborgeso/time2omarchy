@@ -1,0 +1,59 @@
+/**
+ * The optional hardware an entry can carry.
+ *
+ * Fixed options rather than free text: the reason to collect this at all is to
+ * aggregate it, and "average install on a Ryzen 9" cannot be answered if
+ * everyone writes the model differently.
+ */
+import { z } from "zod"
+import { CPU_IDS, cpuById, cpuLabel } from "./cpus"
+
+/** Sizes people actually have, not every number. */
+export const RAM_OPTIONS = [8, 16, 24, 32, 48, 64, 96, 128] as const
+
+export const STORAGE = [
+  { id: "nvme", label: "NVMe SSD" },
+  { id: "ssd", label: "SATA SSD" },
+  { id: "hdd", label: "Hard drive" },
+] as const
+
+export type StorageId = (typeof STORAGE)[number]["id"]
+
+const STORAGE_IDS = STORAGE.map((s) => s.id) as [StorageId, ...StorageId[]]
+
+export function storageLabel(id: string): string | null {
+  return STORAGE.find((s) => s.id === id)?.label ?? null
+}
+
+export const specsSchema = z.object({
+  cpuId: z.enum(CPU_IDS as [string, ...string[]]).optional(),
+  ramGb: z
+    .number()
+    .int()
+    .refine((n) => (RAM_OPTIONS as readonly number[]).includes(n), "Pick an offered size")
+    .optional(),
+  storage: z.enum(STORAGE_IDS).optional(),
+})
+
+export type Specs = {
+  cpuId: string | null
+  ramGb: number | null
+  storage: string | null
+}
+
+/**
+ * Specs as one line, or null when there is nothing to say.
+ *
+ * Tolerates an unknown cpu id: an entry outlives the catalogue, and a chip
+ * removed by a careless edit must not blank out someone's row.
+ */
+export function formatSpecs({ cpuId, ramGb, storage }: Specs): string | null {
+  const cpu = cpuId ? cpuById(cpuId) : null
+  const parts = [
+    cpu ? cpuLabel(cpu) : null,
+    ramGb ? `${ramGb}GB` : null,
+    storage ? storageLabel(storage) : null,
+  ].filter(Boolean)
+
+  return parts.length > 0 ? parts.join(" · ") : null
+}
