@@ -1,0 +1,45 @@
+name: Add a CPU
+description: A processor missing from the picker on the rank form.
+title: "Add CPU: "
+labels: ["catalogue"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The catalogue lives in [`src/lib/cpus.ts`](../blob/main/src/lib/cpus.ts).
+        Pull requests are welcome — one line, keep the file sorted by `id`, and
+        CI checks the rest.
+
+  - type: dropdown
+    id: vendor
+    attributes:
+      label: Vendor
+      options:
+        - AMD
+        - Apple
+        - Intel
+    validations:
+      required: true
+
+  - type: input
+    id: model
+    attributes:
+      label: Model
+      description: Exactly as the vendor writes it, without the vendor name.
+      placeholder: Ryzen 9 9950X3D
+    validations:
+      required: true
+
+  - type: textarea
+    id: kernel
+    attributes:
+      label: What your kernel reports
+      description: |
+        Run this and paste the output. It is the authoritative spelling, and it
+        is what makes the entry accurate rather than a guess.
+      placeholder: |
+        $ grep -m1 'model name' /proc/cpuinfo
+        model name : AMD Ryzen 9 9950X3D 16-Core Processor
+      render: shell
+    validations:
+      required: true

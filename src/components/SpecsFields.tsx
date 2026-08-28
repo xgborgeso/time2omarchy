@@ -33,7 +33,7 @@ type Props = {
 }
 
 const NEW_CPU_ISSUE =
-  "https://github.com/xgborgeso/time2omarchy/issues/new?title=Add%20CPU:%20"
+  "https://github.com/xgborgeso/time2omarchy/issues/new?template=add-cpu.yml&title=Add+CPU%3A+"
 
 /** Matches the labels on the form above, so the two rows read as one form. */
 const LABEL = "text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground"
@@ -104,21 +104,9 @@ export function SpecsFields({ value, onChange }: Props) {
               />
               <CommandList>
                 <CommandEmpty>
-                  {isFetching ? (
-                    <span className="text-xs text-muted-foreground">Searching…</span>
-                  ) : (
-                    <span className="text-xs">
-                      Not listed?{" "}
-                      <a
-                        href={`${NEW_CPU_ISSUE}${encodeURIComponent(query)}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="underline underline-offset-4"
-                      >
-                        Ask for it on GitHub
-                      </a>
-                    </span>
-                  )}
+                  <span className="text-xs text-muted-foreground">
+                    {isFetching ? "Searching…" : "No match."}
+                  </span>
                 </CommandEmpty>
                 {/* The catalogue can never be complete, and this field is
                     required — without this, an unlisted chip would lock
@@ -169,6 +157,19 @@ export function SpecsFields({ value, onChange }: Props) {
                 ))}
               </CommandList>
             </Command>
+            {/* Outside CommandList on purpose: cmdk only renders CommandEmpty
+                when nothing matches, and "Other" always does, so a link in
+                there could never be seen. */}
+            <div className="border-border border-t px-3 py-2">
+              <a
+                href={`${NEW_CPU_ISSUE}${encodeURIComponent(query)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="text-muted-foreground text-xs underline underline-offset-4 hover:text-foreground"
+              >
+                Didn't find your CPU? Ask for it on GitHub
+              </a>
+            </div>
           </PopoverContent>
         </Popover>
       </div>
