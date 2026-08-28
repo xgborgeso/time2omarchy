@@ -15,3 +15,9 @@ public/uploads/*
 .env*.local
 
 .DS_Store
+
+# Third-party agent skills, installed per-machine with `npx skills add`.
+# Tools, not source: 3.6MB of vendored data and compiled bytecode does not
+# belong in a repo this deliberately lean.
+.agents/
+.claude/skills/
