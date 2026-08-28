@@ -14,7 +14,9 @@ export function Hero({ counters }: { counters: Counters | undefined }) {
               number is analytics wearing a badge: it belongs to whoever runs
               the site, and on a quiet hour it advertises an empty room. The
               ranked total only ever climbs. */}
-          <span>{entries.toLocaleString()} RANKED</span>
+          <span>
+            {entries.toLocaleString()} {entries === 1 ? "INSTALL" : "INSTALLS"} RANKED
+          </span>
         </div>
       </div>
 
