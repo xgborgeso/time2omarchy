@@ -31,5 +31,37 @@ export async function openDatabase(dataDir?: string): Promise<Opened> {
   const db = drizzle(client, { schema })
   await migrate(db, { migrationsFolder: MIGRATIONS_DIR })
 
+  if (dataDir) closeOnShutdown(client)
+
   return { client, db }
+}
+
+/**
+ * Checkpoint on the way out, or the directory cannot be opened again.
+ *
+ * Postgres only makes a data directory recoverable at a checkpoint, and
+ * PGlite writes one when the client is closed — which nothing does when a dev
+ * server is killed. The result is a database that dies on its next open with
+ * `PANIC: could not locate a valid checkpoint record`, unrecoverable because
+ * PGlite ships no `pg_resetwal`. Restarting `next dev` was enough to trigger it.
+ *
+ * In-memory databases are exempt: tests have nothing to persist, and adding a
+ * listener per test file would leak them.
+ */
+function closeOnShutdown(client: PGlite): void {
+  let closing = false
+  const close = async (signal: NodeJS.Signals) => {
+    if (closing) return
+    closing = true
+    // Best effort: if the runtime kills us first, the next open pays for it.
+    await client.close().catch(() => {})
+    process.kill(process.pid, signal)
+  }
+
+  for (const signal of ["SIGINT", "SIGTERM"] as const) {
+    process.once(signal, () => {
+      process.removeAllListeners(signal)
+      void close(signal)
+    })
+  }
 }
