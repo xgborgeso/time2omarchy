@@ -38,7 +38,7 @@ describe("Lightbox", () => {
 
   it("shows the hardware when the ranker gave it", () => {
     render(<Lightbox entry={entry} onClose={() => {}} />)
-    expect(screen.getByText("Intel Core i7-13700K · 32GB · NVMe SSD")).toBeInTheDocument()
+    expect(screen.getByText("Intel Core i7-13700K · 32GB · NVMe")).toBeInTheDocument()
   })
 
   it("says nothing about hardware when none was given", () => {

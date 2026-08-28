@@ -45,7 +45,7 @@ describe("specsSchema", () => {
 describe("formatSpecs", () => {
   it("reads as cpu, memory, disk", () => {
     expect(formatSpecs({ cpuId: "intel-core-i7-13700k", ramGb: 32, storage: "nvme" })).toBe(
-      "Intel Core i7-13700K · 32GB · NVMe SSD",
+      "Intel Core i7-13700K · 32GB · NVMe",
     )
   })
 

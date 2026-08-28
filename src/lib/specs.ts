@@ -14,11 +14,12 @@ export const RAM_OPTIONS = [8, 16, 24, 32, 48, 64, 96, 128] as const
 /**
  * Fastest first — this is a speed leaderboard, so the order is the point.
  *
- * The two SSDs name their interface rather than saying plain "SSD": an NVMe
- * drive is also an SSD, so a bare "SSD" option would collect both.
+ * Named by interface, since that is the distinction that matters. "NVMe SSD"
+ * would say it twice — NVMe is only ever an SSD. "SATA" alone would not be
+ * enough, because SATA hard drives exist, so that one keeps its qualifier.
  */
 export const STORAGE = [
-  { id: "nvme", label: "NVMe SSD" },
+  { id: "nvme", label: "NVMe" },
   { id: "ssd", label: "SATA SSD" },
   { id: "hdd", label: "HDD" },
 ] as const
