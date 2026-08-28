@@ -1,5 +1,4 @@
 import { BadgeCheck } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { xUrl } from "@/lib/handle"
 import { formatSpecsShort } from "@/lib/specs"
@@ -24,15 +23,7 @@ type Props = {
 // minmax(0,1fr) rather than 1fr: a grid item defaults to min-width:auto,
 // which stops `truncate` from ever shrinking the handle column.
 const ROW =
-  "grid grid-cols-[2rem_4.75rem_minmax(0,1fr)_2.75rem] items-center gap-2.5 sm:grid-cols-[3.5rem_7.25rem_minmax(0,1fr)_auto_5.5rem] sm:gap-5"
-
-/**
- * A fixed slot for the handle, so every badge beside one starts at the same x.
- *
- * Without it the badges follow the text and step raggedly down the board. The
- * handle truncates instead, which it has to anyway at fifteen characters.
- */
-const HANDLE = "w-[7.5rem] sm:w-[10.5rem]"
+  "grid grid-cols-[2rem_4.5rem_minmax(0,1fr)_2.75rem] items-center gap-3 sm:grid-cols-[3.5rem_7.25rem_minmax(0,1fr)_5.5rem] sm:gap-5"
 
 /**
  * One page of the board.
@@ -63,7 +54,6 @@ export function Board({ entries, loading, onOpen, onClaim, found = null }: Props
         <span>rank</span>
         <span>time</span>
         <span>handle</span>
-        <span className="hidden sm:block">when</span>
         <span className="text-right">boot</span>
       </div>
 
@@ -82,6 +72,15 @@ export function Board({ entries, loading, onOpen, onClaim, found = null }: Props
         <Entry key={entry.handle} entry={entry} onOpen={onOpen} onClaim={onClaim} />
       ))}
     </section>
+  )
+}
+
+/** The separator in the small print. Decorative, so it is hidden from readers. */
+function Dot() {
+  return (
+    <span aria-hidden="true" className="text-muted-foreground/50">
+      ·
+    </span>
   )
 }
 
@@ -132,57 +131,44 @@ function Entry({ entry, onOpen, onClaim, className }: EntryProps) {
       >
         {formatTime(entry.timeSeconds)}
       </span>
-      <span className="flex min-w-0 flex-col justify-center">
-        <span className="flex min-w-0 items-center gap-1.5">
-          <a
-            href={xUrl(entry.handle)}
-            target="_blank"
-            rel="noreferrer"
-            className={cn(
-              "-my-2 shrink-0 truncate py-2 text-[13px] hover:text-primary sm:text-sm",
-              HANDLE,
-            )}
-          >
-            @{entry.handle}
-          </a>
-          {/* One slot, one shape, two jobs. Both are badges so the line reads
-              the same either way, and the fill is what separates them: filled
-              is something to do, outlined is something that is already true.
-              Claim borrows the primary fill from Rank it for exactly that
-              reason — it is the same invitation, met where the entry lives. */}
+      {/* A title and the small print under it, the way an entry reads on a
+          board like this: the handle is the headline, everything that
+          qualifies it sits below in one quiet line. */}
+      <span className="flex min-w-0 flex-col justify-center gap-1">
+        <a
+          href={xUrl(entry.handle)}
+          target="_blank"
+          rel="noreferrer"
+          className="-my-1 w-fit max-w-full truncate py-1 font-medium text-[13px] hover:text-primary sm:text-[15px]"
+        >
+          @{entry.handle}
+        </a>
+        <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 text-[11px] text-muted-foreground sm:text-xs">
+          {specs ? <span className="truncate">{specs}</span> : null}
+          {specs ? <Dot /> : null}
+          <span className="whitespace-nowrap">{relativeTime(entry.updatedAt)}</span>
+          {entry.verified || claimable ? <Dot /> : null}
           {entry.verified ? (
-            <Badge
-              variant="outline"
+            <span
               title="Verified on X — this handle proved it owns the entry"
+              className="inline-flex items-center gap-1 whitespace-nowrap text-primary"
             >
-              <BadgeCheck aria-hidden="true" className="text-primary" />
+              <BadgeCheck aria-hidden="true" className="size-3.5" />
               Verified
-            </Badge>
+            </span>
           ) : claimable ? (
-            // The stock hover rules only fire on an anchor (`[a&]:hover:`),
-            // and this is a button, so the hover is the one thing added.
-            <Badge asChild variant="default">
-              <button
-                type="button"
-                onClick={() => onClaim?.(entry)}
-                aria-label={`Claim the entry for @${entry.handle}`}
-                className="cursor-pointer hover:bg-primary/90"
-              >
-                Claim
-              </button>
-            </Badge>
+            // Text, not a control: on a line of small print a filled badge was
+            // the loudest thing in the entry, and it is an aside, not the point.
+            <button
+              type="button"
+              onClick={() => onClaim?.(entry)}
+              aria-label={`Claim the entry for @${entry.handle}`}
+              className="cursor-pointer whitespace-nowrap font-medium text-primary underline-offset-4 hover:underline"
+            >
+              Claim
+            </button>
           ) : null}
         </span>
-        {/* Hidden on phones, where the row has no width to spare.
-        The full line, with storage, is in the lightbox. */}
-        {specs ? (
-          <span className="hidden truncate text-[11px] text-muted-foreground sm:block">
-            {specs}
-          </span>
-        ) : null}
-      </span>
-      <span className="hidden text-xs text-muted-foreground sm:block">
-        {relativeTime(entry.updatedAt)}
       </span>
       <button
         type="button"
