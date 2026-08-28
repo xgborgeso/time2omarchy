@@ -77,15 +77,20 @@ export function formatSpecs({ cpuId, ramGb, storage }: Specs): string | null {
 }
 
 /**
- * Specs compressed for a board row.
+ * Specs compressed for a board entry.
  *
- * The vendor and the disk are dropped: a row already carries rank, time,
- * handle, date and a thumbnail, and the model plus memory is the part that
- * makes two times comparable at a glance. The full line is in the lightbox.
+ * Only the vendor is dropped: an entry already carries rank, time, handle and
+ * a boot screen, and "Intel" adds nothing next to "Core i7-13700K". The disk
+ * stays — on a board that measures install time, NVMe versus HDD explains more
+ * of the gap between two entries than anything else on the line.
  */
-export function formatSpecsShort({ cpuId, ramGb }: Specs): string | null {
+export function formatSpecsShort({ cpuId, ramGb, storage }: Specs): string | null {
   const cpu = cpuId ? cpuById(cpuId) : null
   const name = cpu?.name ?? (cpuId === OTHER_CPU_ID ? "Other CPU" : null)
-  const parts = [name, ramGb ? `${ramGb}GB` : null].filter(Boolean)
+  const parts = [
+    name,
+    ramGb ? `${ramGb}GB` : null,
+    storage ? storageLabel(storage) : null,
+  ].filter(Boolean)
   return parts.length > 0 ? parts.join(" · ") : null
 }

@@ -1,4 +1,5 @@
 import { BadgeCheck } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { xUrl } from "@/lib/handle"
 import { formatSpecsShort } from "@/lib/specs"
@@ -92,13 +93,15 @@ export function Board({ entries, loading, onOpen, signedInHandle = null, onClaim
                   @{entry.handle}
                 </a>
                 {claimable ? (
-                  <button
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="xs"
                     onClick={() => onClaim?.(entry)}
-                    className="shrink-0 rounded border border-border px-1.5 py-0.5 text-[10px] uppercase tracking-[0.12em] text-muted-foreground hover:border-primary hover:text-primary"
+                    className="shrink-0 text-muted-foreground hover:text-foreground"
                   >
                     Claim
-                  </button>
+                  </Button>
                 ) : null}
                 {entry.verified ? (
                   <span

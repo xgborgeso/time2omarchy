@@ -87,14 +87,22 @@ describe("options", () => {
 })
 
 describe("formatSpecsShort", () => {
-  it("drops the vendor and the disk, which a board row has no width for", () => {
+  it("keeps the disk, which decides the time as much as the chip does", () => {
+    // Dropping it made two entries look like the same machine when one
+    // installed to NVMe and the other to a spinning disk.
     expect(
       formatSpecsShort({ cpuId: "intel-core-i7-13700k", ramGb: 32, storage: "nvme" }),
-    ).toBe("Core i7-13700K · 32GB")
+    ).toBe("Core i7-13700K · 32GB · NVMe")
+  })
+
+  it("still drops the vendor, which a board row has no width for", () => {
+    expect(
+      formatSpecsShort({ cpuId: "intel-core-i7-13700k", ramGb: 32, storage: "hdd" }),
+    ).not.toContain("Intel")
   })
 
   it("falls back to whichever part was given", () => {
-    expect(formatSpecsShort({ cpuId: "apple-m4-max", ramGb: null, storage: "nvme" })).toBe(
+    expect(formatSpecsShort({ cpuId: "apple-m4-max", ramGb: null, storage: null })).toBe(
       "M4 Max",
     )
     expect(formatSpecsShort({ cpuId: null, ramGb: 16, storage: null })).toBe("16GB")

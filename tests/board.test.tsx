@@ -71,14 +71,15 @@ describe("Board", () => {
         onOpen={() => {}}
       />,
     )
-    // Short form: the row has no width for the vendor or the disk.
-    expect(screen.getByText("M4 Max · 32GB")).toBeInTheDocument()
+    // Short form drops the vendor, but keeps the disk: on a board that
+    // measures install time, NVMe versus HDD explains most of the gap.
+    expect(screen.getByText("M4 Max · 32GB · SATA SSD")).toBeInTheDocument()
   })
 
   it("names the not-listed bucket rather than showing a gap", () => {
     // Every entry has specs now, but the catalogue can miss a chip.
     render(<Board entries={TIED} loading={false} onOpen={() => {}} />)
-    expect(screen.getAllByText("Other CPU · 16GB").length).toBe(TIED.length)
+    expect(screen.getAllByText("Other CPU · 16GB · SATA SSD").length).toBe(TIED.length)
   })
 
   it("formats times rather than printing raw seconds", () => {
