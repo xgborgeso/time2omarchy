@@ -5,22 +5,15 @@ import type { Counters } from "@/lib/types"
 export function Hero({ counters }: { counters: Counters | undefined }) {
   const fastest = counters?.fastestSeconds ?? null
   const entries = counters?.entries ?? 0
-  const online = counters?.online ?? 0
 
   return (
     <section>
       <div className="flex justify-center">
         <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 rounded-lg border border-border bg-card px-4 py-2 text-[11px] text-muted-foreground sm:text-xs">
-          <span className="inline-flex items-center gap-2">
-            <span className="relative flex size-1.5">
-              <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-40" />
-              <span className="relative inline-flex size-1.5 rounded-full bg-primary" />
-            </span>
-            <span className="font-medium text-primary">{online} ONLINE</span>
-          </span>
-          <span className="text-muted-foreground" aria-hidden="true">
-            ·
-          </span>
+          {/* The count of everyone here, and nothing else. A live visitor
+              number is analytics wearing a badge: it belongs to whoever runs
+              the site, and on a quiet hour it advertises an empty room. The
+              ranked total only ever climbs. */}
           <span>{entries.toLocaleString()} RANKED</span>
         </div>
       </div>
