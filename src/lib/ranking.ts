@@ -13,13 +13,13 @@ export type Claimant = {
 }
 
 /**
- * What an incoming entry is allowed to do to the row already holding its handle.
+ * What an incoming entry is allowed to do to the entry already holding its handle.
  *
  * Ownership of a handle is only established by verifying it. Until then a
- * handle is just a string someone typed, so an unverified entry may open a row
+ * handle is just a string someone typed, so an unverified entry may open one
  * but never modify one — otherwise anyone could overwrite anyone's entry by
  * typing their handle and a faster time. A verified entry claims an unverified
- * row outright, so squatting an early entry buys nothing.
+ * one outright, so squatting an early entry buys nothing.
  */
 export type EntryDecision = "create" | "replace" | "claim" | "keep" | "reject"
 
@@ -30,7 +30,7 @@ export function decideEntry(existing: Claimant | null, incoming: Claimant): Entr
   return shouldReplace(existing.timeSeconds, incoming.timeSeconds) ? "replace" : "keep"
 }
 
-/** The shape the board needs to place a row. */
+/** The shape the board needs to place an entry. */
 export type Rankable = {
   timeSeconds: number
   verified: boolean
@@ -49,9 +49,9 @@ export type Rankable = {
  * faster unverified one.
  */
 export function rankEntries<T extends Rankable>(
-  rows: readonly T[],
+  entries: readonly T[],
 ): (T & { rank: number })[] {
-  const sorted = [...rows].sort(
+  const sorted = [...entries].sort(
     (a, b) =>
       a.timeSeconds - b.timeSeconds ||
       Number(b.verified) - Number(a.verified) ||
@@ -60,11 +60,11 @@ export function rankEntries<T extends Rankable>(
 
   let rank = 0
   let previousTime: number | null = null
-  return sorted.map((row) => {
-    if (row.timeSeconds !== previousTime) {
+  return sorted.map((entry) => {
+    if (entry.timeSeconds !== previousTime) {
       rank += 1
-      previousTime = row.timeSeconds
+      previousTime = entry.timeSeconds
     }
-    return { ...row, rank }
+    return { ...entry, rank }
   })
 }

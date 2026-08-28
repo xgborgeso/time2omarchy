@@ -27,7 +27,7 @@ const TIED: BoardEntry[] = [
   entry({ handle: "linus", rank: 2, timeSeconds: 51 }),
 ]
 
-function rowFor(handle: string): HTMLElement {
+function entryFor(handle: string): HTMLElement {
   // The handle sits in a span inside the row div, so the nearest div is the row.
   const row = screen.getByRole("link", { name: `@${handle}` }).closest("div")
   if (!row) throw new Error(`no row for @${handle}`)
@@ -37,19 +37,19 @@ function rowFor(handle: string): HTMLElement {
 describe("Board", () => {
   it("shows the same rank on both halves of a tie", () => {
     render(<Board entries={TIED} loading={false} onOpen={() => {}} />)
-    expect(within(rowFor("ada")).getByText("#1")).toBeInTheDocument()
-    expect(within(rowFor("grace")).getByText("#1")).toBeInTheDocument()
+    expect(within(entryFor("ada")).getByText("#1")).toBeInTheDocument()
+    expect(within(entryFor("grace")).getByText("#1")).toBeInTheDocument()
   })
 
   it("leaves no gap in the rank after a tie", () => {
     render(<Board entries={TIED} loading={false} onOpen={() => {}} />)
-    expect(within(rowFor("linus")).getByText("#2")).toBeInTheDocument()
+    expect(within(entryFor("linus")).getByText("#2")).toBeInTheDocument()
     expect(screen.queryByText("#3")).not.toBeInTheDocument()
   })
 
   it("explains the mark to sighted users, not only to screen readers", () => {
     render(<Board entries={TIED} loading={false} onOpen={() => {}} />)
-    expect(within(rowFor("ada")).getByLabelText("Handle verified on X")).toHaveAttribute(
+    expect(within(entryFor("ada")).getByLabelText("Handle verified on X")).toHaveAttribute(
       "title",
       expect.stringContaining("Verified on X"),
     )
@@ -57,8 +57,10 @@ describe("Board", () => {
 
   it("marks only the verified handle", () => {
     render(<Board entries={TIED} loading={false} onOpen={() => {}} />)
-    expect(within(rowFor("ada")).getByLabelText("Handle verified on X")).toBeInTheDocument()
-    expect(within(rowFor("grace")).queryByLabelText("Handle verified on X")).toBeNull()
+    expect(
+      within(entryFor("ada")).getByLabelText("Handle verified on X"),
+    ).toBeInTheDocument()
+    expect(within(entryFor("grace")).queryByLabelText("Handle verified on X")).toBeNull()
   })
 
   it("shows the hardware on a row that has it", () => {
@@ -120,7 +122,7 @@ describe("Board", () => {
 })
 
 describe("claiming from the board", () => {
-  it("offers a claim on an unverified row to the account that owns it", async () => {
+  it("offers a claim on an unverified entry to the account that owns it", async () => {
     // Ranked as a guest, signed in later: the row is right there, so the
     // offer belongs on the row rather than only in the form above.
     const onClaim = vi.fn()
@@ -134,12 +136,12 @@ describe("claiming from the board", () => {
         onClaim={onClaim}
       />,
     )
-    await user.click(within(rowFor("grace")).getByRole("button", { name: /claim/i }))
+    await user.click(within(entryFor("grace")).getByRole("button", { name: /claim/i }))
 
     expect(onClaim).toHaveBeenCalledWith(expect.objectContaining({ handle: "grace" }))
   })
 
-  it("never offers a claim on someone else's row", async () => {
+  it("never offers a claim on someone else's entry", async () => {
     render(
       <Board
         entries={TIED}
@@ -149,10 +151,10 @@ describe("claiming from the board", () => {
         onClaim={() => {}}
       />,
     )
-    expect(within(rowFor("linus")).queryByRole("button", { name: /claim/i })).toBeNull()
+    expect(within(entryFor("linus")).queryByRole("button", { name: /claim/i })).toBeNull()
   })
 
-  it("never offers a claim on a row that is already verified", async () => {
+  it("never offers a claim on an entry that is already verified", async () => {
     render(
       <Board
         entries={[entry({ handle: "ada", rank: 1, verified: true })]}
@@ -162,14 +164,14 @@ describe("claiming from the board", () => {
         onClaim={() => {}}
       />,
     )
-    expect(within(rowFor("ada")).queryByRole("button", { name: /claim/i })).toBeNull()
+    expect(within(entryFor("ada")).queryByRole("button", { name: /claim/i })).toBeNull()
   })
 
   it("offers a claim to a signed-out visitor, who may be the owner", async () => {
     // Signed out we cannot know whose row this is, and the person who ranked
     // as a guest has no other way back in from here.
     render(<Board entries={TIED} loading={false} onOpen={() => {}} onClaim={() => {}} />)
-    expect(within(rowFor("grace")).getByRole("button", { name: /claim/i })).toBeVisible()
-    expect(within(rowFor("ada")).queryByRole("button", { name: /claim/i })).toBeNull()
+    expect(within(entryFor("grace")).getByRole("button", { name: /claim/i })).toBeVisible()
+    expect(within(entryFor("ada")).queryByRole("button", { name: /claim/i })).toBeNull()
   })
 })

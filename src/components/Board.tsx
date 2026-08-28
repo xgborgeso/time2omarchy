@@ -10,7 +10,7 @@ type Props = {
   entries: BoardEntry[]
   loading: boolean
   onOpen: (entry: BoardEntry) => void
-  /** The signed-in X handle, or null. Decides whose rows can offer a claim. */
+  /** The signed-in X handle, or null. Decides whose entries can offer a claim. */
   signedInHandle?: string | null
   onClaim?: (entry: BoardEntry) => void
 }
@@ -50,9 +50,9 @@ export function Board({ entries, loading, onOpen, signedInHandle = null, onClaim
       {entries.map((entry) => {
         const leads = entry.rank === 1
         const specs = formatSpecsShort(entry)
-        // Signed in, only your own row is yours to claim. Signed out we cannot
+        // Signed in, only your own entry is yours to claim. Signed out we cannot
         // know whose is whose, and the guest who ranked has no other way back
-        // in from here — so the offer stands on every unproven row.
+        // in from here — so the offer stands on every unproven entry.
         const claimable =
           !!onClaim &&
           !entry.verified &&

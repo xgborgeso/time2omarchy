@@ -26,8 +26,8 @@ export function RulesPage() {
             and keeps the entry yours to update.
           </li>
           <li className="pl-2">
-            Ranked as a guest? The row is still yours: sign in with the same handle to claim
-            it later, and your time and boot screen stay as they are.
+            Ranked as a guest? The entry is still yours: sign in with the same handle to
+            claim it later, and your time and boot screen stay as they are.
           </li>
         </ol>
       </section>

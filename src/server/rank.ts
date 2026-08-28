@@ -26,13 +26,13 @@ export type RankInput = {
 }
 
 /**
- * The row this entry belongs to.
+ * The entry this submission belongs to.
  *
- * By account id first: an X handle can be changed, and the row has to follow
+ * By account id first: an X handle can be changed, and the entry has to follow
  * the account rather than stay behind under the old name. Only then by handle,
  * which is how an anonymous entry — and a first-time claim of one — is found.
  */
-async function findRow(db: Db, handle: string, identityKey: string | null) {
+async function findEntry(db: Db, handle: string, identityKey: string | null) {
   if (identityKey) {
     const owned = await db
       .select()
@@ -69,9 +69,9 @@ export async function submitRank(input: RankInput): Promise<RankSuccess | RankFa
   const identityKey = identity?.key ?? null
   const verified = identity !== null
 
-  const current = await findRow(db, handle, identityKey)
+  const current = await findEntry(db, handle, identityKey)
 
-  // The account was renamed into a handle another row already holds. Rather
+  // The account was renamed into a handle another entry already holds. Rather
   // than break a unique constraint or quietly overwrite a stranger, say so.
   if (current && current.handle !== handle) {
     const holder = await db
@@ -153,7 +153,7 @@ export async function submitRank(input: RankInput): Promise<RankSuccess | RankFa
       handle,
       timeSeconds,
       bootScreenUrl,
-      // A claim promotes the row for good; it never demotes a verified one.
+      // A claim promotes the entry for good; it never demotes a verified one.
       verified: verified || current.verified,
       identityKey: identityKey ?? current.identityKey,
       ...specs,
@@ -180,7 +180,7 @@ export async function submitRank(input: RankInput): Promise<RankSuccess | RankFa
 }
 
 /**
- * Signing in for a row that is already on the board.
+ * Signing in for an entry that is already on the board.
  *
  * Someone ranks as a guest, then decides they want the mark. Re-ranking would
  * work, but it would make them find the boot screen and retype a time that is
@@ -205,8 +205,8 @@ export async function claimEntry(
     }
   }
   if (current.identityKey) {
-    // Either already yours, or X reassigned the handle and the row belongs to
-    // whoever proved it. Neither is ours to overwrite.
+    // Either already yours, or X reassigned the handle and the entry belongs
+    // to whoever proved it. Neither is ours to overwrite.
     return {
       ok: false,
       error:

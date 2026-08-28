@@ -47,10 +47,10 @@ export function App() {
   }, [view])
 
   /**
-   * Taking over a row ranked as a guest.
+   * Taking over an entry ranked as a guest.
    *
-   * Signed out this can only start the sign-in — the row's handle is not proof
-   * of anything, so the server is never told which row to claim. It works out
+   * Signed out this can only start the sign-in — an entry's handle is not proof
+   * of anything, so the server is never told which entry to claim. It works out
    * ownership from the session alone once there is one.
    */
   async function onClaim() {

@@ -41,7 +41,7 @@ function XMark({ className }: { className?: string }) {
 
 type Props = {
   onSuccess: (result: RankSuccess) => void
-  /** The board, so a row waiting to be claimed can be offered rather than hunted for. */
+  /** The board, so an entry waiting to be claimed is offered, not hunted for. */
   entries?: BoardEntry[]
 }
 
@@ -93,7 +93,7 @@ export function RankForm({ onSuccess, entries = [] }: Props) {
   }, [])
 
   const handle = signedInHandle ?? typedHandle
-  /** Ranked as a guest, signed in after: the row is there, just unproven. */
+  /** Ranked as a guest, signed in after: the entry is there, just unproven. */
   const claimable = entries.some((e) => e.handle === signedInHandle && !e.verified)
 
   /**

@@ -1,3 +1,4 @@
+import { xUrl } from "@/lib/handle"
 import { heroSubline } from "@/lib/hero"
 import { formatTime } from "@/lib/time"
 import type { Counters } from "@/lib/types"
@@ -8,6 +9,7 @@ export function Hero({ counters }: { counters: Counters | undefined }) {
   const online = counters?.online ?? 0
   const leader = counters?.leaderHandle ?? null
   const leaders = counters?.leaderCount ?? 0
+  const subline = heroSubline(leader, leaders)
 
   return (
     <section>
@@ -37,7 +39,18 @@ export function Hero({ counters }: { counters: Counters | undefined }) {
           </span>
         </div>
         <p className="max-w-[32rem] text-pretty text-[13px] font-light text-muted-foreground sm:text-[15px]">
-          {heroSubline(leader, leaders)}
+          {subline.before}
+          {subline.handle ? (
+            <a
+              href={xUrl(subline.handle)}
+              target="_blank"
+              rel="noreferrer"
+              className="font-normal text-foreground underline underline-offset-4 hover:text-primary hover:no-underline"
+            >
+              @{subline.handle}
+            </a>
+          ) : null}
+          {subline.after}
         </p>
       </div>
     </section>

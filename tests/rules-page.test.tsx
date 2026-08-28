@@ -22,7 +22,7 @@ describe("RulesPage", () => {
   })
 
   it("says a guest entry can be claimed later, which is not obvious", () => {
-    // Someone who ranked as a guest has to be told the row is still theirs to
+    // Someone who ranked as a guest has to be told the entry is still theirs to
     // take, or the only way they find out is by trying.
     render(<RulesPage />)
     expect(screen.getByText(/claim it later/i)).toBeInTheDocument()

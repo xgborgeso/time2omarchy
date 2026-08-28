@@ -50,7 +50,7 @@ function wrapper({ children }: { children: ReactNode }) {
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>
 }
 
-/** A board row as the guest path leaves it: on the board, unproven. */
+/** A board entry as the guest path leaves it: on the board, unproven. */
 function unverified(handle: string) {
   return {
     rank: 1,
@@ -348,7 +348,7 @@ describe("RankForm", () => {
     expect(screen.queryByRole("button", { name: /claim/i })).toBeNull()
   })
 
-  it("does not offer a claim on someone else's unverified row", async () => {
+  it("does not offer a claim on someone else's unverified entry", async () => {
     session = { data: { user: { handle: "ada" } } }
     render(<RankForm onSuccess={() => {}} entries={[unverified("bob")]} />, { wrapper })
     expect(screen.queryByRole("button", { name: /claim/i })).toBeNull()

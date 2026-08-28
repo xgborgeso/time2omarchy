@@ -40,7 +40,10 @@ describe("Hero", () => {
 
   it("names a sole leader", () => {
     render(<Hero counters={counters()} />)
-    expect(screen.getByText(/@ada holds it/)).toBeInTheDocument()
+    // The handle links out, so it is its own element rather than loose prose.
+    const link = screen.getByRole("link", { name: "@ada" })
+    expect(link).toHaveAttribute("href", "https://x.com/ada")
+    expect(screen.getByText(/holds it/)).toBeInTheDocument()
   })
 
   it("counts the holders instead of naming one when the top is tied", () => {

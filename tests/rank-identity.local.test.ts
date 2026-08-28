@@ -34,7 +34,7 @@ beforeEach(async () => {
   await (await opened).delete(entries)
 })
 
-async function rowFor(handle: string) {
+async function entryFor(handle: string) {
   const db = await opened
   const rows = await db.select().from(entries).where(eq(entries.handle, handle)).limit(1)
   return rows[0]
@@ -45,7 +45,7 @@ describe("ranking with an X identity", () => {
     const result = await submitRank(input({ identity: ADA }))
 
     expect(result.ok).toBe(true)
-    const row = await rowFor("ada")
+    const row = await entryFor("ada")
     expect(row?.verified).toBe(true)
     expect(row?.identityKey).toBe("x:1665012345678901234")
   })
@@ -54,7 +54,7 @@ describe("ranking with an X identity", () => {
     // Signing in is not a toll: an unverified entry still opens a row.
     await submitRank(input())
 
-    const row = await rowFor("ada")
+    const row = await entryFor("ada")
     expect(row?.verified).toBe(false)
     expect(row?.identityKey).toBeNull()
   })
@@ -63,32 +63,32 @@ describe("ranking with an X identity", () => {
     // Signed in as @ada, typing @bob must not open a row for @bob.
     await submitRank(input({ handle: "bob", identity: ADA }))
 
-    expect(await rowFor("bob")).toBeUndefined()
-    expect((await rowFor("ada"))?.verified).toBe(true)
+    expect(await entryFor("bob")).toBeUndefined()
+    expect((await entryFor("ada"))?.verified).toBe(true)
   })
 
-  it("claims a row someone else opened under your handle", async () => {
+  it("claims an entry someone else opened under your handle", async () => {
     // The whole point of the badge: squatting an early entry buys nothing.
     await submitRank(input({ timeSeconds: 300 }))
-    expect((await rowFor("ada"))?.verified).toBe(false)
+    expect((await entryFor("ada"))?.verified).toBe(false)
 
     const result = await submitRank(input({ timeSeconds: 44, identity: ADA }))
 
     expect(result.ok).toBe(true)
-    const row = await rowFor("ada")
+    const row = await entryFor("ada")
     expect(row?.verified).toBe(true)
     expect(row?.timeSeconds).toBe(44)
   })
 
-  it("refuses an unverified entry that would overwrite a verified row", async () => {
+  it("refuses an unverified entry that would overwrite a verified entry", async () => {
     await submitRank(input({ timeSeconds: 43, identity: ADA }))
     const result = await submitRank(input({ timeSeconds: 20 }))
 
     expect(result.ok).toBe(false)
-    expect((await rowFor("ada"))?.timeSeconds).toBe(43)
+    expect((await entryFor("ada"))?.timeSeconds).toBe(43)
   })
 
-  it("follows a renamed account to its existing row", async () => {
+  it("follows a renamed account to its existing entry", async () => {
     // X handles can be changed and re-registered. The account id cannot, so a
     // rename must move the row rather than open a second one.
     await submitRank(input({ identity: ADA }))
@@ -96,14 +96,14 @@ describe("ranking with an X identity", () => {
 
     const db = await opened
     expect(await db.select().from(entries)).toHaveLength(1)
-    const row = await rowFor("adalove")
+    const row = await entryFor("adalove")
     expect(row?.timeSeconds).toBe(40)
     expect(row?.identityKey).toBe(ADA.key)
   })
 })
 
 describe("claiming an entry ranked as a guest", () => {
-  it("takes over the row that already carries your handle", async () => {
+  it("takes over the entry that already carries your handle", async () => {
     // Ranked first, signed in later. Claiming must not ask for the time and
     // the boot screen a second time — they are already on the board.
     await submitRank(input({ timeSeconds: 61 }))
@@ -111,7 +111,7 @@ describe("claiming an entry ranked as a guest", () => {
     const result = await claimEntry(ADA)
 
     expect(result.ok).toBe(true)
-    const row = await rowFor("ada")
+    const row = await entryFor("ada")
     expect(row?.verified).toBe(true)
     expect(row?.identityKey).toBe(ADA.key)
     // Untouched: a claim proves who owns the row, it does not restate it.
@@ -119,27 +119,27 @@ describe("claiming an entry ranked as a guest", () => {
     expect(row?.bootScreenUrl).toBe("/uploads/ada-1.png")
   })
 
-  it("says there is nothing to claim rather than inventing a row", async () => {
+  it("says there is nothing to claim rather than inventing an entry", async () => {
     const result = await claimEntry(ADA)
 
     expect(result.ok).toBe(false)
-    expect(await rowFor("ada")).toBeUndefined()
+    expect(await entryFor("ada")).toBeUndefined()
   })
 
-  it("leaves a row that is already verified alone", async () => {
+  it("leaves an entry that is already verified alone", async () => {
     await submitRank(input({ identity: ADA }))
     const result = await claimEntry(ADA)
 
     expect(result.ok).toBe(false)
-    expect((await rowFor("ada"))?.identityKey).toBe(ADA.key)
+    expect((await entryFor("ada"))?.identityKey).toBe(ADA.key)
   })
 
-  it("refuses a row verified by a different account", async () => {
-    // X handles can be reassigned; the row belongs to whoever proved it.
+  it("refuses an entry verified by a different account", async () => {
+    // X handles can be reassigned; the entry belongs to whoever proved it.
     await submitRank(input({ identity: ADA }))
     const result = await claimEntry({ key: "x:99", handle: "ada" })
 
     expect(result.ok).toBe(false)
-    expect((await rowFor("ada"))?.identityKey).toBe(ADA.key)
+    expect((await entryFor("ada"))?.identityKey).toBe(ADA.key)
   })
 })
