@@ -158,9 +158,10 @@ export function App() {
             <Hero counters={data?.counters} />
             <RankDialog onSuccess={onSuccess} />
 
-            {/* Toolbar above the frame, sharing an entry's own inset, so it
-                lines up with the columns instead of floating over them. */}
-            <div className="mt-12 mb-3 px-3 sm:mt-16 sm:px-5">
+            {/* Flush with the board's own frame, not with an entry's inner
+                padding: the rule beneath it is the edge the eye measures
+                against, and stopping short of it reads as misalignment. */}
+            <div className="mt-12 mb-3 sm:mt-16">
               <BoardSearch
                 value={lookup}
                 onChange={setLookup}
