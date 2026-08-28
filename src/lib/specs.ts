@@ -11,10 +11,16 @@ import { CPU_IDS, cpuById, cpuLabel } from "./cpus"
 /** Sizes people actually have, not every number. */
 export const RAM_OPTIONS = [8, 16, 24, 32, 48, 64, 96, 128] as const
 
+/**
+ * Fastest first — this is a speed leaderboard, so the order is the point.
+ *
+ * The two SSDs name their interface rather than saying plain "SSD": an NVMe
+ * drive is also an SSD, so a bare "SSD" option would collect both.
+ */
 export const STORAGE = [
   { id: "nvme", label: "NVMe SSD" },
   { id: "ssd", label: "SATA SSD" },
-  { id: "hdd", label: "Hard drive" },
+  { id: "hdd", label: "HDD" },
 ] as const
 
 export type StorageId = (typeof STORAGE)[number]["id"]
