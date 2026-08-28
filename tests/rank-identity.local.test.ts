@@ -1,0 +1,103 @@
+import { eq } from "drizzle-orm"
+import { beforeEach, describe, expect, it, vi } from "vitest"
+import { openDatabase } from "../src/server/pglite"
+import { entries } from "../src/server/schema"
+
+/**
+ * Ranking against real PGlite, with identity handed in the way the router
+ * hands it: resolved from the session before `submitRank` is ever called.
+ *
+ * An in-memory database per file, swapped in for the on-disk dev one — the
+ * board, the counters and the rank path all read through the same `getDb`.
+ */
+const opened = openDatabase().then((o) => o.db)
+vi.mock("../src/server/db", () => ({ getDb: () => opened }))
+
+const { submitRank } = await import("../src/server/rank")
+
+const ADA = { key: "x:1665012345678901234", handle: "ada" }
+
+function input(over: Partial<Parameters<typeof submitRank>[0]> = {}) {
+  return {
+    handle: "ada",
+    timeSeconds: 43,
+    bootScreenUrl: "/uploads/ada-1.png",
+    cpuId: "amd-ryzen-7-9800x3d",
+    ramGb: 32,
+    storage: "nvme",
+    identity: null,
+    ...over,
+  }
+}
+
+beforeEach(async () => {
+  await (await opened).delete(entries)
+})
+
+async function rowFor(handle: string) {
+  const db = await opened
+  const rows = await db.select().from(entries).where(eq(entries.handle, handle)).limit(1)
+  return rows[0]
+}
+
+describe("ranking with an X identity", () => {
+  it("marks an entry verified and keys it to the account id", async () => {
+    const result = await submitRank(input({ identity: ADA }))
+
+    expect(result.ok).toBe(true)
+    const row = await rowFor("ada")
+    expect(row?.verified).toBe(true)
+    expect(row?.identityKey).toBe("x:1665012345678901234")
+  })
+
+  it("leaves an entry unverified when nobody is signed in", async () => {
+    // Signing in is not a toll: an unverified entry still opens a row.
+    await submitRank(input())
+
+    const row = await rowFor("ada")
+    expect(row?.verified).toBe(false)
+    expect(row?.identityKey).toBeNull()
+  })
+
+  it("takes the handle from the session, not from the form", async () => {
+    // Signed in as @ada, typing @bob must not open a row for @bob.
+    await submitRank(input({ handle: "bob", identity: ADA }))
+
+    expect(await rowFor("bob")).toBeUndefined()
+    expect((await rowFor("ada"))?.verified).toBe(true)
+  })
+
+  it("claims a row someone else opened under your handle", async () => {
+    // The whole point of the badge: squatting an early entry buys nothing.
+    await submitRank(input({ timeSeconds: 300 }))
+    expect((await rowFor("ada"))?.verified).toBe(false)
+
+    const result = await submitRank(input({ timeSeconds: 44, identity: ADA }))
+
+    expect(result.ok).toBe(true)
+    const row = await rowFor("ada")
+    expect(row?.verified).toBe(true)
+    expect(row?.timeSeconds).toBe(44)
+  })
+
+  it("refuses an unverified entry that would overwrite a verified row", async () => {
+    await submitRank(input({ timeSeconds: 43, identity: ADA }))
+    const result = await submitRank(input({ timeSeconds: 20 }))
+
+    expect(result.ok).toBe(false)
+    expect((await rowFor("ada"))?.timeSeconds).toBe(43)
+  })
+
+  it("follows a renamed account to its existing row", async () => {
+    // X handles can be changed and re-registered. The account id cannot, so a
+    // rename must move the row rather than open a second one.
+    await submitRank(input({ identity: ADA }))
+    await submitRank(input({ timeSeconds: 40, identity: { ...ADA, handle: "adalove" } }))
+
+    const db = await opened
+    expect(await db.select().from(entries)).toHaveLength(1)
+    const row = await rowFor("adalove")
+    expect(row?.timeSeconds).toBe(40)
+    expect(row?.identityKey).toBe(ADA.key)
+  })
+})

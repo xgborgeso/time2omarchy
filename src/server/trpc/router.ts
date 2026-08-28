@@ -3,6 +3,7 @@ import { searchCpus } from "../../lib/cpus"
 import { specsSchema } from "../../lib/specs"
 import { handleSchema, timeSchema } from "../../lib/validation"
 import { loadBoard, loadStats } from "../board"
+import { identityFrom } from "../identity"
 import { submitRank } from "../rank"
 import { Limiter } from "../ratelimit"
 import { captureError } from "../sentry"
@@ -65,9 +66,12 @@ export const appRouter = router({
         })
         .extend(specsSchema.shape),
     )
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       try {
         return await submitRank({
+          // Verification is the session and nothing else: whoever is signed in
+          // owns the entry, and the typed handle is only used without one.
+          identity: await identityFrom(ctx.headers),
           handle: input.handle,
           timeSeconds: input.time,
           bootScreenUrl: input.bootScreenUrl,

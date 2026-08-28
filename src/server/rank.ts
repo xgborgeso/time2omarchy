@@ -1,14 +1,18 @@
 import { eq } from "drizzle-orm"
+import type { Identity } from "../lib/identity"
 import { decideEntry } from "../lib/ranking"
 import { isStoredBootScreen } from "../lib/storage-key"
 import type { BoardEntry, RankFailure, RankSuccess } from "../lib/types"
 import { loadBoard } from "./board"
-import { getDb } from "./db"
+import { type Db, getDb } from "./db"
 import { entries } from "./schema"
 import { deleteBootScreen } from "./storage"
 
 export type RankInput = {
-  /** Already normalized and range-checked by the router's schemas. */
+  /**
+   * Already normalized and range-checked by the router's schemas. Ignored
+   * entirely when there is an identity — see `submitRank`.
+   */
   handle: string
   timeSeconds: number
   /** A url this app issued; uploading is a separate step. */
@@ -17,10 +21,35 @@ export type RankInput = {
   cpuId: string
   ramGb: number
   storage: string
+  /** The signed-in X account, or null for an anonymous entry. */
+  identity: Identity | null
+}
+
+/**
+ * The row this entry belongs to.
+ *
+ * By account id first: an X handle can be changed, and the row has to follow
+ * the account rather than stay behind under the old name. Only then by handle,
+ * which is how an anonymous entry — and a first-time claim of one — is found.
+ */
+async function findRow(db: Db, handle: string, identityKey: string | null) {
+  if (identityKey) {
+    const owned = await db
+      .select()
+      .from(entries)
+      .where(eq(entries.identityKey, identityKey))
+      .limit(1)
+    if (owned[0]) return owned[0]
+  }
+  const named = await db.select().from(entries).where(eq(entries.handle, handle)).limit(1)
+  return named[0]
 }
 
 export async function submitRank(input: RankInput): Promise<RankSuccess | RankFailure> {
-  const { handle, timeSeconds, bootScreenUrl } = input
+  const { timeSeconds, bootScreenUrl, identity } = input
+  // Signed in, you are whoever X says you are. A typed handle is a guess, and
+  // a guess must never be able to name someone else.
+  const handle = identity?.handle ?? input.handle
   const specs = {
     cpuId: input.cpuId,
     ramGb: input.ramGb,
@@ -36,18 +65,28 @@ export async function submitRank(input: RankInput): Promise<RankSuccess | RankFa
 
   const db = await getDb()
 
-  // Nothing proves a handle yet: X sign-in replaces the posted nonce, and
-  // until it lands every entry opens a row unverified.
-  const identityKey: string | null = null
-  const verified = false
+  // Signing in is the whole of verification now; there is nothing else to check.
+  const identityKey = identity?.key ?? null
+  const verified = identity !== null
 
-  const existing = await db
-    .select()
-    .from(entries)
-    .where(eq(entries.handle, handle))
-    .limit(1)
+  const current = await findRow(db, handle, identityKey)
 
-  const current = existing[0]
+  // The account was renamed into a handle another row already holds. Rather
+  // than break a unique constraint or quietly overwrite a stranger, say so.
+  if (current && current.handle !== handle) {
+    const holder = await db
+      .select({ id: entries.id })
+      .from(entries)
+      .where(eq(entries.handle, handle))
+      .limit(1)
+    if (holder[0] && holder[0].id !== current.id) {
+      return {
+        ok: false,
+        error: `@${handle} is already held by another entry.`,
+        field: "handle",
+      }
+    }
+  }
 
   const decision = decideEntry(
     current ? { timeSeconds: current.timeSeconds, verified: current.verified } : null,
@@ -111,6 +150,7 @@ export async function submitRank(input: RankInput): Promise<RankSuccess | RankFa
   const updated = await db
     .update(entries)
     .set({
+      handle,
       timeSeconds,
       bootScreenUrl,
       // A claim promotes the row for good; it never demotes a verified one.
@@ -119,7 +159,7 @@ export async function submitRank(input: RankInput): Promise<RankSuccess | RankFa
       ...specs,
       updatedAt: now,
     })
-    .where(eq(entries.handle, handle))
+    .where(eq(entries.id, current.id))
     .returning()
   const row = updated[0]!
   // The previous object is now unreferenced, so drop it rather than leaking it.

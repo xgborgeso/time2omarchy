@@ -7,6 +7,17 @@ import { RankForm } from "@/components/RankForm"
 
 const rankFn = vi.fn()
 const uploadFn = vi.fn()
+const signInFn = vi.fn()
+const signOutFn = vi.fn()
+
+/** Reassigned per test; the hook reads it on every render. */
+let session: { data: { user: { handle: string } } | null } = { data: null }
+
+vi.mock("@/lib/auth-client", () => ({
+  useSession: () => session,
+  signIn: { social: (...args: unknown[]) => signInFn(...args) },
+  signOut: (...args: unknown[]) => signOutFn(...args),
+}))
 
 vi.mock("@/lib/trpc", () => ({
   useTRPC: () => ({
@@ -58,6 +69,9 @@ async function submit(handle: string, time: string, withSpecs = true) {
 }
 
 beforeEach(() => {
+  session = { data: null }
+  signInFn.mockReset()
+  signOutFn.mockReset()
   rankFn.mockReset()
   uploadFn.mockReset()
   uploadFn.mockResolvedValue({ ok: true, url: "/uploads/x-1.png" })
@@ -138,6 +152,51 @@ describe("RankForm", () => {
     expect(screen.queryByLabelText(/link to your post/i)).toBeNull()
     expect(screen.queryByRole("link", { name: /post on x/i })).toBeNull()
     expect(screen.queryByRole("button", { name: /verify @/i })).toBeNull()
+  })
+
+  it("offers to sign in with X, since that is the whole of verification now", async () => {
+    const user = userEvent.setup()
+    render(<RankForm onSuccess={() => {}} />, { wrapper })
+    await user.click(screen.getByRole("button", { name: /sign in with x/i }))
+
+    expect(signInFn).toHaveBeenCalledWith(expect.objectContaining({ provider: "twitter" }))
+  })
+
+  it("stops asking for a handle once one is signed in", async () => {
+    // The handle is the account's, not a field: typing someone else's is
+    // exactly what signing in exists to prevent.
+    session = { data: { user: { handle: "ada" } } }
+    render(<RankForm onSuccess={() => {}} />, { wrapper })
+
+    expect(screen.getByText("@ada")).toBeVisible()
+    expect(screen.queryByRole("textbox", { name: /handle/i })).toBeNull()
+    expect(screen.queryByRole("button", { name: /sign in with x/i })).toBeNull()
+  })
+
+  it("ranks as the signed-in account without a handle being typed", async () => {
+    session = { data: { user: { handle: "ada" } } }
+    rankFn.mockResolvedValue({
+      ok: true,
+      created: true,
+      improved: true,
+      keptBest: false,
+      bestTimeSeconds: 43,
+      entry: {},
+      board: { entries: [] },
+    })
+    const user = userEvent.setup()
+    render(<RankForm onSuccess={() => {}} />, { wrapper })
+    await user.type(screen.getByLabelText(/^time$/i), "43")
+    await user.upload(
+      document.querySelector("input[type=file]") as HTMLInputElement,
+      bootScreen(),
+    )
+    await user.click(screen.getByRole("button", { name: /fill specs/i }))
+    await user.click(screen.getByRole("button", { name: /rank it/i }))
+
+    await waitFor(() => expect(rankFn).toHaveBeenCalled())
+    expect(rankFn.mock.calls[0]?.[0]).toMatchObject({ handle: "ada" })
+    expect(uploadFn).toHaveBeenCalledWith("ada", expect.any(File))
   })
 
   it("refuses to submit without a boot screen", async () => {

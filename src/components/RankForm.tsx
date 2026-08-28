@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query"
-import { ImageIcon } from "lucide-react"
+import { ImageIcon, BadgeCheckIcon as VerifiedIcon } from "lucide-react"
 import {
   type DragEvent,
   type FormEvent,
@@ -13,6 +13,7 @@ import { SpecsFields } from "@/components/SpecsFields"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { signIn, signOut, useSession } from "@/lib/auth-client"
 import type { Specs, StorageId } from "@/lib/specs"
 import { formatTime, isTimeInRange, parseTime } from "@/lib/time"
 import { useTRPC } from "@/lib/trpc"
@@ -28,11 +29,14 @@ type Props = {
 export function RankForm({ onSuccess }: Props) {
   const trpc = useTRPC()
   const rank = useMutation(trpc.rank.mutationOptions())
+  const { data: session } = useSession()
+  /** Signed in, the handle is the account's; typed, it is only a guess. */
+  const signedInHandle = session?.user.handle ?? null
   const handleId = useId()
   const timeId = useId()
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const [handle, setHandle] = useState("")
+  const [typedHandle, setTypedHandle] = useState("")
   const [time, setTime] = useState("")
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
@@ -67,6 +71,8 @@ export function RankForm({ onSuccess }: Props) {
     window.addEventListener("paste", onPaste)
     return () => window.removeEventListener("paste", onPaste)
   }, [])
+
+  const handle = signedInHandle ?? typedHandle
 
   const parsed = useMemo(() => {
     const seconds = parseTime(time)
@@ -162,15 +168,25 @@ export function RankForm({ onSuccess }: Props) {
           >
             handle
           </Label>
-          <Input
-            id={handleId}
-            name="handle"
-            autoComplete="username"
-            placeholder="@handle"
-            value={handle}
-            onChange={(e) => setHandle(e.target.value)}
-            className="h-11"
-          />
+          {signedInHandle ? (
+            <div
+              id={handleId}
+              className="flex h-11 items-center gap-2 rounded-lg border border-primary/40 bg-background px-3"
+            >
+              <VerifiedIcon className="size-4 shrink-0 text-primary" aria-hidden="true" />
+              <span className="truncate text-sm">@{signedInHandle}</span>
+            </div>
+          ) : (
+            <Input
+              id={handleId}
+              name="handle"
+              autoComplete="username"
+              placeholder="@handle"
+              value={typedHandle}
+              onChange={(e) => setTypedHandle(e.target.value)}
+              className="h-11"
+            />
+          )}
         </div>
 
         <div className="flex w-full flex-col gap-1.5 sm:w-32">
@@ -251,6 +267,33 @@ export function RankForm({ onSuccess }: Props) {
       <div className="mt-3">
         <SpecsFields value={specs} onChange={setSpecs} />
       </div>
+      <p className="mt-3 text-xs text-muted-foreground">
+        {signedInHandle ? (
+          <>
+            Verified as @{signedInHandle}.{" "}
+            <button
+              type="button"
+              onClick={() => signOut()}
+              className="font-medium text-foreground underline underline-offset-4 hover:no-underline"
+            >
+              Sign out
+            </button>
+          </>
+        ) : (
+          <>
+            Ranking as a guest.{" "}
+            <button
+              type="button"
+              onClick={() => signIn.social({ provider: "twitter" })}
+              className="font-medium text-foreground underline underline-offset-4 hover:no-underline"
+            >
+              Sign in with X
+            </button>{" "}
+            for the verified mark — it is also the only way to change an entry later.
+          </>
+        )}
+      </p>
+
       {notice ? (
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
           <p role="status" className="text-xs text-primary">
