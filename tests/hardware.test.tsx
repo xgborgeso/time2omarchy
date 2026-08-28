@@ -75,6 +75,48 @@ describe("Hardware", () => {
     expect(onFilter).toHaveBeenCalledWith(null)
   })
 
+  it("keeps naming the chosen bucket after drilling past it", async () => {
+    // Choosing AMD swaps the CPU chart to AMD's families, so no item in the
+    // list carries the value "vendor:AMD" any more. Left to resolve the label
+    // itself, the trigger rendered empty.
+    render(
+      <Hardware
+        hardware={{
+          ...hardware,
+          cpu: [
+            {
+              id: "Ryzen 9000",
+              label: "Ryzen 9000",
+              entries: 28,
+              fastestSeconds: 26,
+              medianSeconds: 34,
+            },
+          ],
+          cpuLevel: "family",
+          cpuParent: { dimension: "vendor", id: "AMD", label: "AMD" },
+        }}
+        onFilter={() => {}}
+        active={{ dimension: "vendor", id: "AMD" }}
+      />,
+    )
+    expect(screen.getByRole("combobox", { name: /narrow the stats/i })).toHaveTextContent(
+      "AMD",
+    )
+  })
+
+  it("names the chosen bucket when it is still in the list", async () => {
+    render(
+      <Hardware
+        hardware={hardware}
+        onFilter={() => {}}
+        active={{ dimension: "storage", id: "ssd" }}
+      />,
+    )
+    expect(screen.getByRole("combobox", { name: /narrow the stats/i })).toHaveTextContent(
+      "SATA SSD",
+    )
+  })
+
   it("says nothing at all when there is nothing measured yet", () => {
     const { container } = render(
       <Hardware

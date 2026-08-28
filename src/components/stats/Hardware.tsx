@@ -80,6 +80,21 @@ export function Hardware({ hardware, active, onFilter }: Props) {
     ] satisfies Group[]
   ).filter((group) => group.buckets.length > 0)
 
+  /**
+   * What the trigger says.
+   *
+   * Rendered rather than left to `SelectValue`: drilling swaps the CPU group
+   * for the level below, so the item carrying the current value is gone from
+   * the list and Radix has no label to resolve — the trigger went blank. The
+   * breadcrumb knows the name in exactly that case.
+   */
+  const activeLabel = active
+    ? (groups.flatMap((group) => group.buckets).find((bucket) => bucket.id === active.id)
+        ?.label ??
+      cpuParent?.label ??
+      active.id)
+    : null
+
   return (
     <section className="flex flex-col gap-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -103,7 +118,7 @@ export function Hardware({ hardware, active, onFilter }: Props) {
           }}
         >
           <SelectTrigger className="!h-9 w-full sm:w-[15rem]" aria-label="Narrow the stats">
-            <SelectValue />
+            <SelectValue>{activeLabel ?? "All installs"}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value={EVERYTHING}>All installs</SelectItem>
