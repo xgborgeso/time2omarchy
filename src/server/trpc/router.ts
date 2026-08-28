@@ -17,6 +17,8 @@ const HOUR = 60 * MINUTE
 /** Reads are generous; writes are cheap to send and expensive to serve. */
 const readLimit = new Limiter({ windowMs: MINUTE, max: 300 })
 const rankLimit = new Limiter({ windowMs: HOUR, max: 8 })
+/** Cheap and idempotent, and a refused claim is a normal thing to retry. */
+const claimLimit = new Limiter({ windowMs: HOUR, max: 30 })
 
 export const appRouter = router({
   health: publicProcedure.query(() => ({ ok: true as const, name: "time2omarchy" })),
@@ -63,7 +65,7 @@ export const appRouter = router({
    * than quietly do nothing.
    */
   claim: publicProcedure
-    .use(throttled(rankLimit, "Slow down. Try again in an hour."))
+    .use(throttled(claimLimit, "Too many attempts. Try again later."))
     .input(z.object({ handle: handleSchema }))
     .mutation(async ({ ctx, input }) => {
       try {

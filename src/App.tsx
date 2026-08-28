@@ -1,7 +1,8 @@
 "use client"
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
+import { toast } from "sonner"
 import { Activity } from "@/components/Activity"
 import { Board } from "@/components/Board"
 import { Footer } from "@/components/Footer"
@@ -12,6 +13,7 @@ import { RulesPage } from "@/components/RulesPage"
 import { SiteHeader } from "@/components/SiteHeader"
 import { StatsPage } from "@/components/stats/StatsPage"
 import { signIn } from "@/lib/auth-client"
+import { claimOutcome } from "@/lib/claim-outcome"
 import { useTRPC } from "@/lib/trpc"
 import type { BoardEntry, RankSuccess } from "@/lib/types"
 import { usePresence } from "@/lib/use-presence"
@@ -26,7 +28,6 @@ export function App() {
   )
   const claim = useMutation(trpc.claim.mutationOptions())
   const [open, setOpen] = useState<BoardEntry | null>(null)
-  const [claimNotice, setClaimNotice] = useState<string | null>(null)
   const [view, setView] = useState<View>("board")
 
   const applyHash = useCallback(() => {
@@ -63,30 +64,33 @@ export function App() {
   /**
    * Finishes a claim that went through X and came back.
    *
-   * The server compares the handle asked for against the account X returned,
-   * so a claim on someone else's entry comes back as a sentence naming both.
+   * Guarded by a ref, not by the effect's dependencies: the mutation object
+   * changes identity on every render, so depending on it fired the claim in a
+   * loop until the rate limit answered instead of the server.
    */
-  const finishClaim = useCallback(
-    async (target: string) => {
-      const result = await claim.mutateAsync({ handle: target }).catch(() => null)
-      setClaimNotice(
-        result?.ok
-          ? `@${target} is verified.`
-          : (result?.error ?? "Could not prove that entry."),
-      )
-      if (result?.ok) {
-        await queryClient.invalidateQueries({ queryKey: trpc.board.queryKey() })
-      }
-      // Drop the parameter so a reload does not try the claim a second time.
-      window.history.replaceState(null, "", window.location.pathname + window.location.hash)
-    },
-    [claim, queryClient, trpc],
-  )
+  const claimed = useRef<string | null>(null)
 
   useEffect(() => {
     const target = new URLSearchParams(window.location.search).get("claim")
-    if (target) void finishClaim(target)
-  }, [finishClaim])
+    if (!target || claimed.current === target) return
+    claimed.current = target
+    // Dropped straight away so a reload never repeats the claim.
+    window.history.replaceState(null, "", window.location.pathname + window.location.hash)
+
+    void claim
+      .mutateAsync({ handle: target })
+      .catch(() => null)
+      .then(async (result) => {
+        const outcome = claimOutcome(target, result)
+        if (outcome.ok) {
+          toast.success(outcome.message)
+          await queryClient.invalidateQueries({ queryKey: trpc.board.queryKey() })
+        } else {
+          toast.error("That claim did not go through", { description: outcome.message })
+        }
+      })
+    // Runs once per handle in the url; the ref above is the real guard.
+  }, [claim, queryClient, trpc])
 
   function navigate(next: View) {
     const hash = hashForView(next)
@@ -121,14 +125,7 @@ export function App() {
           <>
             <Hero counters={data?.counters} />
             <RankForm onSuccess={onSuccess} />
-            {claimNotice ? (
-              <p
-                role="status"
-                className="mx-auto mt-3 w-full max-w-[792px] text-xs text-muted-foreground"
-              >
-                {claimNotice}
-              </p>
-            ) : null}
+
             <Board
               entries={entries}
               loading={isLoading}
