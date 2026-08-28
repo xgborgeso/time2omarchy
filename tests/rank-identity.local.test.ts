@@ -13,7 +13,7 @@ import { entries } from "../src/server/schema"
 const opened = openDatabase().then((o) => o.db)
 vi.mock("../src/server/db", () => ({ getDb: () => opened }))
 
-const { submitRank } = await import("../src/server/rank")
+const { submitRank, claimEntry } = await import("../src/server/rank")
 
 const ADA = { key: "x:1665012345678901234", handle: "ada" }
 
@@ -99,5 +99,47 @@ describe("ranking with an X identity", () => {
     const row = await rowFor("adalove")
     expect(row?.timeSeconds).toBe(40)
     expect(row?.identityKey).toBe(ADA.key)
+  })
+})
+
+describe("claiming an entry ranked as a guest", () => {
+  it("takes over the row that already carries your handle", async () => {
+    // Ranked first, signed in later. Claiming must not ask for the time and
+    // the boot screen a second time — they are already on the board.
+    await submitRank(input({ timeSeconds: 61 }))
+
+    const result = await claimEntry(ADA)
+
+    expect(result.ok).toBe(true)
+    const row = await rowFor("ada")
+    expect(row?.verified).toBe(true)
+    expect(row?.identityKey).toBe(ADA.key)
+    // Untouched: a claim proves who owns the row, it does not restate it.
+    expect(row?.timeSeconds).toBe(61)
+    expect(row?.bootScreenUrl).toBe("/uploads/ada-1.png")
+  })
+
+  it("says there is nothing to claim rather than inventing a row", async () => {
+    const result = await claimEntry(ADA)
+
+    expect(result.ok).toBe(false)
+    expect(await rowFor("ada")).toBeUndefined()
+  })
+
+  it("leaves a row that is already verified alone", async () => {
+    await submitRank(input({ identity: ADA }))
+    const result = await claimEntry(ADA)
+
+    expect(result.ok).toBe(false)
+    expect((await rowFor("ada"))?.identityKey).toBe(ADA.key)
+  })
+
+  it("refuses a row verified by a different account", async () => {
+    // X handles can be reassigned; the row belongs to whoever proved it.
+    await submitRank(input({ identity: ADA }))
+    const result = await claimEntry({ key: "x:99", handle: "ada" })
+
+    expect(result.ok).toBe(false)
+    expect((await rowFor("ada"))?.identityKey).toBe(ADA.key)
   })
 })

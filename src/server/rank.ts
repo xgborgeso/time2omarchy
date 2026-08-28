@@ -179,6 +179,56 @@ export async function submitRank(input: RankInput): Promise<RankSuccess | RankFa
   }
 }
 
+/**
+ * Signing in for a row that is already on the board.
+ *
+ * Someone ranks as a guest, then decides they want the mark. Re-ranking would
+ * work, but it would make them find the boot screen and retype a time that is
+ * already there — so this proves ownership and changes nothing else.
+ */
+export async function claimEntry(
+  identity: Identity,
+): Promise<{ ok: true; entry: BoardEntry } | RankFailure> {
+  const db = await getDb()
+  const rows = await db
+    .select()
+    .from(entries)
+    .where(eq(entries.handle, identity.handle))
+    .limit(1)
+
+  const current = rows[0]
+  if (!current) {
+    return {
+      ok: false,
+      error: `Nothing on the board under @${identity.handle} yet.`,
+      field: "handle",
+    }
+  }
+  if (current.identityKey) {
+    // Either already yours, or X reassigned the handle and the row belongs to
+    // whoever proved it. Neither is ours to overwrite.
+    return {
+      ok: false,
+      error:
+        current.identityKey === identity.key
+          ? `@${identity.handle} is already verified.`
+          : `@${identity.handle} is already claimed by another account.`,
+      field: "handle",
+    }
+  }
+
+  const claimed = await db
+    .update(entries)
+    .set({ verified: true, identityKey: identity.key, updatedAt: new Date() })
+    .where(eq(entries.id, current.id))
+    .returning()
+
+  const board = await loadBoard()
+  const row = claimed[0]!
+  const entry = board.entries.find((e) => e.handle === row.handle) ?? toEntry(row, board)
+  return { ok: true, entry }
+}
+
 function toEntry(
   row: typeof entries.$inferSelect,
   board: { entries: BoardEntry[] },

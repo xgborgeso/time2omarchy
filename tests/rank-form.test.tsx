@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { RankForm } from "@/components/RankForm"
 
 const rankFn = vi.fn()
+const claimFn = vi.fn()
 const uploadFn = vi.fn()
 const signInFn = vi.fn()
 const signOutFn = vi.fn()
@@ -22,6 +23,7 @@ vi.mock("@/lib/auth-client", () => ({
 vi.mock("@/lib/trpc", () => ({
   useTRPC: () => ({
     rank: { mutationOptions: () => ({ mutationFn: rankFn }) },
+    claim: { mutationOptions: () => ({ mutationFn: claimFn }) },
   }),
 }))
 
@@ -48,6 +50,22 @@ function wrapper({ children }: { children: ReactNode }) {
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>
 }
 
+/** A board row as the guest path leaves it: on the board, unproven. */
+function unverified(handle: string) {
+  return {
+    rank: 1,
+    handle,
+    timeSeconds: 61,
+    bootScreenUrl: "/uploads/x.png",
+    verified: false,
+    cpuId: "other",
+    ramGb: 16,
+    storage: "nvme",
+    createdAt: "2026-08-28T00:00:00.000Z",
+    updatedAt: "2026-08-28T00:00:00.000Z",
+  }
+}
+
 function bootScreen(): File {
   return new File(["x"], "boot.png", { type: "image/png" })
 }
@@ -71,6 +89,7 @@ async function submit(handle: string, time: string, withSpecs = true) {
 beforeEach(() => {
   session = { data: null }
   signInFn.mockReset()
+  claimFn.mockReset()
   signOutFn.mockReset()
   rankFn.mockReset()
   uploadFn.mockReset()
@@ -162,6 +181,16 @@ describe("RankForm", () => {
     expect(signInFn).toHaveBeenCalledWith(expect.objectContaining({ provider: "twitter" }))
   })
 
+  it("says so when sign-in cannot even be started", async () => {
+    // A 403 from a mismatched origin used to look exactly like a dead button.
+    signInFn.mockResolvedValue({ error: { message: "Invalid origin" } })
+    const user = userEvent.setup()
+    render(<RankForm onSuccess={() => {}} />, { wrapper })
+    await user.click(screen.getByRole("button", { name: /sign in with x/i }))
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/invalid origin/i)
+  })
+
   it("stops asking for a handle once one is signed in", async () => {
     // The handle is the account's, not a field: typing someone else's is
     // exactly what signing in exists to prevent.
@@ -234,6 +263,37 @@ describe("RankForm", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/43s or 1:12/)
     expect(uploadFn).not.toHaveBeenCalled()
+  })
+
+  it("offers to claim a row already on the board under your handle", async () => {
+    // Ranked as a guest first, signed in after. The entry is right there —
+    // making them retype a time and find the boot screen again is a wall.
+    session = { data: { user: { handle: "ada" } } }
+    claimFn.mockResolvedValue({ ok: true, entry: { handle: "ada" } })
+    const user = userEvent.setup()
+    render(<RankForm onSuccess={() => {}} entries={[unverified("ada")]} />, { wrapper })
+    await user.click(screen.getByRole("button", { name: /claim/i }))
+
+    await waitFor(() => expect(claimFn).toHaveBeenCalled())
+    expect(await screen.findByRole("status")).toHaveTextContent(/verified/i)
+  })
+
+  it("does not offer a claim when the row is already verified", async () => {
+    session = { data: { user: { handle: "ada" } } }
+    render(
+      <RankForm
+        onSuccess={() => {}}
+        entries={[{ ...unverified("ada"), verified: true }]}
+      />,
+      { wrapper },
+    )
+    expect(screen.queryByRole("button", { name: /claim/i })).toBeNull()
+  })
+
+  it("does not offer a claim on someone else's unverified row", async () => {
+    session = { data: { user: { handle: "ada" } } }
+    render(<RankForm onSuccess={() => {}} entries={[unverified("bob")]} />, { wrapper })
+    expect(screen.queryByRole("button", { name: /claim/i })).toBeNull()
   })
 
   it("refuses to submit without a boot screen", async () => {

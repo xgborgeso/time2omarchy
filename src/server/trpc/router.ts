@@ -4,7 +4,7 @@ import { specsSchema } from "../../lib/specs"
 import { handleSchema, timeSchema } from "../../lib/validation"
 import { loadBoard, loadStats } from "../board"
 import { identityFrom } from "../identity"
-import { submitRank } from "../rank"
+import { claimEntry, submitRank } from "../rank"
 import { Limiter } from "../ratelimit"
 import { captureError } from "../sentry"
 import { touchPresence } from "../stats"
@@ -52,6 +52,34 @@ export const appRouter = router({
       const visitorId = visitorIdFrom(ctx.headers, ctx.resHeaders, ctx.secure)
       await touchPresence(visitorId, input.countView)
       return { ok: true as const }
+    }),
+
+  /**
+   * Takes over a row that was ranked as a guest. No input: the only thing it
+   * could take is a handle, and a handle someone types is exactly what this
+   * exists to stop being trusted.
+   */
+  claim: publicProcedure
+    .use(throttled(rankLimit, "Slow down. Try again in an hour."))
+    .mutation(async ({ ctx }) => {
+      try {
+        const identity = await identityFrom(ctx.headers)
+        if (!identity) {
+          return {
+            ok: false as const,
+            error: "Sign in with X first.",
+            field: "handle" as const,
+          }
+        }
+        return await claimEntry(identity)
+      } catch (err) {
+        await captureError(err)
+        return {
+          ok: false as const,
+          error: "Could not claim that entry",
+          field: "form" as const,
+        }
+      }
     }),
 
   rank: publicProcedure

@@ -74,7 +74,7 @@ export function App() {
         ) : (
           <>
             <Hero counters={data?.counters} />
-            <RankForm onSuccess={onSuccess} />
+            <RankForm onSuccess={onSuccess} entries={entries} />
             <Board entries={entries} loading={isLoading} onOpen={setOpen} />
             {entries.length === 0 && !isLoading ? (
               <p className="border-y border-card py-10 text-center text-sm text-muted-foreground">

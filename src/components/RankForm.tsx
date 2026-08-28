@@ -18,7 +18,7 @@ import { errorText } from "@/lib/error-text"
 import type { Specs, StorageId } from "@/lib/specs"
 import { formatTime, isTimeInRange, parseTime } from "@/lib/time"
 import { useTRPC } from "@/lib/trpc"
-import type { RankSuccess } from "@/lib/types"
+import type { BoardEntry, RankSuccess } from "@/lib/types"
 import { uploadBootScreen } from "@/lib/upload"
 import { cn } from "@/lib/utils"
 import { timeError } from "@/lib/validation"
@@ -26,11 +26,14 @@ import { ShareButton } from "./ShareButton"
 
 type Props = {
   onSuccess: (result: RankSuccess) => void
+  /** The board, so a row waiting to be claimed can be offered rather than hunted for. */
+  entries?: BoardEntry[]
 }
 
-export function RankForm({ onSuccess }: Props) {
+export function RankForm({ onSuccess, entries = [] }: Props) {
   const trpc = useTRPC()
   const rank = useMutation(trpc.rank.mutationOptions())
+  const claim = useMutation(trpc.claim.mutationOptions())
   const { data: session } = useSession()
   /** Signed in, the handle is the account's; typed, it is only a guess. */
   const signedInHandle = session?.user.handle ?? null
@@ -75,6 +78,28 @@ export function RankForm({ onSuccess }: Props) {
   }, [])
 
   const handle = signedInHandle ?? typedHandle
+  /** Ranked as a guest, signed in after: the row is there, just unproven. */
+  const claimable = entries.some((e) => e.handle === signedInHandle && !e.verified)
+
+  /**
+   * Sign-in reports failure as data, not by throwing, so an unstarted flow
+   * looked exactly like a dead button until this said so out loud.
+   */
+  async function startSignIn() {
+    setError(null)
+    const result = await signIn.social({ provider: "twitter", callbackURL: "/" })
+    if (result?.error) {
+      setError(result.error.message ?? "Could not start sign-in with X.")
+    }
+  }
+
+  async function claimEntry() {
+    setError(null)
+    setNotice(null)
+    const result = await claim.mutateAsync().catch(() => null)
+    if (result?.ok) setNotice(`@${signedInHandle} is now verified.`)
+    else setError(result?.error ?? "Could not claim that entry.")
+  }
 
   const parsed = useMemo(() => {
     const seconds = parseTime(time)
@@ -279,7 +304,22 @@ export function RankForm({ onSuccess }: Props) {
       <p className="mt-3 text-xs text-muted-foreground">
         {signedInHandle ? (
           <>
-            Verified as @{signedInHandle}.{" "}
+            {claimable ? (
+              <>
+                @{signedInHandle} is already on the board, unverified.{" "}
+                <button
+                  type="button"
+                  onClick={claimEntry}
+                  disabled={claim.isPending}
+                  className="font-medium text-foreground underline underline-offset-4 hover:no-underline disabled:opacity-50"
+                >
+                  Claim it
+                </button>{" "}
+                to take it over — your time and boot screen stay as they are.{" "}
+              </>
+            ) : (
+              <>Verified as @{signedInHandle}. </>
+            )}
             <button
               type="button"
               onClick={() => signOut()}
@@ -293,7 +333,7 @@ export function RankForm({ onSuccess }: Props) {
             Ranking as a guest.{" "}
             <button
               type="button"
-              onClick={() => signIn.social({ provider: "twitter" })}
+              onClick={startSignIn}
               className="font-medium text-foreground underline underline-offset-4 hover:no-underline"
             >
               Sign in with X
