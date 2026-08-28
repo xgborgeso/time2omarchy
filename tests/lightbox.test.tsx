@@ -29,22 +29,23 @@ describe("Lightbox", () => {
     expect(screen.getByText("Boot screen for @ada")).toBeInTheDocument()
   })
 
-  it("shows the formatted time in both the caption and the description", () => {
-    // Sighted users read the caption; screen readers get the description.
+  it("describes the run in the time format the board uses", () => {
+    // Nothing is drawn for sighted users, so the description is the only
+    // place the run is named at all — and it says 1:04, never 64s.
     render(<Lightbox entry={entry} onClose={() => {}} />)
-    expect(screen.getAllByText(/1:04/).length).toBeGreaterThanOrEqual(2)
+    expect(screen.getByText(/1:04/)).toBeInTheDocument()
     expect(screen.queryByText(/64s/)).toBeNull()
   })
 
-  it("shows the hardware when the ranker gave it", () => {
+  it("draws nothing the row behind it is already showing", () => {
+    // The dialog is one image. Time, rank, handle, specs and the verified
+    // mark are all on the entry that was clicked to open it, still on screen
+    // behind the overlay, so a caption here was the same record twice.
     render(<Lightbox entry={entry} onClose={() => {}} />)
-    expect(screen.getByText("Intel Core i7-13700K · 32GB · NVMe")).toBeInTheDocument()
-  })
-
-  it("names the not-listed bucket rather than showing a gap", () => {
-    // Specs are required, but the catalogue can still miss a chip.
-    render(<Lightbox entry={{ ...entry, cpuId: "other" }} onClose={() => {}} />)
-    expect(screen.getByText("Other CPU · 32GB · NVMe")).toBeInTheDocument()
+    expect(screen.queryByRole("link")).toBeNull()
+    expect(screen.queryByText("Intel Core i7-13700K · 32GB · NVMe")).toBeNull()
+    expect(screen.queryByText("#1")).toBeNull()
+    expect(screen.getByRole("img", { name: "Boot screen for @ada" })).toBeInTheDocument()
   })
 
   it("closes on Escape", async () => {
