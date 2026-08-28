@@ -55,23 +55,27 @@ export const appRouter = router({
     }),
 
   /**
-   * Takes over a row that was ranked as a guest. No input: the only thing it
-   * could take is a handle, and a handle someone types is exactly what this
-   * exists to stop being trusted.
+   * Takes over an entry that was ranked as a guest.
+   *
+   * The handle names which entry was asked for; it is never authority. The
+   * server acts only where X's answer matches it, and says so plainly when it
+   * does not — a claim on someone else's entry has to explain itself rather
+   * than quietly do nothing.
    */
   claim: publicProcedure
     .use(throttled(rankLimit, "Slow down. Try again in an hour."))
-    .mutation(async ({ ctx }) => {
+    .input(z.object({ handle: handleSchema }))
+    .mutation(async ({ ctx, input }) => {
       try {
         const identity = await identityFrom(ctx.headers)
         if (!identity) {
           return {
             ok: false as const,
-            error: "Sign in with X first.",
+            error: "Prove the entry with X first.",
             field: "handle" as const,
           }
         }
-        return await claimEntry(identity)
+        return await claimEntry(identity, input.handle)
       } catch (err) {
         await captureError(err)
         return {

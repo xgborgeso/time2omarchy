@@ -59,12 +59,15 @@ describe("ranking with an X identity", () => {
     expect(row?.identityKey).toBeNull()
   })
 
-  it("takes the handle from the session, not from the form", async () => {
-    // Signed in as @ada, typing @bob must not open a row for @bob.
+  it("ignores an identity that does not match the handle being ranked", async () => {
+    // There is no signed-in state in this product, only proof of one entry.
+    // Proof of @ada says nothing about an entry called @bob, so @bob opens
+    // exactly as a guest entry would.
     await submitRank(input({ handle: "bob", identity: ADA }))
 
-    expect(await entryFor("bob")).toBeUndefined()
-    expect((await entryFor("ada"))?.verified).toBe(true)
+    const bob = await entryFor("bob")
+    expect(bob?.verified).toBe(false)
+    expect(bob?.identityKey).toBeNull()
   })
 
   it("claims an entry someone else opened under your handle", async () => {
@@ -92,7 +95,13 @@ describe("ranking with an X identity", () => {
     // X handles can be changed and re-registered. The account id cannot, so a
     // rename must move the row rather than open a second one.
     await submitRank(input({ identity: ADA }))
-    await submitRank(input({ timeSeconds: 40, identity: { ...ADA, handle: "adalove" } }))
+    await submitRank(
+      input({
+        handle: "adalove",
+        timeSeconds: 40,
+        identity: { ...ADA, handle: "adalove" },
+      }),
+    )
 
     const db = await opened
     expect(await db.select().from(entries)).toHaveLength(1)
@@ -108,7 +117,7 @@ describe("claiming an entry ranked as a guest", () => {
     // the boot screen a second time — they are already on the board.
     await submitRank(input({ timeSeconds: 61 }))
 
-    const result = await claimEntry(ADA)
+    const result = await claimEntry(ADA, "ada")
 
     expect(result.ok).toBe(true)
     const row = await entryFor("ada")
@@ -120,7 +129,7 @@ describe("claiming an entry ranked as a guest", () => {
   })
 
   it("says there is nothing to claim rather than inventing an entry", async () => {
-    const result = await claimEntry(ADA)
+    const result = await claimEntry(ADA, "ada")
 
     expect(result.ok).toBe(false)
     expect(await entryFor("ada")).toBeUndefined()
@@ -128,7 +137,7 @@ describe("claiming an entry ranked as a guest", () => {
 
   it("leaves an entry that is already verified alone", async () => {
     await submitRank(input({ identity: ADA }))
-    const result = await claimEntry(ADA)
+    const result = await claimEntry(ADA, "ada")
 
     expect(result.ok).toBe(false)
     expect((await entryFor("ada"))?.identityKey).toBe(ADA.key)
@@ -137,7 +146,7 @@ describe("claiming an entry ranked as a guest", () => {
   it("refuses an entry verified by a different account", async () => {
     // X handles can be reassigned; the entry belongs to whoever proved it.
     await submitRank(input({ identity: ADA }))
-    const result = await claimEntry({ key: "x:99", handle: "ada" })
+    const result = await claimEntry({ key: "x:99", handle: "ada" }, "ada")
 
     expect(result.ok).toBe(false)
     expect((await entryFor("ada"))?.identityKey).toBe(ADA.key)
@@ -150,9 +159,14 @@ describe("claiming an entry that is not yours", () => {
     // no handle at all — the server only ever looks up the caller's own.
     await submitRank(input({ handle: "ada" }))
 
-    const result = await claimEntry({ key: "x:777", handle: "bob" })
+    const result = await claimEntry({ key: "x:777", handle: "bob" }, "ada")
 
     expect(result.ok).toBe(false)
+    // Named on both sides, so it is obvious what went wrong and for whom.
+    if (!result.ok) {
+      expect(result.error).toContain("@ada")
+      expect(result.error).toContain("@bob")
+    }
     const ada = await entryFor("ada")
     expect(ada?.verified).toBe(false)
     expect(ada?.identityKey).toBeNull()
@@ -163,7 +177,7 @@ describe("claiming an entry that is not yours", () => {
     await submitRank(input({ handle: "ada" }))
     await submitRank(input({ handle: "bob" }))
 
-    const result = await claimEntry({ key: "x:777", handle: "bob" })
+    const result = await claimEntry({ key: "x:777", handle: "bob" }, "bob")
 
     expect(result.ok).toBe(true)
     expect((await entryFor("bob"))?.identityKey).toBe("x:777")
@@ -173,7 +187,7 @@ describe("claiming an entry that is not yours", () => {
   it("cannot take an entry by renaming into a handle someone already holds", async () => {
     // X frees a handle when it is changed. Whoever proved an entry keeps it.
     await submitRank(input({ handle: "ada", identity: ADA }))
-    const result = await claimEntry({ key: "x:777", handle: "ada" })
+    const result = await claimEntry({ key: "x:777", handle: "ada" }, "ada")
 
     expect(result.ok).toBe(false)
     expect((await entryFor("ada"))?.identityKey).toBe(ADA.key)

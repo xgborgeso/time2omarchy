@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query"
-import { ImageIcon, BadgeCheckIcon as VerifiedIcon } from "lucide-react"
+import { ImageIcon } from "lucide-react"
 import {
   type DragEvent,
   type FormEvent,
@@ -12,19 +12,13 @@ import {
 import { SpecsFields } from "@/components/SpecsFields"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupButton,
-  InputGroupInput,
-} from "@/components/ui/input-group"
 import { Label } from "@/components/ui/label"
-import { signIn, signOut, useSession } from "@/lib/auth-client"
+import { signIn } from "@/lib/auth-client"
 import { errorText } from "@/lib/error-text"
 import type { Specs, StorageId } from "@/lib/specs"
 import { formatTime, isTimeInRange, parseTime } from "@/lib/time"
 import { useTRPC } from "@/lib/trpc"
-import type { BoardEntry, RankSuccess } from "@/lib/types"
+import type { RankSuccess } from "@/lib/types"
 import { uploadBootScreen } from "@/lib/upload"
 import { cn } from "@/lib/utils"
 import { timeError } from "@/lib/validation"
@@ -41,22 +35,16 @@ function XMark({ className }: { className?: string }) {
 
 type Props = {
   onSuccess: (result: RankSuccess) => void
-  /** The board, so an entry waiting to be claimed is offered, not hunted for. */
-  entries?: BoardEntry[]
 }
 
-export function RankForm({ onSuccess, entries = [] }: Props) {
+export function RankForm({ onSuccess }: Props) {
   const trpc = useTRPC()
   const rank = useMutation(trpc.rank.mutationOptions())
-  const claim = useMutation(trpc.claim.mutationOptions())
-  const { data: session } = useSession()
-  /** Signed in, the handle is the account's; typed, it is only a guess. */
-  const signedInHandle = session?.user.handle ?? null
   const handleId = useId()
   const timeId = useId()
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const [typedHandle, setTypedHandle] = useState("")
+  const [handle, setHandle] = useState("")
   const [time, setTime] = useState("")
   const [file, setFile] = useState<File | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
@@ -92,34 +80,18 @@ export function RankForm({ onSuccess, entries = [] }: Props) {
     return () => window.removeEventListener("paste", onPaste)
   }, [])
 
-  const handle = signedInHandle ?? typedHandle
-  /** Ranked as a guest, signed in after: the entry is there, just unproven. */
-  const claimable = entries.some((e) => e.handle === signedInHandle && !e.verified)
-
   /**
-   * Sign-in reports failure as data, not by throwing, so an unstarted flow
-   * looked exactly like a dead button until this said so out loud.
+   * Proving an entry is the only thing X is used for, so this hands the
+   * handle being ranked to the callback and comes straight back to it.
    */
-  async function startSignIn() {
+  async function claimEntry(target: string) {
     setError(null)
     const result = await signIn.social({
       provider: "twitter",
-      callbackURL: "/",
-      // Declining on X is a choice, not a crash: it belongs back on the
-      // board, not on Better Auth's bare /api/auth/error page.
+      callbackURL: `/?claim=${encodeURIComponent(target)}`,
       errorCallbackURL: "/",
     })
-    if (result?.error) {
-      setError(result.error.message ?? "Could not start sign-in with X.")
-    }
-  }
-
-  async function claimEntry() {
-    setError(null)
-    setNotice(null)
-    const result = await claim.mutateAsync().catch(() => null)
-    if (result?.ok) setNotice(`@${signedInHandle} is now verified.`)
-    else setError(result?.error ?? "Could not claim that entry.")
+    if (result?.error) setError(result.error.message ?? "Could not reach X.")
   }
 
   const parsed = useMemo(() => {
@@ -223,46 +195,15 @@ export function RankForm({ onSuccess, entries = [] }: Props) {
           >
             handle
           </Label>
-          {signedInHandle ? (
-            <div
-              id={handleId}
-              className="flex h-11 items-center gap-2 rounded-lg border border-primary/40 bg-background px-3"
-            >
-              <VerifiedIcon className="size-4 shrink-0 text-primary" aria-hidden="true" />
-              <span className="flex-1 truncate text-sm">@{signedInHandle}</span>
-              <button
-                type="button"
-                onClick={() => signOut()}
-                className="shrink-0 text-[11px] uppercase tracking-[0.16em] text-muted-foreground hover:text-foreground"
-              >
-                sign out
-              </button>
-            </div>
-          ) : (
-            // The offer sits in the field because the field is the decision:
-            // this is exactly where a handle gets mistyped for someone else's.
-            <InputGroup className="h-11">
-              <InputGroupInput
-                id={handleId}
-                name="handle"
-                autoComplete="username"
-                placeholder="@handle"
-                value={typedHandle}
-                onChange={(e) => setTypedHandle(e.target.value)}
-              />
-              <InputGroupAddon align="inline-end">
-                <InputGroupButton
-                  type="button"
-                  size="xs"
-                  onClick={startSignIn}
-                  className="gap-1.5"
-                >
-                  <XMark className="size-3" />
-                  Sign in
-                </InputGroupButton>
-              </InputGroupAddon>
-            </InputGroup>
-          )}
+          <Input
+            id={handleId}
+            name="handle"
+            autoComplete="username"
+            placeholder="@handle"
+            value={handle}
+            onChange={(e) => setHandle(e.target.value)}
+            className="h-11"
+          />
         </div>
 
         <div className="flex w-full flex-col gap-1.5 sm:w-32">
@@ -287,7 +228,22 @@ export function RankForm({ onSuccess, entries = [] }: Props) {
             className="h-11 tabular-nums"
           />
         </div>
+      </div>
 
+      {error ? (
+        <p role="alert" className="mt-3 text-xs text-destructive">
+          {error}
+        </p>
+      ) : null}
+      {/* Second, and always visible: these are required, and a required field
+          behind a disclosure is a trap. */}
+      <div className="mt-3">
+        <SpecsFields value={specs} onChange={setSpecs} />
+      </div>
+
+      {/* Last, in this order on purpose: nothing should invite you to submit
+          before you have been asked for everything. */}
+      <div className="mt-3 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
@@ -327,45 +283,13 @@ export function RankForm({ onSuccess, entries = [] }: Props) {
         <Button
           type="submit"
           disabled={busy}
-          className="h-11 shrink-0 px-6 text-sm font-bold uppercase"
+          className="h-11 shrink-0 px-6 text-sm font-bold uppercase sm:ml-auto"
         >
           {busy ? "Ranking…" : "Rank it"}
         </Button>
       </div>
-
-      {error ? (
-        <p role="alert" className="mt-3 text-xs text-destructive">
-          {error}
-        </p>
-      ) : null}
-      {/* Always visible: these are required, and a required field behind a
-          disclosure is a trap. */}
-      <div className="mt-3">
-        <SpecsFields value={specs} onChange={setSpecs} />
-      </div>
       <p className="mt-3 text-xs text-muted-foreground">
-        {signedInHandle ? (
-          claimable ? (
-            <>
-              @{signedInHandle} is already on the board, unverified.{" "}
-              <button
-                type="button"
-                onClick={claimEntry}
-                disabled={claim.isPending}
-                className="font-medium text-foreground underline underline-offset-4 hover:no-underline disabled:opacity-50"
-              >
-                Claim it
-              </button>{" "}
-              to take it over — your time and boot screen stay as they are.
-            </>
-          ) : (
-            <>Verified as @{signedInHandle}. Your entry is yours to change.</>
-          )
-        ) : (
-          // No second sign-in button: the field above already offers it, and
-          // two of them read as two different things.
-          <>An unverified entry can be opened, but never changed afterwards.</>
-        )}
+        An unverified entry can be opened, but never changed afterwards.
       </p>
 
       {notice ? (
@@ -373,10 +297,10 @@ export function RankForm({ onSuccess, entries = [] }: Props) {
           <p role="status" className="text-xs text-primary">
             {notice}
           </p>
-          {placed && !signedInHandle ? (
+          {placed && !placed.entry.verified ? (
             <button
               type="button"
-              onClick={startSignIn}
+              onClick={() => claimEntry(handle)}
               className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-lg border border-primary/40 px-5 text-sm font-bold uppercase text-foreground transition-colors hover:bg-muted/50"
             >
               <XMark className="size-3.5" />

@@ -9,10 +9,7 @@ import { entries } from "./schema"
 import { deleteBootScreen } from "./storage"
 
 export type RankInput = {
-  /**
-   * Already normalized and range-checked by the router's schemas. Ignored
-   * entirely when there is an identity — see `submitRank`.
-   */
+  /** Already normalized and range-checked by the router's schemas. */
   handle: string
   timeSeconds: number
   /** A url this app issued; uploading is a separate step. */
@@ -21,7 +18,7 @@ export type RankInput = {
   cpuId: string
   ramGb: number
   storage: string
-  /** The signed-in X account, or null for an anonymous entry. */
+  /** A proven X account, if one is carried. Counts only for its own handle. */
   identity: Identity | null
 }
 
@@ -47,9 +44,10 @@ async function findEntry(db: Db, handle: string, identityKey: string | null) {
 
 export async function submitRank(input: RankInput): Promise<RankSuccess | RankFailure> {
   const { timeSeconds, bootScreenUrl, identity } = input
-  // Signed in, you are whoever X says you are. A typed handle is a guess, and
-  // a guess must never be able to name someone else.
-  const handle = identity?.handle ?? input.handle
+  // There is no signed-in state in this product, only proof of one entry. The
+  // handle is always the one typed; proof of @ada says nothing about @bob.
+  const handle = input.handle
+  const proven = identity?.handle === handle ? identity : null
   const specs = {
     cpuId: input.cpuId,
     ramGb: input.ramGb,
@@ -65,9 +63,9 @@ export async function submitRank(input: RankInput): Promise<RankSuccess | RankFa
 
   const db = await getDb()
 
-  // Signing in is the whole of verification now; there is nothing else to check.
-  const identityKey = identity?.key ?? null
-  const verified = identity !== null
+  // Claiming is the whole of verification; there is nothing else to check.
+  const identityKey = proven?.key ?? null
+  const verified = proven !== null
 
   const current = await findEntry(db, handle, identityKey)
 
@@ -180,7 +178,7 @@ export async function submitRank(input: RankInput): Promise<RankSuccess | RankFa
 }
 
 /**
- * Signing in for an entry that is already on the board.
+ * Proving an entry that is already on the board.
  *
  * Someone ranks as a guest, then decides they want the mark. Re-ranking would
  * work, but it would make them find the boot screen and retype a time that is
@@ -188,7 +186,19 @@ export async function submitRank(input: RankInput): Promise<RankSuccess | RankFa
  */
 export async function claimEntry(
   identity: Identity,
+  /** The entry the person asked for. A request, never authority. */
+  requested: string,
 ): Promise<{ ok: true; entry: BoardEntry } | RankFailure> {
+  // Checked before anything is looked up, so the answer names both sides
+  // rather than leaving someone staring at a button that did nothing.
+  if (identity.handle !== requested) {
+    return {
+      ok: false,
+      error: `That entry belongs to @${requested}. You authorized as @${identity.handle}.`,
+      field: "handle",
+    }
+  }
+
   const db = await getDb()
   const rows = await db
     .select()

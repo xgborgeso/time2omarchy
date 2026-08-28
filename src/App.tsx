@@ -11,7 +11,7 @@ import { RankForm } from "@/components/RankForm"
 import { RulesPage } from "@/components/RulesPage"
 import { SiteHeader } from "@/components/SiteHeader"
 import { StatsPage } from "@/components/stats/StatsPage"
-import { signIn, useSession } from "@/lib/auth-client"
+import { signIn } from "@/lib/auth-client"
 import { useTRPC } from "@/lib/trpc"
 import type { BoardEntry, RankSuccess } from "@/lib/types"
 import { usePresence } from "@/lib/use-presence"
@@ -24,10 +24,9 @@ export function App() {
   const { data, isLoading } = useQuery(
     trpc.board.queryOptions(undefined, { refetchInterval: 10_000 }),
   )
-  const { data: session } = useSession()
-  const signedInHandle = session?.user.handle ?? null
   const claim = useMutation(trpc.claim.mutationOptions())
   const [open, setOpen] = useState<BoardEntry | null>(null)
+  const [claimNotice, setClaimNotice] = useState<string | null>(null)
   const [view, setView] = useState<View>("board")
 
   const applyHash = useCallback(() => {
@@ -47,22 +46,47 @@ export function App() {
   }, [view])
 
   /**
-   * Taking over an entry ranked as a guest.
+   * Proving an entry, which is the only thing X is used for here.
    *
-   * Signed out this can only start the sign-in — an entry's handle is not proof
-   * of anything, so the server is never told which entry to claim. It works out
-   * ownership from the session alone once there is one.
+   * The handle rides along in the return url rather than in state: the round
+   * trip through X reloads the page, so anything held in memory is gone by the
+   * time the answer comes back.
    */
-  async function onClaim() {
-    if (!signedInHandle) {
-      await signIn.social({ provider: "twitter", callbackURL: "/", errorCallbackURL: "/" })
-      return
-    }
-    const result = await claim.mutateAsync().catch(() => null)
-    if (result?.ok) {
-      await queryClient.invalidateQueries({ queryKey: trpc.board.queryKey() })
-    }
+  async function onClaim(entry: BoardEntry) {
+    await signIn.social({
+      provider: "twitter",
+      callbackURL: `/?claim=${encodeURIComponent(entry.handle)}`,
+      errorCallbackURL: "/",
+    })
   }
+
+  /**
+   * Finishes a claim that went through X and came back.
+   *
+   * The server compares the handle asked for against the account X returned,
+   * so a claim on someone else's entry comes back as a sentence naming both.
+   */
+  const finishClaim = useCallback(
+    async (target: string) => {
+      const result = await claim.mutateAsync({ handle: target }).catch(() => null)
+      setClaimNotice(
+        result?.ok
+          ? `@${target} is verified.`
+          : (result?.error ?? "Could not prove that entry."),
+      )
+      if (result?.ok) {
+        await queryClient.invalidateQueries({ queryKey: trpc.board.queryKey() })
+      }
+      // Drop the parameter so a reload does not try the claim a second time.
+      window.history.replaceState(null, "", window.location.pathname + window.location.hash)
+    },
+    [claim, queryClient, trpc],
+  )
+
+  useEffect(() => {
+    const target = new URLSearchParams(window.location.search).get("claim")
+    if (target) void finishClaim(target)
+  }, [finishClaim])
 
   function navigate(next: View) {
     const hash = hashForView(next)
@@ -96,12 +120,19 @@ export function App() {
         ) : (
           <>
             <Hero counters={data?.counters} />
-            <RankForm onSuccess={onSuccess} entries={entries} />
+            <RankForm onSuccess={onSuccess} />
+            {claimNotice ? (
+              <p
+                role="status"
+                className="mx-auto mt-3 w-full max-w-[792px] text-xs text-muted-foreground"
+              >
+                {claimNotice}
+              </p>
+            ) : null}
             <Board
               entries={entries}
               loading={isLoading}
               onOpen={setOpen}
-              signedInHandle={signedInHandle}
               onClaim={onClaim}
             />
             {entries.length === 0 && !isLoading ? (

@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
-import { render, screen, waitFor, within } from "@testing-library/react"
+import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
@@ -48,22 +48,6 @@ function wrapper({ children }: { children: ReactNode }) {
   // retry off: a failing mutation should surface immediately, not after backoff.
   const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
   return <QueryClientProvider client={client}>{children}</QueryClientProvider>
-}
-
-/** A board entry as the guest path leaves it: on the board, unproven. */
-function unverified(handle: string) {
-  return {
-    rank: 1,
-    handle,
-    timeSeconds: 61,
-    bootScreenUrl: "/uploads/x.png",
-    verified: false,
-    cpuId: "other",
-    ramGb: 16,
-    storage: "nvme",
-    createdAt: "2026-08-28T00:00:00.000Z",
-    updatedAt: "2026-08-28T00:00:00.000Z",
-  }
 }
 
 function bootScreen(): File {
@@ -173,29 +157,6 @@ describe("RankForm", () => {
     expect(screen.queryByRole("button", { name: /verify @/i })).toBeNull()
   })
 
-  it("offers to sign in from the handle field, where the handle is decided", async () => {
-    // Buried in small print below the form, this was missed entirely — and
-    // the field is where a mistyped handle happens in the first place.
-    const user = userEvent.setup()
-    render(<RankForm onSuccess={() => {}} />, { wrapper })
-    const field = screen.getByRole("textbox", { name: /handle/i }).closest("[role=group]")
-    expect(field).not.toBeNull()
-    const signIn = within(field as HTMLElement).getByRole("button", {
-      name: /sign in/i,
-    })
-    await user.click(signIn)
-
-    // Both destinations named: declining on X must land back on the board,
-    // not on Better Auth's bare /api/auth/error page.
-    expect(signInFn).toHaveBeenCalledWith(
-      expect.objectContaining({
-        provider: "twitter",
-        callbackURL: "/",
-        errorCallbackURL: "/",
-      }),
-    )
-  })
-
   it("offers to verify the entry it just put on the board", async () => {
     // The moment right after ranking is when the badge is worth most: the
     // position is real and the share button is already there.
@@ -212,78 +173,6 @@ describe("RankForm", () => {
     await submit("ada", "43")
 
     expect(await screen.findByRole("button", { name: /claim this entry/i })).toBeVisible()
-  })
-
-  it("does not offer to verify an entry that already is", async () => {
-    session = { data: { user: { handle: "ada" } } }
-    rankFn.mockResolvedValue({
-      ok: true,
-      created: true,
-      improved: true,
-      keptBest: false,
-      bestTimeSeconds: 43,
-      entry: { rank: 1, timeSeconds: 43 },
-      board: { entries: [], counters: { entries: 1 } },
-    })
-    const user = userEvent.setup()
-    render(<RankForm onSuccess={() => {}} />, { wrapper })
-    await user.type(screen.getByLabelText(/^time$/i), "43")
-    await user.upload(
-      document.querySelector("input[type=file]") as HTMLInputElement,
-      bootScreen(),
-    )
-    await user.click(screen.getByRole("button", { name: /fill specs/i }))
-    await user.click(screen.getByRole("button", { name: /rank it/i }))
-
-    await waitFor(() => expect(rankFn).toHaveBeenCalled())
-    expect(screen.queryByRole("button", { name: /claim this entry/i })).toBeNull()
-  })
-
-  it("says so when sign-in cannot even be started", async () => {
-    // A 403 from a mismatched origin used to look exactly like a dead button.
-    signInFn.mockResolvedValue({ error: { message: "Invalid origin" } })
-    const user = userEvent.setup()
-    render(<RankForm onSuccess={() => {}} />, { wrapper })
-    await user.click(screen.getByRole("button", { name: /^sign in$/i }))
-
-    expect(await screen.findByRole("alert")).toHaveTextContent(/invalid origin/i)
-  })
-
-  it("stops asking for a handle once one is signed in", async () => {
-    // The handle is the account's, not a field: typing someone else's is
-    // exactly what signing in exists to prevent.
-    session = { data: { user: { handle: "ada" } } }
-    render(<RankForm onSuccess={() => {}} />, { wrapper })
-
-    expect(screen.getByText("@ada")).toBeVisible()
-    expect(screen.queryByRole("textbox", { name: /handle/i })).toBeNull()
-    expect(screen.queryByRole("button", { name: /^sign in$/i })).toBeNull()
-  })
-
-  it("ranks as the signed-in account without a handle being typed", async () => {
-    session = { data: { user: { handle: "ada" } } }
-    rankFn.mockResolvedValue({
-      ok: true,
-      created: true,
-      improved: true,
-      keptBest: false,
-      bestTimeSeconds: 43,
-      entry: {},
-      board: { entries: [] },
-    })
-    const user = userEvent.setup()
-    render(<RankForm onSuccess={() => {}} />, { wrapper })
-    await user.type(screen.getByLabelText(/^time$/i), "43")
-    await user.upload(
-      document.querySelector("input[type=file]") as HTMLInputElement,
-      bootScreen(),
-    )
-    await user.click(screen.getByRole("button", { name: /fill specs/i }))
-    await user.click(screen.getByRole("button", { name: /rank it/i }))
-
-    await waitFor(() => expect(rankFn).toHaveBeenCalled())
-    expect(rankFn.mock.calls[0]?.[0]).toMatchObject({ handle: "ada" })
-    expect(uploadFn).toHaveBeenCalledWith("ada", expect.any(File))
   })
 
   it("names the missing time instead of showing the schema that caught it", async () => {
@@ -323,35 +212,34 @@ describe("RankForm", () => {
     expect(uploadFn).not.toHaveBeenCalled()
   })
 
-  it("offers to claim a row already on the board under your handle", async () => {
-    // Ranked as a guest first, signed in after. The entry is right there —
-    // making them retype a time and find the boot screen again is a wall.
-    session = { data: { user: { handle: "ada" } } }
-    claimFn.mockResolvedValue({ ok: true, entry: { handle: "ada" } })
-    const user = userEvent.setup()
-    render(<RankForm onSuccess={() => {}} entries={[unverified("ada")]} />, { wrapper })
-    await user.click(screen.getByRole("button", { name: /claim/i }))
-
-    await waitFor(() => expect(claimFn).toHaveBeenCalled())
-    expect(await screen.findByRole("status")).toHaveTextContent(/verified/i)
-  })
-
-  it("does not offer a claim when the row is already verified", async () => {
-    session = { data: { user: { handle: "ada" } } }
-    render(
-      <RankForm
-        onSuccess={() => {}}
-        entries={[{ ...unverified("ada"), verified: true }]}
-      />,
-      { wrapper },
+  it("asks for everything in the order it is filled in", async () => {
+    // Required fields sat below the submit button: you were invited to rank
+    // before you had been asked for the machine. Handle, time, machine,
+    // boot screen, then the button that ends it.
+    render(<RankForm onSuccess={() => {}} />, { wrapper })
+    const form = document.querySelector("form") as HTMLElement
+    const order = Array.from(
+      form.querySelectorAll("input, button, [data-slot=select-trigger], [role=combobox]"),
     )
-    expect(screen.queryByRole("button", { name: /claim/i })).toBeNull()
+    const at = (el: Element | null) => order.indexOf(el as Element)
+
+    const handle = at(screen.getByRole("textbox", { name: /handle/i }))
+    const time = at(screen.getByLabelText(/^time$/i))
+    const specs = at(screen.getByRole("button", { name: /fill specs/i }))
+    const rank = at(screen.getByRole("button", { name: /rank it/i }))
+
+    expect(handle).toBeLessThan(time)
+    expect(time).toBeLessThan(specs)
+    expect(specs).toBeLessThan(rank)
   })
 
-  it("does not offer a claim on someone else's unverified entry", async () => {
-    session = { data: { user: { handle: "ada" } } }
-    render(<RankForm onSuccess={() => {}} entries={[unverified("bob")]} />, { wrapper })
-    expect(screen.queryByRole("button", { name: /claim/i })).toBeNull()
+  it("has no sign-in, sign-out or account of any kind", async () => {
+    // The only thing X is for is proving one entry. There is no logged-in
+    // state to show, so the form must never imply one.
+    render(<RankForm onSuccess={() => {}} />, { wrapper })
+    expect(screen.queryByRole("button", { name: /sign in/i })).toBeNull()
+    expect(screen.queryByRole("button", { name: /sign out/i })).toBeNull()
+    expect(screen.queryByText(/verified as/i)).toBeNull()
   })
 
   it("refuses to submit without a boot screen", async () => {

@@ -11,8 +11,6 @@ type Props = {
   entries: BoardEntry[]
   loading: boolean
   onOpen: (entry: BoardEntry) => void
-  /** The signed-in X handle, or null. Decides whose entries can offer a claim. */
-  signedInHandle?: string | null
   onClaim?: (entry: BoardEntry) => void
 }
 
@@ -22,7 +20,7 @@ const ROW =
   "grid grid-cols-[2rem_4.75rem_minmax(0,1fr)_2.75rem] items-center gap-2.5 sm:grid-cols-[3.5rem_7.25rem_minmax(0,1fr)_auto_4.75rem] sm:gap-5"
 
 /** The whole board. Equal times share a rank, so there is no podium to fill. */
-export function Board({ entries, loading, onOpen, signedInHandle = null, onClaim }: Props) {
+export function Board({ entries, loading, onOpen, onClaim }: Props) {
   if (loading && entries.length === 0) {
     return (
       <div className="mt-6 flex flex-col gap-px">
@@ -51,12 +49,11 @@ export function Board({ entries, loading, onOpen, signedInHandle = null, onClaim
       {entries.map((entry) => {
         const leads = entry.rank === 1
         const specs = formatSpecsShort(entry)
-        // Only your own, and only once signed in. Offering it on every
-        // unproven entry to a signed-out visitor promised something it could
-        // never deliver: clicking Claim on a stranger's entry sent you through
-        // X and back to silence, because the only entry a session can reach is
-        // its own. One button, on the one entry it works for.
-        const claimable = !!onClaim && !entry.verified && signedInHandle === entry.handle
+        // Every unproven entry offers it: there is no logged-in state to know
+        // whose is whose, and proving one is the only thing X is used for. A
+        // claim on someone else's comes back naming both accounts, so the
+        // offer stays honest even when the answer is no.
+        const claimable = !!onClaim && !entry.verified
         return (
           <div
             key={entry.handle}

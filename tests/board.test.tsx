@@ -123,58 +123,25 @@ describe("Board", () => {
 })
 
 describe("claiming from the board", () => {
-  it("offers a claim on an unverified entry to the account that owns it", async () => {
-    // Ranked as a guest, signed in later: the row is right there, so the
-    // offer belongs on the row rather than only in the form above.
+  it("offers a claim on every unproven entry", async () => {
+    // There is no logged-in state, so the board cannot know whose entry is
+    // whose. Offering it everywhere is honest because the answer names the
+    // mismatch — see the server's claim tests.
     const onClaim = vi.fn()
     const user = userEvent.setup()
-    render(
-      <Board
-        entries={TIED}
-        loading={false}
-        onOpen={() => {}}
-        signedInHandle="grace"
-        onClaim={onClaim}
-      />,
-    )
+    render(<Board entries={TIED} loading={false} onOpen={() => {}} onClaim={onClaim} />)
     await user.click(within(entryFor("grace")).getByRole("button", { name: /claim/i }))
 
     expect(onClaim).toHaveBeenCalledWith(expect.objectContaining({ handle: "grace" }))
   })
 
-  it("never offers a claim on someone else's entry", async () => {
-    render(
-      <Board
-        entries={TIED}
-        loading={false}
-        onOpen={() => {}}
-        signedInHandle="grace"
-        onClaim={() => {}}
-      />,
-    )
-    expect(within(entryFor("linus")).queryByRole("button", { name: /claim/i })).toBeNull()
-  })
-
-  it("never offers a claim on an entry that is already verified", async () => {
-    render(
-      <Board
-        entries={[entry({ handle: "ada", rank: 1, verified: true })]}
-        loading={false}
-        onOpen={() => {}}
-        signedInHandle="ada"
-        onClaim={() => {}}
-      />,
-    )
+  it("never offers a claim on an entry that is already proven", async () => {
+    render(<Board entries={TIED} loading={false} onOpen={() => {}} onClaim={() => {}} />)
     expect(within(entryFor("ada")).queryByRole("button", { name: /claim/i })).toBeNull()
   })
 
-  it("offers nothing to a signed-out visitor, whose entry we cannot know", async () => {
-    // It used to offer a claim on every unproven entry. Clicking one that was
-    // not yours sent you through X and back to silence — a session can only
-    // ever reach its own entry, so the button promised what it could not do.
-    render(<Board entries={TIED} loading={false} onOpen={() => {}} onClaim={() => {}} />)
-    for (const handle of ["ada", "grace", "linus"]) {
-      expect(within(entryFor(handle)).queryByRole("button", { name: /claim/i })).toBeNull()
-    }
+  it("offers nothing at all when claiming is not wired up", async () => {
+    render(<Board entries={TIED} loading={false} onOpen={() => {}} />)
+    expect(screen.queryByRole("button", { name: /claim/i })).toBeNull()
   })
 })
