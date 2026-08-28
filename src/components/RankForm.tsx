@@ -380,7 +380,7 @@ export function RankForm({ onSuccess, entries = [] }: Props) {
               className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-lg border border-primary/40 px-5 text-sm font-bold uppercase text-foreground transition-colors hover:bg-muted/50"
             >
               <XMark className="size-3.5" />
-              Verify this entry
+              Claim this entry
             </button>
           ) : null}
           {placed ? (

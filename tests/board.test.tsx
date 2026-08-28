@@ -118,3 +118,58 @@ describe("Board", () => {
     expect(screen.queryByRole("link")).toBeNull()
   })
 })
+
+describe("claiming from the board", () => {
+  it("offers a claim on an unverified row to the account that owns it", async () => {
+    // Ranked as a guest, signed in later: the row is right there, so the
+    // offer belongs on the row rather than only in the form above.
+    const onClaim = vi.fn()
+    const user = userEvent.setup()
+    render(
+      <Board
+        entries={TIED}
+        loading={false}
+        onOpen={() => {}}
+        signedInHandle="grace"
+        onClaim={onClaim}
+      />,
+    )
+    await user.click(within(rowFor("grace")).getByRole("button", { name: /claim/i }))
+
+    expect(onClaim).toHaveBeenCalledWith(expect.objectContaining({ handle: "grace" }))
+  })
+
+  it("never offers a claim on someone else's row", async () => {
+    render(
+      <Board
+        entries={TIED}
+        loading={false}
+        onOpen={() => {}}
+        signedInHandle="grace"
+        onClaim={() => {}}
+      />,
+    )
+    expect(within(rowFor("linus")).queryByRole("button", { name: /claim/i })).toBeNull()
+  })
+
+  it("never offers a claim on a row that is already verified", async () => {
+    render(
+      <Board
+        entries={[entry({ handle: "ada", rank: 1, verified: true })]}
+        loading={false}
+        onOpen={() => {}}
+        signedInHandle="ada"
+        onClaim={() => {}}
+      />,
+    )
+    expect(within(rowFor("ada")).queryByRole("button", { name: /claim/i })).toBeNull()
+  })
+
+  it("offers a claim to a signed-out visitor, who may be the owner", async () => {
+    // Signed out we cannot know whose row this is, and the person who ranked
+    // as a guest has no other way back in from here.
+    render(<Board entries={TIED} loading={false} onOpen={() => {}} onClaim={() => {}} />)
+    expect(within(rowFor("grace")).getByRole("button", { name: /claim/i })).toBeVisible()
+    expect(within(rowFor("ada")).queryByRole("button", { name: /claim/i })).toBeNull()
+  })
+})

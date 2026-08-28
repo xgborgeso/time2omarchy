@@ -22,8 +22,12 @@ export function RulesPage() {
           <li className="pl-2">One time per X handle. A faster one replaces it.</li>
           <li className="pl-2">A boot screen is required, shown publicly as proof.</li>
           <li className="pl-2">
-            Times are self-reported. Verifying your handle on X is optional — it earns the
-            check mark and keeps the entry yours to update.
+            Times are self-reported. Signing in with X is optional — it earns the check mark
+            and keeps the entry yours to update.
+          </li>
+          <li className="pl-2">
+            Ranked as a guest? The row is still yours: sign in with the same handle to claim
+            it later, and your time and boot screen stay as they are.
           </li>
         </ol>
       </section>

@@ -10,6 +10,9 @@ type Props = {
   entries: BoardEntry[]
   loading: boolean
   onOpen: (entry: BoardEntry) => void
+  /** The signed-in X handle, or null. Decides whose rows can offer a claim. */
+  signedInHandle?: string | null
+  onClaim?: (entry: BoardEntry) => void
 }
 
 // minmax(0,1fr) rather than 1fr: a grid item defaults to min-width:auto,
@@ -18,7 +21,7 @@ const ROW =
   "grid grid-cols-[2rem_4.75rem_minmax(0,1fr)_2.75rem] items-center gap-2.5 sm:grid-cols-[3.5rem_7.25rem_minmax(0,1fr)_auto_4.75rem] sm:gap-5"
 
 /** The whole board. Equal times share a rank, so there is no podium to fill. */
-export function Board({ entries, loading, onOpen }: Props) {
+export function Board({ entries, loading, onOpen, signedInHandle = null, onClaim }: Props) {
   if (loading && entries.length === 0) {
     return (
       <div className="mt-6 flex flex-col gap-px">
@@ -47,6 +50,13 @@ export function Board({ entries, loading, onOpen }: Props) {
       {entries.map((entry) => {
         const leads = entry.rank === 1
         const specs = formatSpecsShort(entry)
+        // Signed in, only your own row is yours to claim. Signed out we cannot
+        // know whose is whose, and the guest who ranked has no other way back
+        // in from here — so the offer stands on every unproven row.
+        const claimable =
+          !!onClaim &&
+          !entry.verified &&
+          (signedInHandle === null || signedInHandle === entry.handle)
         return (
           <div
             key={entry.handle}
@@ -81,6 +91,15 @@ export function Board({ entries, loading, onOpen }: Props) {
                 >
                   @{entry.handle}
                 </a>
+                {claimable ? (
+                  <button
+                    type="button"
+                    onClick={() => onClaim?.(entry)}
+                    className="shrink-0 rounded border border-border px-1.5 py-0.5 text-[10px] uppercase tracking-[0.12em] text-muted-foreground hover:border-primary hover:text-primary"
+                  >
+                    Claim
+                  </button>
+                ) : null}
                 {entry.verified ? (
                   <span
                     role="img"

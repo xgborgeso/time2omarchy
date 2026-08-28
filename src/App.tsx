@@ -1,6 +1,6 @@
 "use client"
 
-import { useQuery, useQueryClient } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useEffect, useState } from "react"
 import { Activity } from "@/components/Activity"
 import { Board } from "@/components/Board"
@@ -11,6 +11,7 @@ import { RankForm } from "@/components/RankForm"
 import { RulesPage } from "@/components/RulesPage"
 import { SiteHeader } from "@/components/SiteHeader"
 import { StatsPage } from "@/components/stats/StatsPage"
+import { signIn, useSession } from "@/lib/auth-client"
 import { useTRPC } from "@/lib/trpc"
 import type { BoardEntry, RankSuccess } from "@/lib/types"
 import { usePresence } from "@/lib/use-presence"
@@ -23,6 +24,9 @@ export function App() {
   const { data, isLoading } = useQuery(
     trpc.board.queryOptions(undefined, { refetchInterval: 10_000 }),
   )
+  const { data: session } = useSession()
+  const signedInHandle = session?.user.handle ?? null
+  const claim = useMutation(trpc.claim.mutationOptions())
   const [open, setOpen] = useState<BoardEntry | null>(null)
   const [view, setView] = useState<View>("board")
 
@@ -41,6 +45,24 @@ export function App() {
   useEffect(() => {
     window.scrollTo({ top: 0 })
   }, [view])
+
+  /**
+   * Taking over a row ranked as a guest.
+   *
+   * Signed out this can only start the sign-in — the row's handle is not proof
+   * of anything, so the server is never told which row to claim. It works out
+   * ownership from the session alone once there is one.
+   */
+  async function onClaim() {
+    if (!signedInHandle) {
+      await signIn.social({ provider: "twitter", callbackURL: "/", errorCallbackURL: "/" })
+      return
+    }
+    const result = await claim.mutateAsync().catch(() => null)
+    if (result?.ok) {
+      await queryClient.invalidateQueries({ queryKey: trpc.board.queryKey() })
+    }
+  }
 
   function navigate(next: View) {
     const hash = hashForView(next)
@@ -75,7 +97,13 @@ export function App() {
           <>
             <Hero counters={data?.counters} />
             <RankForm onSuccess={onSuccess} entries={entries} />
-            <Board entries={entries} loading={isLoading} onOpen={setOpen} />
+            <Board
+              entries={entries}
+              loading={isLoading}
+              onOpen={setOpen}
+              signedInHandle={signedInHandle}
+              onClaim={onClaim}
+            />
             {entries.length === 0 && !isLoading ? (
               <p className="border-y border-card py-10 text-center text-sm text-muted-foreground">
                 Nothing ranked yet. Be first.

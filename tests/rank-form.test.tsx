@@ -211,7 +211,7 @@ describe("RankForm", () => {
     render(<RankForm onSuccess={() => {}} />, { wrapper })
     await submit("ada", "43")
 
-    expect(await screen.findByRole("button", { name: /verify this entry/i })).toBeVisible()
+    expect(await screen.findByRole("button", { name: /claim this entry/i })).toBeVisible()
   })
 
   it("does not offer to verify an entry that already is", async () => {
@@ -236,7 +236,7 @@ describe("RankForm", () => {
     await user.click(screen.getByRole("button", { name: /rank it/i }))
 
     await waitFor(() => expect(rankFn).toHaveBeenCalled())
-    expect(screen.queryByRole("button", { name: /verify this entry/i })).toBeNull()
+    expect(screen.queryByRole("button", { name: /claim this entry/i })).toBeNull()
   })
 
   it("says so when sign-in cannot even be started", async () => {
