@@ -1,5 +1,6 @@
 import { axisPosition, type TimeBucket } from "@/lib/stats"
 import { formatTime } from "@/lib/time"
+import { cn } from "@/lib/utils"
 
 type Props = {
   buckets: TimeBucket[]
@@ -28,10 +29,16 @@ export function Distribution({ buckets, total, medianSeconds }: Props) {
         {busiest.count > 0 ? `Most land in ${busiest.label}.` : "Nothing ranked yet."}
       </p>
 
-      <div className="relative mt-7 h-[260px]">
-        <div className="absolute inset-x-0 bottom-8 h-[200px] flex items-end gap-0.5">
-          {buckets.map((bucket) => {
+      {/* Headroom above the bars is the tooltip's: a full-height bar
+          would otherwise push it out over the heading. */}
+      <div className="relative mt-7 h-[292px]">
+        <div className="absolute inset-x-0 bottom-8 flex h-[200px] items-end gap-0.5">
+          {buckets.map((bucket, i) => {
             const share = total > 0 ? Math.round((bucket.count / total) * 100) : 0
+            // The end buckets have no room to centre into, so they align to
+            // their own edge instead of hanging off the side of the card.
+            const first = i === 0
+            const last = i === buckets.length - 1
             return (
               <div
                 key={bucket.label}
@@ -46,7 +53,12 @@ export function Distribution({ buckets, total, medianSeconds }: Props) {
                 <div className="size-full rounded-t-[4px] bg-chart-1 transition-opacity group-hover:opacity-80" />
                 <div
                   role="tooltip"
-                  className="pointer-events-none absolute bottom-[calc(100%+10px)] left-1/2 z-10 hidden -translate-x-1/2 whitespace-nowrap rounded-lg border border-border bg-popover px-3 py-2 shadow-lg group-hover:block"
+                  className={cn(
+                    "pointer-events-none absolute bottom-[calc(100%+10px)] z-30 hidden whitespace-nowrap rounded-lg border border-border bg-popover px-3 py-2 shadow-lg group-hover:block",
+                    first && "left-0",
+                    last && "right-0",
+                    !first && !last && "left-1/2 -translate-x-1/2",
+                  )}
                 >
                   <div className="text-[11px] text-foreground">{bucket.label}</div>
                   <div className="text-[11px] text-muted-foreground">
@@ -67,6 +79,7 @@ export function Distribution({ buckets, total, medianSeconds }: Props) {
               aria-hidden="true"
             />
             <span
+              data-slot="median-label"
               className="absolute top-0 z-20 translate-x-2 whitespace-nowrap text-[11px] text-chart-2"
               style={{ left: `${median * 100}%` }}
             >

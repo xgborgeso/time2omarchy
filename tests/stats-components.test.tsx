@@ -50,6 +50,30 @@ describe("Distribution", () => {
     expect(screen.getAllByText(buckets.at(-1)!.label).length).toBeGreaterThan(0)
   })
 
+  it("keeps every count readable at the scale the board is aiming for", () => {
+    // 10k entries is the point of the thing. Bare digits stop being legible
+    // somewhere around four of them.
+    const busy = TIME_BUCKETS.map((b, i) => ({ ...b, count: i === 0 ? 12345 : 900 }))
+    render(<Distribution buckets={busy} total={20_000} medianSeconds={64} />)
+    expect(screen.getByText("12,345")).toBeInTheDocument()
+    expect(screen.getByText(/20,000 ranked/)).toBeInTheDocument()
+  })
+
+  it("draws a hovered bucket above the median marker, never under it", () => {
+    // They occupy the same corner: the label used to be painted over the
+    // tooltip, which read as one bloated smear of overlapping text.
+    const { container } = render(
+      <Distribution buckets={buckets} total={9} medianSeconds={64} />,
+    )
+    const tooltip = container.querySelector("[role=tooltip]")
+    const marker = container.querySelector("[data-slot=median-label]")
+    expect(tooltip).not.toBeNull()
+    expect(marker).not.toBeNull()
+    const layer = (el: Element | null) =>
+      Number(/z-(\d+)/.exec(el?.className ?? "")?.[1] ?? 0)
+    expect(layer(tooltip)).toBeGreaterThan(layer(marker))
+  })
+
   it("renders without a median, which an empty board has", () => {
     const empty = TIME_BUCKETS.map((b) => ({ ...b, count: 0 }))
     render(<Distribution buckets={empty} total={0} medianSeconds={null} />)
