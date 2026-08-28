@@ -1,5 +1,5 @@
 import { BadgeCheck } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { xUrl } from "@/lib/handle"
 import { formatSpecsShort } from "@/lib/specs"
@@ -126,32 +126,29 @@ function Entry({ entry, onOpen, onClaim, className }: EntryProps) {
           >
             @{entry.handle}
           </a>
-          {claimable ? (
-            // Outline: the lightest variant that still reads as a control.
-            // Ghost gave it no edges, so on a row of text it looked like more
-            // text; link styling would promise navigation instead of an action.
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => onClaim?.(entry)}
-              aria-label={`Claim the entry for @${entry.handle}`}
-              className="shrink-0"
-            >
-              Claim
-            </Button>
-          ) : null}
+          {/* One slot, one shape. Proven entries carry a check, unproven ones
+              carry the invitation to prove them — both badges, so the line
+              reads the same either way. A button here was a second visual
+              language sitting inside a row of text. */}
           {entry.verified ? (
-            <span
-              role="img"
-              aria-label="Handle verified on X"
-              // Sighted users never see an aria-label, and without this the
-              // mark is unexplained decoration. Lucide icons take no title.
+            <Badge
+              variant="verified"
               title="Verified on X — this handle proved it owns the entry"
-              className="inline-flex shrink-0"
             >
-              <BadgeCheck aria-hidden="true" className="size-3.5 text-primary sm:size-4" />
-            </span>
+              <BadgeCheck aria-hidden="true" />
+              Verified
+            </Badge>
+          ) : claimable ? (
+            <Badge asChild variant="outline">
+              <button
+                type="button"
+                onClick={() => onClaim?.(entry)}
+                aria-label={`Claim the entry for @${entry.handle}`}
+                className="cursor-pointer hover:border-primary/40 hover:text-primary"
+              >
+                Claim
+              </button>
+            </Badge>
           ) : null}
         </span>
         {/* Hidden on phones, where the row has no width to spare.

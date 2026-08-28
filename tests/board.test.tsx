@@ -47,20 +47,19 @@ describe("Board", () => {
     expect(screen.queryByText("#3")).not.toBeInTheDocument()
   })
 
-  it("explains the mark to sighted users, not only to screen readers", () => {
+  it("says what the mark means rather than leaving a bare icon", () => {
+    // The check used to carry its meaning only in an aria-label, which a
+    // sighted reader never sees. The badge says the word.
     render(<Board entries={TIED} loading={false} onOpen={() => {}} />)
-    expect(within(entryFor("ada")).getByLabelText("Handle verified on X")).toHaveAttribute(
-      "title",
-      expect.stringContaining("Verified on X"),
-    )
+    const badge = within(entryFor("ada")).getByText("Verified")
+    expect(badge).toBeVisible()
+    expect(badge).toHaveAttribute("title", expect.stringContaining("Verified on X"))
   })
 
   it("marks only the verified handle", () => {
     render(<Board entries={TIED} loading={false} onOpen={() => {}} />)
-    expect(
-      within(entryFor("ada")).getByLabelText("Handle verified on X"),
-    ).toBeInTheDocument()
-    expect(within(entryFor("grace")).queryByLabelText("Handle verified on X")).toBeNull()
+    expect(within(entryFor("ada")).getByText("Verified")).toBeInTheDocument()
+    expect(within(entryFor("grace")).queryByText("Verified")).toBeNull()
   })
 
   it("shows the hardware on a row that has it", () => {
