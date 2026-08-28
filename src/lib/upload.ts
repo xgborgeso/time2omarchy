@@ -10,9 +10,8 @@ export type UploadResult =
   | { ok: true; url: string }
   | { ok: false; error: string; field?: string }
 
-export async function uploadBootScreen(handle: string, file: File): Promise<UploadResult> {
+export async function uploadBootScreen(file: File): Promise<UploadResult> {
   const body = new FormData()
-  body.set("handle", handle)
   body.set("bootScreen", file)
 
   try {

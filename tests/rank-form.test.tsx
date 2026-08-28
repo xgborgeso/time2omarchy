@@ -6,27 +6,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { RankForm } from "@/components/RankForm"
 
 const rankFn = vi.fn()
-const verifyFn = vi.fn()
 const uploadFn = vi.fn()
-const signInFn = vi.fn()
 const toastError = vi.fn()
 
 vi.mock("sonner", () => ({ toast: { error: (...a: unknown[]) => toastError(...a) } }))
-const signOutFn = vi.fn()
-
-/** Reassigned per test; the hook reads it on every render. */
-let session: { data: { user: { handle: string } } | null } = { data: null }
-
-vi.mock("@/lib/auth-client", () => ({
-  useSession: () => session,
-  signIn: { social: (...args: unknown[]) => signInFn(...args) },
-  signOut: (...args: unknown[]) => signOutFn(...args),
-}))
 
 vi.mock("@/lib/trpc", () => ({
   useTRPC: () => ({
     rank: { mutationOptions: () => ({ mutationFn: rankFn }) },
-    verify: { mutationOptions: () => ({ mutationFn: verifyFn }) },
   }),
 }))
 
@@ -58,10 +45,14 @@ function bootScreen(): File {
   return new File(["x"], "boot.png", { type: "image/png" })
 }
 
-/** Fills the form and submits, as a person would. */
-async function submit(handle: string, time: string, withSpecs = true) {
+/**
+ * Fills the form and submits, as a person would.
+ *
+ * No handle: the form does not ask for one. Reaching this component at all
+ * means X already answered, and the entry is named by that answer.
+ */
+async function submit(time: string, withSpecs = true) {
   const user = userEvent.setup()
-  await user.type(screen.getByLabelText(/handle/i), handle)
   await user.type(screen.getByLabelText(/^time$/i), time)
   await user.upload(
     document.querySelector("input[type=file]") as HTMLInputElement,
@@ -75,11 +66,7 @@ async function submit(handle: string, time: string, withSpecs = true) {
 }
 
 beforeEach(() => {
-  session = { data: null }
-  signInFn.mockReset()
   toastError.mockReset()
-  verifyFn.mockReset()
-  signOutFn.mockReset()
   rankFn.mockReset()
   uploadFn.mockReset()
   uploadFn.mockResolvedValue({ ok: true, url: "/uploads/x-1.png" })
@@ -90,7 +77,7 @@ describe("RankForm", () => {
     // Reported install times span 45s to eight minutes on identical software,
     // so a time with no machine attached compares to nothing.
     render(<RankForm onSuccess={() => {}} />, { wrapper })
-    await submit("ada", "43", false)
+    await submit("43", false)
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/CPU, memory and drive/i)
     expect(uploadFn).not.toHaveBeenCalled()
@@ -108,7 +95,7 @@ describe("RankForm", () => {
       board: { entries: [] },
     })
     render(<RankForm onSuccess={() => {}} />, { wrapper })
-    await submit("ada", "43")
+    await submit("43")
 
     await waitFor(() => expect(rankFn).toHaveBeenCalled())
     expect(rankFn.mock.calls[0]?.[0]).toMatchObject({
@@ -129,21 +116,23 @@ describe("RankForm", () => {
       board: { entries: [] },
     })
     render(<RankForm onSuccess={() => {}} />, { wrapper })
-    await submit("ada", "43")
+    await submit("43")
 
     await waitFor(() => expect(rankFn).toHaveBeenCalled())
-    expect(uploadFn).toHaveBeenCalledWith("ada", expect.any(File))
+    // No handle in either call: the upload endpoint and the rank mutation
+    // both take the name from the session rather than from this form.
+    expect(uploadFn).toHaveBeenCalledWith(expect.any(File))
     expect(rankFn.mock.calls[0]?.[0]).toMatchObject({
-      handle: "ada",
       time: "43",
       bootScreenUrl: "/uploads/x-1.png",
     })
+    expect(rankFn.mock.calls[0]?.[0]).not.toHaveProperty("handle")
   })
 
   it("does not rank at all when the upload fails", async () => {
     uploadFn.mockResolvedValue({ ok: false, error: "That boot screen is too large." })
     render(<RankForm onSuccess={() => {}} />, { wrapper })
-    await submit("ada", "43")
+    await submit("43")
 
     expect(await screen.findByRole("alert")).toHaveTextContent("too large")
     expect(rankFn).not.toHaveBeenCalled()
@@ -152,9 +141,7 @@ describe("RankForm", () => {
   it("never asks anyone to post a code to prove a handle", async () => {
     // Proof is an X sign-in now. Nothing should send someone off to compose a
     // post, paste a link back, or race a 15-minute nonce.
-    const user = userEvent.setup()
     render(<RankForm onSuccess={() => {}} />, { wrapper })
-    await user.type(screen.getByLabelText(/handle/i), "ada")
 
     expect(screen.queryByText(/post this from that account/i)).toBeNull()
     expect(screen.queryByLabelText(/link to your post/i)).toBeNull()
@@ -162,9 +149,9 @@ describe("RankForm", () => {
     expect(screen.queryByRole("button", { name: /verify @/i })).toBeNull()
   })
 
-  it("offers to verify the entry it just put on the board", async () => {
-    // The moment right after ranking is when the badge is worth most: the
-    // position is real and the share button is already there.
+  it("offers the share on the entry it just put on the board", async () => {
+    // Every entry went through X, so the account that posts the brag is the
+    // account the row names. There is nothing left to prove first.
     rankFn.mockResolvedValue({
       ok: true,
       created: true,
@@ -175,9 +162,9 @@ describe("RankForm", () => {
       board: { entries: [], counters: { entries: 1 } },
     })
     render(<RankForm onSuccess={() => {}} />, { wrapper })
-    await submit("ada", "43")
+    await submit("43")
 
-    expect(await screen.findByRole("button", { name: /verify this entry/i })).toBeVisible()
+    expect(await screen.findByRole("link", { name: /share/i })).toBeVisible()
   })
 
   it("names the missing time instead of showing the schema that caught it", async () => {
@@ -185,7 +172,6 @@ describe("RankForm", () => {
     // [ { "origin": "string", "code": "too_small", "path": [ "time" ], … } ]
     const user = userEvent.setup()
     render(<RankForm onSuccess={() => {}} />, { wrapper })
-    await user.type(screen.getByLabelText(/handle/i), "ada")
     await user.upload(
       document.querySelector("input[type=file]") as HTMLInputElement,
       bootScreen(),
@@ -204,7 +190,6 @@ describe("RankForm", () => {
   it("reads a rejected time back as a sentence", async () => {
     const user = userEvent.setup()
     render(<RankForm onSuccess={() => {}} />, { wrapper })
-    await user.type(screen.getByLabelText(/handle/i), "ada")
     await user.type(screen.getByLabelText(/^time$/i), "soon")
     await user.upload(
       document.querySelector("input[type=file]") as HTMLInputElement,
@@ -219,8 +204,8 @@ describe("RankForm", () => {
 
   it("asks for everything in the order it is filled in", async () => {
     // Required fields sat below the submit button: you were invited to rank
-    // before you had been asked for the machine. Handle, time, machine,
-    // boot screen, then the button that ends it.
+    // before you had been asked for the machine. Time, boot screen, machine,
+    // then the button that ends it.
     render(<RankForm onSuccess={() => {}} />, { wrapper })
     const form = document.querySelector("form") as HTMLElement
     const order = Array.from(
@@ -228,12 +213,10 @@ describe("RankForm", () => {
     )
     const at = (el: Element | null) => order.indexOf(el as Element)
 
-    const handle = at(screen.getByRole("textbox", { name: /handle/i }))
     const time = at(screen.getByLabelText(/^time$/i))
     const specs = at(screen.getByRole("button", { name: /fill specs/i }))
     const rank = at(screen.getByRole("button", { name: /rank it/i }))
 
-    expect(handle).toBeLessThan(time)
     expect(time).toBeLessThan(specs)
     expect(specs).toBeLessThan(rank)
   })
@@ -252,7 +235,6 @@ describe("RankForm", () => {
     // someone hunting for which field it means.
     const user = userEvent.setup()
     render(<RankForm onSuccess={() => {}} />, { wrapper })
-    await user.type(screen.getByRole("textbox", { name: /handle/i }), "ada")
     await user.click(screen.getByRole("button", { name: /rank it/i }))
 
     const time = screen.getByLabelText(/^time$/i)
@@ -277,32 +259,9 @@ describe("RankForm", () => {
     expect(time).not.toHaveAttribute("aria-invalid", "true")
   })
 
-  it("toasts when X cannot be reached, since no field is at fault", async () => {
-    // Nothing on the form is wrong, so there is nowhere inline to put this.
-    // A system outcome with no field to attach to is what a toast is for.
-    signInFn.mockResolvedValue({ error: { message: "Invalid origin" } })
-    rankFn.mockResolvedValue({
-      ok: true,
-      created: true,
-      improved: true,
-      keptBest: false,
-      bestTimeSeconds: 43,
-      entry: { rank: 1, timeSeconds: 43, verified: false },
-      board: { entries: [], counters: { entries: 1 } },
-    })
-    render(<RankForm onSuccess={() => {}} />, { wrapper })
-    const user = await submit("ada", "43")
-
-    await user.click(await screen.findByRole("button", { name: /verify this entry/i }))
-
-    await waitFor(() => expect(toastError).toHaveBeenCalled())
-    expect(String(toastError.mock.calls[0]?.[0])).toMatch(/invalid origin/i)
-  })
-
   it("refuses to submit without a boot screen", async () => {
     const user = userEvent.setup()
     render(<RankForm onSuccess={() => {}} />, { wrapper })
-    await user.type(screen.getByLabelText(/handle/i), "ada")
     await user.type(screen.getByLabelText(/^time$/i), "43")
     await user.click(screen.getByRole("button", { name: /rank it/i }))
 

@@ -22,6 +22,7 @@ describe("local PGlite", () => {
           .values({
             handle,
             timeSeconds,
+            identityKey: `x:${handle}`,
             bootScreenUrl: `/uploads/${handle}.png`,
             cpuId: "other",
             ramGb: 16,

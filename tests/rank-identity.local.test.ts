@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm"
 import { beforeEach, describe, expect, it, vi } from "vitest"
+import type { Identity } from "../src/lib/identity"
 import { openDatabase } from "../src/server/pglite"
 import { entries } from "../src/server/schema"
 
@@ -7,26 +8,32 @@ import { entries } from "../src/server/schema"
  * Ranking against real PGlite, with identity handed in the way the router
  * hands it: resolved from the session before `submitRank` is ever called.
  *
+ * There is no guest path left to test. Ranking goes through X, so the router
+ * refuses before it reaches here and `identity` is not nullable.
+ *
  * An in-memory database per file, swapped in for the on-disk dev one — the
  * board, the counters and the rank path all read through the same `getDb`.
  */
 const opened = openDatabase().then((o) => o.db)
 vi.mock("../src/server/db", () => ({ getDb: () => opened }))
 
-const { submitRank, verifyEntry } = await import("../src/server/rank")
+const { submitRank } = await import("../src/server/rank")
 const { findEntryByHandle, loadBoard, searchEntries } = await import("../src/server/board")
 
-const ADA = { key: "x:1665012345678901234", handle: "ada" }
+const ADA: Identity = { key: "x:1665012345678901234", handle: "ada" }
 
-function input(over: Partial<Parameters<typeof submitRank>[0]> = {}) {
+type Over = Partial<Parameters<typeof submitRank>[0]> & { handle?: string }
+
+/** One account per handle unless a test says otherwise. */
+function input({ handle, ...over }: Over = {}) {
+  const who = handle ?? "ada"
   return {
-    handle: "ada",
     timeSeconds: 43,
     bootScreenUrl: "/uploads/ada-1.png",
     cpuId: "amd-ryzen-7-9800x3d",
     ramGb: 32,
     storage: "nvme",
-    identity: null,
+    identity: { key: `x:${who}`, handle: who },
     ...over,
   }
 }
@@ -41,54 +48,37 @@ async function entryFor(handle: string) {
   return rows[0]
 }
 
-describe("ranking with an X identity", () => {
-  it("marks an entry verified and keys it to the account id", async () => {
+describe("ranking through X", () => {
+  it("keys the entry to the account id, not to the name", async () => {
     const result = await submitRank(input({ identity: ADA }))
 
     expect(result.ok).toBe(true)
     const row = await entryFor("ada")
-    expect(row?.verified).toBe(true)
     expect(row?.identityKey).toBe("x:1665012345678901234")
   })
 
-  it("leaves an entry unverified when nobody is signed in", async () => {
-    // Signing in is not a toll: an unverified entry still opens a row.
-    await submitRank(input())
+  it("takes the handle from the account, never from the caller", async () => {
+    // There is no handle field on the input any more. Whatever the form
+    // thinks it is submitting, the row is named by whoever X answered with.
+    await submitRank(input({ identity: ADA }))
 
-    const row = await entryFor("ada")
-    expect(row?.verified).toBe(false)
-    expect(row?.identityKey).toBeNull()
+    expect(await entryFor("ada")).toBeDefined()
   })
 
-  it("ignores an identity that does not match the handle being ranked", async () => {
-    // There is no signed-in state in this product, only proof of one entry.
-    // Proof of @ada says nothing about an entry called @bob, so @bob opens
-    // exactly as a guest entry would.
-    await submitRank(input({ handle: "bob", identity: ADA }))
+  it("replaces your own entry when you beat it", async () => {
+    await submitRank(input({ identity: ADA, timeSeconds: 61 }))
+    await submitRank(input({ identity: ADA, timeSeconds: 44 }))
 
-    const bob = await entryFor("bob")
-    expect(bob?.verified).toBe(false)
-    expect(bob?.identityKey).toBeNull()
+    const db = await opened
+    expect(await db.select().from(entries)).toHaveLength(1)
+    expect((await entryFor("ada"))?.timeSeconds).toBe(44)
   })
 
-  it("verifies an entry someone else opened under your handle", async () => {
-    // The whole point of the badge: squatting an early entry buys nothing.
-    await submitRank(input({ timeSeconds: 300 }))
-    expect((await entryFor("ada"))?.verified).toBe(false)
-
-    const result = await submitRank(input({ timeSeconds: 44, identity: ADA }))
+  it("keeps your best when the new time is slower", async () => {
+    await submitRank(input({ identity: ADA, timeSeconds: 43 }))
+    const result = await submitRank(input({ identity: ADA, timeSeconds: 90 }))
 
     expect(result.ok).toBe(true)
-    const row = await entryFor("ada")
-    expect(row?.verified).toBe(true)
-    expect(row?.timeSeconds).toBe(44)
-  })
-
-  it("refuses an unverified entry that would overwrite a verified entry", async () => {
-    await submitRank(input({ timeSeconds: 43, identity: ADA }))
-    const result = await submitRank(input({ timeSeconds: 20 }))
-
-    expect(result.ok).toBe(false)
     expect((await entryFor("ada"))?.timeSeconds).toBe(43)
   })
 
@@ -96,13 +86,7 @@ describe("ranking with an X identity", () => {
     // X handles can be changed and re-registered. The account id cannot, so a
     // rename must move the row rather than open a second one.
     await submitRank(input({ identity: ADA }))
-    await submitRank(
-      input({
-        handle: "adalove",
-        timeSeconds: 40,
-        identity: { ...ADA, handle: "adalove" },
-      }),
-    )
+    await submitRank(input({ timeSeconds: 40, identity: { ...ADA, handle: "adalove" } }))
 
     const db = await opened
     expect(await db.select().from(entries)).toHaveLength(1)
@@ -110,97 +94,24 @@ describe("ranking with an X identity", () => {
     expect(row?.timeSeconds).toBe(40)
     expect(row?.identityKey).toBe(ADA.key)
   })
-})
 
-describe("verifying an entry ranked as a guest", () => {
-  it("takes over the entry that already carries your handle", async () => {
-    // Ranked first, signed in later. Verifying must not ask for the time and
-    // the boot screen a second time — they are already on the board.
-    await submitRank(input({ timeSeconds: 61 }))
-
-    const result = await verifyEntry(ADA, "ada")
-
-    expect(result.ok).toBe(true)
-    const row = await entryFor("ada")
-    expect(row?.verified).toBe(true)
-    expect(row?.identityKey).toBe(ADA.key)
-    // Untouched: a verify proves who owns the row, it does not restate it.
-    expect(row?.timeSeconds).toBe(61)
-    expect(row?.bootScreenUrl).toBe("/uploads/ada-1.png")
-  })
-
-  it("says there is nothing to verify rather than inventing an entry", async () => {
-    const result = await verifyEntry(ADA, "ada")
-
-    expect(result.ok).toBe(false)
-    expect(await entryFor("ada")).toBeUndefined()
-  })
-
-  it("leaves an entry that is already verified alone", async () => {
-    await submitRank(input({ identity: ADA }))
-    const result = await verifyEntry(ADA, "ada")
-
-    expect(result.ok).toBe(false)
-    expect((await entryFor("ada"))?.identityKey).toBe(ADA.key)
-  })
-
-  it("refuses an entry verified by a different account", async () => {
-    // X handles can be reassigned; the entry belongs to whoever proved it.
-    await submitRank(input({ identity: ADA }))
-    const result = await verifyEntry({ key: "x:99", handle: "ada" }, "ada")
-
-    expect(result.ok).toBe(false)
-    expect((await entryFor("ada"))?.identityKey).toBe(ADA.key)
-  })
-})
-
-describe("verifying an entry that is not yours", () => {
-  it("cannot touch it, because the entry to verify is never sent", async () => {
-    // Signed in as @bob, clicking Verify on @ada's entry. The request carries
-    // no handle at all — the server only ever looks up the caller's own.
+  it("refuses to rename into a handle another account already holds", async () => {
+    // X frees a handle when it is changed, so someone can genuinely arrive
+    // carrying a name that is already on the board. Whoever ranked it keeps it.
     await submitRank(input({ handle: "ada" }))
+    await submitRank(input({ identity: { key: "x:777", handle: "bob" } }))
 
-    const result = await verifyEntry({ key: "x:777", handle: "bob" }, "ada")
-
-    expect(result.ok).toBe(false)
-    // Explains itself without naming either account: the person knows which
-    // entry they clicked, and the entry's owner is not theirs to be told.
-    if (!result.ok) {
-      expect(result.error).toMatch(/doesn't belong to you/i)
-      expect(result.error).not.toContain("@")
-    }
-    const ada = await entryFor("ada")
-    expect(ada?.verified).toBe(false)
-    expect(ada?.identityKey).toBeNull()
-  })
-
-  it("verifies your own entry instead, when you have one", async () => {
-    // The only entry a session can ever reach is the one under its own handle.
-    await submitRank(input({ handle: "ada" }))
-    await submitRank(input({ handle: "bob" }))
-
-    const result = await verifyEntry({ key: "x:777", handle: "bob" }, "bob")
-
-    expect(result.ok).toBe(true)
-    expect((await entryFor("bob"))?.identityKey).toBe("x:777")
-    expect((await entryFor("ada"))?.identityKey).toBeNull()
-  })
-
-  it("cannot take an entry by renaming into a handle someone already holds", async () => {
-    // X frees a handle when it is changed. Whoever proved an entry keeps it.
-    await submitRank(input({ handle: "ada", identity: ADA }))
-    const result = await verifyEntry({ key: "x:777", handle: "ada" }, "ada")
+    const result = await submitRank(input({ identity: { key: "x:777", handle: "ada" } }))
 
     expect(result.ok).toBe(false)
-    expect((await entryFor("ada"))?.identityKey).toBe(ADA.key)
+    expect((await entryFor("ada"))?.identityKey).toBe("x:ada")
   })
 })
 
 describe("finding one entry among many", () => {
   it("returns an entry by handle whatever its rank", async () => {
-    // The board shows the top 100. At ten thousand entries that is the whole
-    // problem: someone at #4000 cannot see their own entry, and every verify
-    // affordance goes with it.
+    // The board pages at fifty. At ten thousand entries that is the whole
+    // problem: someone at #4000 cannot otherwise see their own entry.
     await submitRank(input({ handle: "ada", timeSeconds: 61 }))
 
     const found = await findEntryByHandle("ada")
@@ -260,40 +171,24 @@ describe("paging the board", () => {
 })
 
 describe("the number the hero puts on the homepage", () => {
-  it("headlines the fastest verified time, not the fastest typed one", async () => {
-    // The hero number is the marketing surface. An unverified entry can hold
-    // rank 1 on the board — that is the rule — but it must not become the
-    // figure the homepage quotes, because nothing stands behind it.
-    await submitRank(input({ handle: "faker", timeSeconds: 16 }))
-    await submitRank(input({ handle: "ada", timeSeconds: 43, identity: ADA }))
+  it("headlines the fastest time on the board", async () => {
+    // No second query behind this any more: every entry went through X, so
+    // there is no unproven time to hold the headline back from.
+    await submitRank(input({ handle: "quick", timeSeconds: 16 }))
+    await submitRank(input({ handle: "ada", timeSeconds: 43 }))
 
     const board = await loadBoard(1)
 
-    expect(board.counters.fastestSeconds).toBe(43)
-    expect(board.counters.leaderHandle).toBe("ada")
-    // The board itself still ranks by time alone.
-    expect(board.entries[0]?.handle).toBe("faker")
+    expect(board.counters.fastestSeconds).toBe(16)
+    expect(board.counters.leaderHandle).toBe("quick")
     expect(board.entries[0]?.rank).toBe(1)
   })
 
-  it("falls back to the fastest overall while nobody has verified anything", async () => {
-    // A brand-new board has no verified entry to quote, and an empty hero
-    // above fifty real entries would read as broken.
-    await submitRank(input({ handle: "first", timeSeconds: 61 }))
-
-    const board = await loadBoard(1)
-
-    expect(board.counters.fastestSeconds).toBe(61)
-    expect(board.counters.leaderHandle).toBe("first")
-  })
-
-  it("counts only the verified entries sharing the headline time", async () => {
-    await submitRank(input({ handle: "ada", timeSeconds: 43, identity: ADA }))
+  it("counts everyone sharing the headline time", async () => {
+    await submitRank(input({ handle: "ada", timeSeconds: 43 }))
     await submitRank(input({ handle: "bob", timeSeconds: 43 }))
 
-    const board = await loadBoard(1)
-
-    expect(board.counters.leaderCount).toBe(1)
+    expect((await loadBoard(1)).counters.leaderCount).toBe(2)
   })
 })
 
@@ -346,5 +241,22 @@ describe("searching for a handle", () => {
 
     const found = await searchEntries("void")
     expect(found[0]?.rank).toBe(2)
+  })
+})
+
+describe("a taken-down entry", () => {
+  it("leaves the board, the count and the headline at once", async () => {
+    await submitRank(input({ handle: "bad", timeSeconds: 20 }))
+    await submitRank(input({ handle: "good", timeSeconds: 40 }))
+    const { takedown } = await import("../src/server/takedown")
+
+    await takedown("bad")
+    const board = await loadBoard(1)
+
+    expect(board.entries.map((e) => e.handle)).toEqual(["good"])
+    expect(board.total).toBe(1)
+    expect(board.counters.leaderHandle).toBe("good")
+    expect(await findEntryByHandle("bad")).toBeNull()
+    expect(await searchEntries("bad")).toEqual([])
   })
 })

@@ -7,7 +7,6 @@ export type BoardEntry = {
   timeSeconds: number
   bootScreenUrl: string
   /** Proven to belong to its handle, not merely typed. */
-  verified: boolean
   /** Required hardware — every entry carries a machine. */
   cpuId: string
   ramGb: number

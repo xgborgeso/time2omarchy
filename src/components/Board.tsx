@@ -1,4 +1,3 @@
-import { BadgeCheck } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { xUrl } from "@/lib/handle"
 import { formatSpecsShort } from "@/lib/specs"
@@ -10,7 +9,6 @@ type Props = {
   entries: BoardEntry[]
   loading: boolean
   onOpen: (entry: BoardEntry) => void
-  onVerify?: (entry: BoardEntry) => void
 }
 
 // minmax(0,1fr) rather than 1fr: a grid item defaults to min-width:auto,
@@ -25,7 +23,7 @@ const ROW =
  * five entries and a rule drawn after the tenth can land mid-tie. Only the
  * leader is marked, because that one is unambiguous.
  */
-export function Board({ entries, loading, onOpen, onVerify }: Props) {
+export function Board({ entries, loading, onOpen }: Props) {
   if (loading && entries.length === 0) {
     return (
       <div className="mt-6 flex flex-col gap-px">
@@ -51,7 +49,7 @@ export function Board({ entries, loading, onOpen, onVerify }: Props) {
       </div>
 
       {entries.map((entry) => (
-        <Entry key={entry.handle} entry={entry} onOpen={onOpen} onVerify={onVerify} />
+        <Entry key={entry.handle} entry={entry} onOpen={onOpen} />
       ))}
     </section>
   )
@@ -69,7 +67,6 @@ function Dot() {
 type EntryProps = {
   entry: BoardEntry
   onOpen: (entry: BoardEntry) => void
-  onVerify?: (entry: BoardEntry) => void
   className?: string
 }
 
@@ -79,14 +76,9 @@ type EntryProps = {
  * The same markup either way: an entry found by lookup is the same object as
  * an entry in the top hundred, and looking different would suggest otherwise.
  */
-function Entry({ entry, onOpen, onVerify, className }: EntryProps) {
+function Entry({ entry, onOpen, className }: EntryProps) {
   const leads = entry.rank === 1
   const specs = formatSpecsShort(entry)
-  // Every unproven entry offers it: there is no logged-in state to know
-  // whose is whose, and proving one is the only thing X is used for. A
-  // verify on someone else's comes back naming both accounts, so the
-  // offer stays honest even when the answer is no.
-  const verifiable = !!onVerify && !entry.verified
   return (
     <div
       className={cn(
@@ -129,32 +121,6 @@ function Entry({ entry, onOpen, onVerify, className }: EntryProps) {
           {specs ? <span className="truncate">{specs}</span> : null}
           {specs ? <Dot /> : null}
           <span className="whitespace-nowrap">{relativeTime(entry.updatedAt)}</span>
-          {entry.verified || verifiable ? <Dot /> : null}
-          {entry.verified ? (
-            // The check alone, the way X marks an account: a mark repeated
-            // down every verified entry does not need the word beside it. The
-            // meaning lives in the title for a cursor and in the label for a
-            // screen reader, so nothing is carried by the glyph alone.
-            <span
-              role="img"
-              aria-label="Verified on X"
-              title="Verified on X — this handle proved it owns the entry"
-              className="inline-flex shrink-0 text-primary"
-            >
-              <BadgeCheck aria-hidden="true" className="size-3.5" />
-            </span>
-          ) : verifiable ? (
-            // Text, not a control: on a line of small print a filled badge was
-            // the loudest thing in the entry, and it is an aside, not the point.
-            <button
-              type="button"
-              onClick={() => onVerify?.(entry)}
-              aria-label={`Verify the entry for @${entry.handle}`}
-              className="cursor-pointer whitespace-nowrap font-medium text-primary underline-offset-4 hover:underline"
-            >
-              Verify
-            </button>
-          ) : null}
         </span>
       </span>
       <button

@@ -9,34 +9,28 @@ export function shouldReplace(
 
 export type Contender = {
   timeSeconds: number
-  verified: boolean
 }
 
 /**
  * What an incoming entry is allowed to do to the entry already holding its handle.
  *
- * Ownership of a handle is only established by verifying it. Until then a
- * handle is just a string someone typed, so an unverified entry may open one
- * but never modify one — otherwise anyone could overwrite anyone's entry by
- * typing their handle and a faster time. A verified entry takes over an
- * unverified one outright, so squatting an early entry buys nothing.
+ * Ranking goes through X, so a handle is never a string someone typed — the
+ * only person who can reach an entry is the account that owns it. That leaves
+ * one question: whether the new time beats the old one.
  */
-export type EntryDecision = "create" | "replace" | "takeover" | "keep" | "reject"
+export type EntryDecision = "create" | "replace" | "keep"
 
 export function decideEntry(
   existing: Contender | null,
   incoming: Contender,
 ): EntryDecision {
   if (!existing) return "create"
-  if (!incoming.verified) return "reject"
-  if (!existing.verified) return "takeover"
   return shouldReplace(existing.timeSeconds, incoming.timeSeconds) ? "replace" : "keep"
 }
 
 /** The shape the board needs to place an entry. */
 export type Rankable = {
   timeSeconds: number
-  verified: boolean
   /** ISO 8601, so lexical order is chronological order. */
   createdAt: string
 }
@@ -47,9 +41,8 @@ export type Rankable = {
  * last rank equals the number of distinct times on the board.
  *
  * The rank number is a function of time and nothing else — Rule 01 stays true.
- * Proof only decides who is listed first among equals, which is what makes the
- * badge worth earning without ever letting a slower verified entry outrank a
- * faster unverified one.
+ * Equal times are listed oldest first, so getting there first is worth
+ * something without ever letting it change the number beside a name.
  */
 export function rankEntries<T extends Rankable>(
   entries: readonly T[],
@@ -63,10 +56,7 @@ export function rankEntries<T extends Rankable>(
   startRank = 1,
 ): (T & { rank: number })[] {
   const sorted = [...entries].sort(
-    (a, b) =>
-      a.timeSeconds - b.timeSeconds ||
-      Number(b.verified) - Number(a.verified) ||
-      a.createdAt.localeCompare(b.createdAt),
+    (a, b) => a.timeSeconds - b.timeSeconds || a.createdAt.localeCompare(b.createdAt),
   )
 
   let rank = startRank - 1

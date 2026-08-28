@@ -18,10 +18,13 @@ export const entries = pgTable(
     handle: text("handle").notNull().unique(),
     timeSeconds: integer("time_seconds").notNull(),
     bootScreenUrl: text("boot_screen_url").notNull(),
-    /** True once the handle's owner has been proven, not merely typed. */
-    verified: boolean("verified").notNull().default(false),
-    /** Stable "source:id" identity, e.g. "x:123456". Null until verified. */
-    identityKey: text("identity_key").unique(),
+    /**
+     * Stable "source:id" identity, e.g. "x:123456".
+     *
+     * Not nullable: ranking goes through X, so every row has an account behind
+     * it. This is the real owner — a handle can be renamed, an id cannot.
+     */
+    identityKey: text("identity_key").notNull().unique(),
     /**
      * Required hardware. Reported install times span roughly 45s to 8 minutes
      * on the same software, so a time without a machine attached compares to

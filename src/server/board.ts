@@ -32,13 +32,13 @@ export async function loadBoard(page = 1): Promise<BoardResponse> {
   const current = Math.max(1, Math.trunc(page) || 1)
   const offset = (current - 1) * PER_PAGE
 
-  const [rows, activityRows, total, counters, leader, anyone] = await Promise.all([
+  const [rows, activityRows, total, counters, leader] = await Promise.all([
     db
       .select()
       .from(entries)
       .where(visible)
       // Mirrors rankEntries so the page holds the rows it should.
-      .orderBy(asc(entries.timeSeconds), desc(entries.verified), asc(entries.createdAt))
+      .orderBy(asc(entries.timeSeconds), asc(entries.createdAt))
       .limit(PER_PAGE)
       .offset(offset),
     db
@@ -54,23 +54,11 @@ export async function loadBoard(page = 1): Promise<BoardResponse> {
     db.select({ n: count() }).from(entries).where(visible),
     readCounters(),
     /**
-     * The leader the hero quotes, and it must be a verified one.
+     * The leader the hero quotes, over the whole board rather than this page.
      *
-     * An unverified entry can hold rank 1 on the board — ranking is open, and
-     * that is deliberate — but the hero's number is the figure the homepage
-     * puts its name to. Nothing stands behind a time someone typed, so a
-     * doctored screenshot must not be able to become the headline.
-     *
-     * The leader belongs to the whole board, not to the page being read.
+     * There is no second query behind this any more: ranking goes through X,
+     * so there is no such thing as an unproven entry to exclude.
      */
-    db
-      .select({ handle: entries.handle, timeSeconds: entries.timeSeconds })
-      .from(entries)
-      .where(and(visible, eq(entries.verified, true)))
-      .orderBy(asc(entries.timeSeconds), asc(entries.createdAt))
-      .limit(1),
-    // Until anyone has verified anything there is nothing to quote, and an
-    // empty hero above a full board would read as broken.
     db
       .select({ handle: entries.handle, timeSeconds: entries.timeSeconds })
       .from(entries)
@@ -79,9 +67,8 @@ export async function loadBoard(page = 1): Promise<BoardResponse> {
       .limit(1),
   ])
 
-  const headline = leader[0] ?? anyone[0] ?? null
+  const headline = leader[0] ?? null
   const fastest = headline?.timeSeconds ?? null
-  const verifiedHeadline = leader.length > 0
 
   const [faster, tied] = await Promise.all([
     // How many distinct times beat this page's first entry: the rank it holds
@@ -92,18 +79,12 @@ export async function loadBoard(page = 1): Promise<BoardResponse> {
           .select({ n: sql<number>`count(distinct ${entries.timeSeconds})` })
           .from(entries)
           .where(and(visible, lt(entries.timeSeconds, rows[0].timeSeconds))),
-    // Counted over the same set the headline came from, or a verified leader
-    // would be reported as tied with everyone who merely typed that time.
     fastest === null
       ? Promise.resolve([{ n: 0 }])
       : db
           .select({ n: count() })
           .from(entries)
-          .where(
-            verifiedHeadline
-              ? and(visible, eq(entries.timeSeconds, fastest), eq(entries.verified, true))
-              : and(visible, eq(entries.timeSeconds, fastest)),
-          ),
+          .where(and(visible, eq(entries.timeSeconds, fastest))),
   ])
 
   const ranked: BoardEntry[] = rankEntries(
@@ -111,7 +92,6 @@ export async function loadBoard(page = 1): Promise<BoardResponse> {
       handle: row.handle,
       timeSeconds: row.timeSeconds,
       bootScreenUrl: row.bootScreenUrl,
-      verified: row.verified,
       cpuId: row.cpuId,
       ramGb: row.ramGb,
       storage: row.storage,
@@ -247,7 +227,6 @@ export async function findEntryByHandle(handle: string): Promise<BoardEntry | nu
     handle: row.handle,
     timeSeconds: row.timeSeconds,
     bootScreenUrl: row.bootScreenUrl,
-    verified: row.verified,
     cpuId: row.cpuId,
     ramGb: row.ramGb,
     storage: row.storage,
@@ -281,7 +260,7 @@ export async function searchEntries(query: string): Promise<BoardEntry[]> {
     .select()
     .from(entries)
     .where(and(visible, sql`${entries.handle} LIKE ${`%${escaped}%`} ESCAPE '\\'`))
-    .orderBy(asc(entries.timeSeconds), desc(entries.verified), asc(entries.createdAt))
+    .orderBy(asc(entries.timeSeconds), asc(entries.createdAt))
     .limit(MAX_MATCHES)
 
   // Ranked one at a time against the whole board: these rows are a filtered
@@ -298,7 +277,6 @@ export async function searchEntries(query: string): Promise<BoardEntry[]> {
         handle: row.handle,
         timeSeconds: row.timeSeconds,
         bootScreenUrl: row.bootScreenUrl,
-        verified: row.verified,
         cpuId: row.cpuId,
         ramGb: row.ramGb,
         storage: row.storage,

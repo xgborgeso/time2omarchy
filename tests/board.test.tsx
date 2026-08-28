@@ -10,7 +10,6 @@ function entry(
   return {
     timeSeconds: 43,
     bootScreenUrl: "/uploads/x.png",
-    verified: false,
     cpuId: "other",
     ramGb: 16,
     storage: "ssd",
@@ -22,7 +21,7 @@ function entry(
 
 /** Mirrors what the server produces for a tie: shared rank, verified first. */
 const TIED: BoardEntry[] = [
-  entry({ handle: "ada", rank: 1, verified: true }),
+  entry({ handle: "ada", rank: 1 }),
   entry({ handle: "grace", rank: 1 }),
   entry({ handle: "linus", rank: 2, timeSeconds: 51 }),
 ]
@@ -47,23 +46,11 @@ describe("Board", () => {
     expect(screen.queryByText("#3")).not.toBeInTheDocument()
   })
 
-  it("explains the mark to a cursor and to a screen reader alike", () => {
-    // The check carries its meaning alone, the way X marks an account — so
-    // both the hover title and the accessible name have to say what it is.
+  it("carries no mark, because every entry on the board has one behind it", () => {
+    // The badge distinguished proven entries from guest ones. Ranking goes
+    // through X now, so a mark on every row would say nothing.
     render(<Board entries={TIED} loading={false} onOpen={() => {}} />)
-    const mark = within(entryFor("ada")).getByRole("img", { name: /verified on x/i })
-    expect(mark).toBeVisible()
-    expect(mark).toHaveAttribute("title", expect.stringContaining("proved it owns"))
-  })
-
-  it("marks only the verified handle", () => {
-    render(<Board entries={TIED} loading={false} onOpen={() => {}} />)
-    expect(
-      within(entryFor("ada")).getByRole("img", { name: /verified on x/i }),
-    ).toBeInTheDocument()
-    expect(
-      within(entryFor("grace")).queryByRole("img", { name: /verified on x/i }),
-    ).toBeNull()
+    expect(screen.queryByRole("img", { name: /verified/i })).toBeNull()
   })
 
   it("shows the hardware on a row that has it", () => {
@@ -122,29 +109,5 @@ describe("Board", () => {
     const { container } = render(<Board entries={[]} loading={true} onOpen={() => {}} />)
     expect(container).not.toBeEmptyDOMElement()
     expect(screen.queryByRole("link")).toBeNull()
-  })
-})
-
-describe("verifying from the board", () => {
-  it("offers a verify on every unproven entry", async () => {
-    // There is no logged-in state, so the board cannot know whose entry is
-    // whose. Offering it everywhere is honest because the answer names the
-    // mismatch — see the server's verify tests.
-    const onVerify = vi.fn()
-    const user = userEvent.setup()
-    render(<Board entries={TIED} loading={false} onOpen={() => {}} onVerify={onVerify} />)
-    await user.click(within(entryFor("grace")).getByRole("button", { name: /verify/i }))
-
-    expect(onVerify).toHaveBeenCalledWith(expect.objectContaining({ handle: "grace" }))
-  })
-
-  it("never offers a verify on an entry that is already proven", async () => {
-    render(<Board entries={TIED} loading={false} onOpen={() => {}} onVerify={() => {}} />)
-    expect(within(entryFor("ada")).queryByRole("button", { name: /verify/i })).toBeNull()
-  })
-
-  it("offers nothing at all when verifying is not wired up", async () => {
-    render(<Board entries={TIED} loading={false} onOpen={() => {}} />)
-    expect(screen.queryByRole("button", { name: /verify/i })).toBeNull()
   })
 })

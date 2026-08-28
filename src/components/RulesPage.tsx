@@ -17,22 +17,21 @@ export function RulesPage() {
         <ol className="ml-5 list-decimal space-y-3.5 text-sm marker:tabular-nums marker:text-muted-foreground">
           <li className="pl-2">Rank is by time alone. Fastest wins.</li>
           <li className="pl-2">
-            Equal times share a rank, and a verified entry is listed first. That is the only
-            thing verifying changes about the order.
+            Equal times share a rank. The earlier entry is listed first.
           </li>
-          <li className="pl-2">One entry per X handle.</li>
+          <li className="pl-2">
+            Ranking goes through X. Every entry has an account behind it, so a handle here
+            is never just a name someone typed.
+          </li>
+          <li className="pl-2">One entry per X account.</li>
           <li className="pl-2">A boot screen is required, shown publicly as proof.</li>
           <li className="pl-2">
-            Times are self-reported. Anyone can rank — verifying your entry with X is
-            optional, and earns the check mark.
+            Times are self-reported. The boot screen is the only proof, and anyone can
+            report one that does not look right.
           </li>
           <li className="pl-2">
-            Only a verified handle can post a faster time later. Verify yours whenever you
-            like: your time and boot screen stay exactly as they are.
-          </li>
-          <li className="pl-2">
-            The number at the top of the page is the fastest verified time. Anyone can hold
-            rank 1, but a headline needs an account standing behind it.
+            Beat your own time whenever you like: only you can change your entry, and your
+            boot screen is replaced along with it.
           </li>
         </ol>
       </section>

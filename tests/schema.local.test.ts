@@ -47,8 +47,9 @@ describe("schema", () => {
     try {
       const first = await openDatabase(dir)
       await first.client.query(
-        "INSERT INTO entries (handle, time_seconds, boot_screen_url, cpu_id, ram_gb, storage)" +
-          " VALUES ('kept', 43, '/a.png', 'other', 16, 'ssd')",
+        "INSERT INTO entries (handle, time_seconds, boot_screen_url, identity_key," +
+          " cpu_id, ram_gb, storage)" +
+          " VALUES ('kept', 43, '/a.png', 'x:kept', 'other', 16, 'ssd')",
       )
       await first.client.close()
 
@@ -64,14 +65,16 @@ describe("schema", () => {
     }
   }, 30_000)
 
-  it("keeps identity_key nullable so unverified rows can coexist", async () => {
+  it("refuses a row with no account behind it", async () => {
+    // Ranking goes through X, so identity_key is the one column that proves an
+    // entry is somebody's. A nullable one would let a guest row back in.
     const client = await freshDb()
-    await client.query(
-      "INSERT INTO entries (handle, time_seconds, boot_screen_url, cpu_id, ram_gb, storage)" +
-        " VALUES ('a', 43, '/a.png', 'other', 16, 'ssd'), ('b', 51, '/b.png', 'other', 32, 'nvme')",
-    )
-    const res = await client.query<{ n: number }>("SELECT count(*)::int AS n FROM entries")
-    expect(res.rows[0]?.n).toBe(2)
+    await expect(
+      client.query(
+        "INSERT INTO entries (handle, time_seconds, boot_screen_url, cpu_id, ram_gb, storage)" +
+          " VALUES ('a', 43, '/a.png', 'other', 16, 'ssd')",
+      ),
+    ).rejects.toThrow(/identity_key/)
     await client.close()
   })
 })

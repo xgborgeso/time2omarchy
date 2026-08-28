@@ -6,8 +6,9 @@
  * resulting url is submitted with the rank.
  */
 import { clientKeyFrom } from "@/lib/ratelimit"
-import { handleSchema, MAX_BOOT_SCREEN_BYTES, validateBootScreen } from "@/lib/validation"
+import { MAX_BOOT_SCREEN_BYTES, validateBootScreen } from "@/lib/validation"
 import { TRUSTED_IP_HEADER } from "@/server/env"
+import { identityFrom } from "@/server/identity"
 import { Limiter } from "@/server/ratelimit"
 import { captureError } from "@/server/sentry"
 import { storeBootScreen } from "@/server/storage"
@@ -41,15 +42,13 @@ export async function POST(request: Request): Promise<Response> {
       return fail("Slow down. Try again in an hour.", 429)
     }
 
-    const form = await request.formData()
+    // Storage is only ever written on behalf of an account. Without this an
+    // anonymous caller could fill the bucket with anything at no cost, and the
+    // rate limit alone is a speed bump rather than a door.
+    const identity = await identityFrom(request.headers)
+    if (!identity) return fail("Connect X before uploading.", 401)
 
-    const handle = handleSchema.safeParse(String(form.get("handle") ?? ""))
-    if (!handle.success) {
-      return Response.json(
-        { ok: false, error: "Add an X handle", field: "handle" },
-        { status: 400 },
-      )
-    }
+    const form = await request.formData()
 
     const uploaded = form.get("bootScreen")
     const file = uploaded instanceof File ? uploaded : null
@@ -58,7 +57,7 @@ export async function POST(request: Request): Promise<Response> {
       return fail(issue?.error ?? "Add a boot screen", 400)
     }
 
-    return Response.json({ ok: true, url: await storeBootScreen(file, handle.data) })
+    return Response.json({ ok: true, url: await storeBootScreen(file, identity.handle) })
   } catch (err) {
     await captureError(err)
     return fail("Upload failed", 500)

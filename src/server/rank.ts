@@ -9,8 +9,6 @@ import { entries } from "./schema"
 import { deleteBootScreen, publicUploadBase } from "./storage"
 
 export type RankInput = {
-  /** Already normalized and range-checked by the router's schemas. */
-  handle: string
   timeSeconds: number
   /** A url this app issued; uploading is a separate step. */
   bootScreenUrl: string
@@ -18,36 +16,33 @@ export type RankInput = {
   cpuId: string
   ramGb: number
   storage: string
-  /** A proven X account, if one is carried. Counts only for its own handle. */
-  identity: Identity | null
+  /**
+   * Who is ranking. Never optional, and never a typed string.
+   *
+   * Ranking goes through X first, so the handle on an entry is the handle X
+   * answered with. There is nothing to impersonate and nothing to claim later.
+   */
+  identity: Identity
 }
 
 /**
  * The entry this submission belongs to.
  *
- * By account id first: an X handle can be changed, and the entry has to follow
- * the account rather than stay behind under the old name. Only then by handle,
- * which is how an anonymous entry — and the first time one is verified — is found.
+ * By account id, not by name: an X handle can be changed, and the entry has to
+ * follow the account rather than stay behind under the old one.
  */
-async function findEntry(db: Db, handle: string, identityKey: string | null) {
-  if (identityKey) {
-    const owned = await db
-      .select()
-      .from(entries)
-      .where(eq(entries.identityKey, identityKey))
-      .limit(1)
-    if (owned[0]) return owned[0]
-  }
-  const named = await db.select().from(entries).where(eq(entries.handle, handle)).limit(1)
-  return named[0]
+async function findEntry(db: Db, identityKey: string) {
+  const owned = await db
+    .select()
+    .from(entries)
+    .where(eq(entries.identityKey, identityKey))
+    .limit(1)
+  return owned[0]
 }
 
 export async function submitRank(input: RankInput): Promise<RankSuccess | RankFailure> {
   const { timeSeconds, bootScreenUrl, identity } = input
-  // There is no signed-in state in this product, only proof of one entry. The
-  // handle is always the one typed; proof of @ada says nothing about @bob.
-  const handle = input.handle
-  const proven = identity?.handle === handle ? identity : null
+  const handle = identity.handle
   const specs = {
     cpuId: input.cpuId,
     ramGb: input.ramGb,
@@ -62,22 +57,17 @@ export async function submitRank(input: RankInput): Promise<RankSuccess | RankFa
   }
 
   const db = await getDb()
-
-  // Verifying is the whole of it; there is nothing else to check.
-  const identityKey = proven?.key ?? null
-  const verified = proven !== null
-
-  const current = await findEntry(db, handle, identityKey)
+  const current = await findEntry(db, identity.key)
 
   // The account was renamed into a handle another entry already holds. Rather
   // than break a unique constraint or quietly overwrite a stranger, say so.
-  if (current && current.handle !== handle) {
+  if (!current || current.handle !== handle) {
     const holder = await db
       .select({ id: entries.id })
       .from(entries)
       .where(eq(entries.handle, handle))
       .limit(1)
-    if (holder[0] && holder[0].id !== current.id) {
+    if (holder[0] && holder[0].id !== current?.id) {
       return {
         ok: false,
         error: `@${handle} is already held by another entry.`,
@@ -86,19 +76,9 @@ export async function submitRank(input: RankInput): Promise<RankSuccess | RankFa
     }
   }
 
-  const decision = decideEntry(
-    current ? { timeSeconds: current.timeSeconds, verified: current.verified } : null,
-    { timeSeconds, verified },
-  )
-
-  if (decision === "reject") {
-    return {
-      ok: false,
-      error: `@${handle} is already on the board.`,
-      field: "handle",
-      needsSignIn: true,
-    }
-  }
+  const decision = decideEntry(current ? { timeSeconds: current.timeSeconds } : null, {
+    timeSeconds,
+  })
 
   if (decision === "keep" && current) {
     const board = await loadBoard()
@@ -124,8 +104,7 @@ export async function submitRank(input: RankInput): Promise<RankSuccess | RankFa
         handle,
         timeSeconds,
         bootScreenUrl,
-        verified,
-        identityKey,
+        identityKey: identity.key,
         ...specs,
         createdAt: now,
         updatedAt: now,
@@ -148,12 +127,11 @@ export async function submitRank(input: RankInput): Promise<RankSuccess | RankFa
   const updated = await db
     .update(entries)
     .set({
+      // Written every time: X is the source of the name, so a rename lands
+      // here on the owner's next rank rather than leaving a stale handle.
       handle,
       timeSeconds,
       bootScreenUrl,
-      // Verifying promotes the entry for good; it never demotes a verified one.
-      verified: verified || current.verified,
-      identityKey: identityKey ?? current.identityKey,
       ...specs,
       updatedAt: now,
     })
@@ -177,73 +155,6 @@ export async function submitRank(input: RankInput): Promise<RankSuccess | RankFa
   }
 }
 
-/**
- * Proving an entry that is already on the board.
- *
- * Someone ranks as a guest, then decides they want the mark. Re-ranking would
- * work, but it would make them find the boot screen and retype a time that is
- * already there — so this proves ownership and changes nothing else.
- */
-export async function verifyEntry(
-  identity: Identity,
-  /** The entry the person asked for. A request, never authority. */
-  requested: string,
-  // The board size travels with the entry because verifying is now the only
-  // moment that offers a share, and the tweet names the field it beat.
-): Promise<{ ok: true; entry: BoardEntry; total: number } | RankFailure> {
-  // Checked before anything is looked up, so a refusal says something rather
-  // than leaving someone staring at a button that did nothing.
-  if (identity.handle !== requested) {
-    return {
-      ok: false,
-      // Second person, and no accounts named: naming them told each side who
-      // the other was for no benefit, and the person already knows which
-      // entry they clicked.
-      error: "That entry doesn't belong to you.",
-      field: "handle",
-    }
-  }
-
-  const db = await getDb()
-  const rows = await db
-    .select()
-    .from(entries)
-    .where(eq(entries.handle, identity.handle))
-    .limit(1)
-
-  const current = rows[0]
-  if (!current) {
-    return {
-      ok: false,
-      error: `Nothing on the board under @${identity.handle} yet.`,
-      field: "handle",
-    }
-  }
-  if (current.identityKey) {
-    // Either already yours, or X reassigned the handle and the entry belongs
-    // to whoever proved it. Neither is ours to overwrite.
-    return {
-      ok: false,
-      error:
-        current.identityKey === identity.key
-          ? `@${identity.handle} is already verified.`
-          : `@${identity.handle} is already verified by another account.`,
-      field: "handle",
-    }
-  }
-
-  const verified = await db
-    .update(entries)
-    .set({ verified: true, identityKey: identity.key, updatedAt: new Date() })
-    .where(eq(entries.id, current.id))
-    .returning()
-
-  const board = await loadBoard()
-  const row = verified[0]!
-  const entry = board.entries.find((e) => e.handle === row.handle) ?? toEntry(row, board)
-  return { ok: true, entry, total: board.counters.entries }
-}
-
 function toEntry(
   row: typeof entries.$inferSelect,
   board: { entries: BoardEntry[] },
@@ -253,7 +164,6 @@ function toEntry(
     handle: row.handle,
     timeSeconds: row.timeSeconds,
     bootScreenUrl: row.bootScreenUrl,
-    verified: row.verified,
     cpuId: row.cpuId,
     ramGb: row.ramGb,
     storage: row.storage,

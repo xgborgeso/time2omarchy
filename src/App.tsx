@@ -1,7 +1,7 @@
 "use client"
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 import { Activity } from "@/components/Activity"
 import { Board } from "@/components/Board"
@@ -12,15 +12,12 @@ import { Hero } from "@/components/Hero"
 import { Lightbox } from "@/components/Lightbox"
 import { RankDialog } from "@/components/RankDialog"
 import { RulesPage } from "@/components/RulesPage"
-import { ShareButton } from "@/components/ShareButton"
 import { SiteHeader } from "@/components/SiteHeader"
 import { StatsPage } from "@/components/stats/StatsPage"
-import { signIn } from "@/lib/auth-client"
 import { useTRPC } from "@/lib/trpc"
 import type { BoardEntry, RankSuccess } from "@/lib/types"
 import { useDebounced } from "@/lib/use-debounced"
 import { usePresence } from "@/lib/use-presence"
-import { verifyOutcome } from "@/lib/verify-outcome"
 import { hashForView, type View, viewFromHash } from "@/lib/view"
 
 export function App() {
@@ -36,7 +33,6 @@ export function App() {
       { refetchInterval: page === 1 ? 10_000 : false, placeholderData: (p) => p },
     ),
   )
-  const verify = useMutation(trpc.verify.mutationOptions())
   const report = useMutation(trpc.report.mutationOptions())
   /**
    * Handles this viewer has already flagged, so the button can go quiet.
@@ -79,72 +75,6 @@ export function App() {
   useEffect(() => {
     window.scrollTo({ top: 0 })
   }, [view])
-
-  /**
-   * Proving an entry, which is the only thing X is used for here.
-   *
-   * The handle rides along in the return url rather than in state: the round
-   * trip through X reloads the page, so anything held in memory is gone by the
-   * time the answer comes back.
-   */
-  async function onVerify(entry: BoardEntry) {
-    await signIn.social({
-      provider: "twitter",
-      callbackURL: `/?verify=${encodeURIComponent(entry.handle)}`,
-      errorCallbackURL: "/",
-    })
-  }
-
-  /**
-   * Finishes a verify that went through X and came back.
-   *
-   * Guarded by a ref, not by the effect's dependencies: the mutation object
-   * changes identity on every render, so depending on it fired the verify in a
-   * loop until the rate limit answered instead of the server.
-   */
-  const verified = useRef<string | null>(null)
-
-  useEffect(() => {
-    const target = new URLSearchParams(window.location.search).get("verify")
-    if (!target || verified.current === target) return
-    verified.current = target
-    // Dropped straight away so a reload never repeats the verify.
-    window.history.replaceState(null, "", window.location.pathname + window.location.hash)
-
-    void verify
-      .mutateAsync({ handle: target })
-      .catch(() => null)
-      .then(async (result) => {
-        const outcome = verifyOutcome(result)
-        if (outcome.ok) {
-          toast.success(outcome.message, {
-            // The one place a share can be offered: the entry is proven, and
-            // the account that proved it is the account X will post from, so
-            // the brag and the row finally name the same person. Left up
-            // until it is dismissed — six seconds is not long enough to
-            // decide to post something.
-            duration: outcome.position ? Number.POSITIVE_INFINITY : undefined,
-            // The real button rather than a label and a handler: it is an
-            // anchor, so middle-click and open-in-new-tab behave, and it
-            // carries X's mark, which is the only thing naming where the
-            // press goes. Shrunk to the height a toast action wants.
-            action: outcome.position ? (
-              <ShareButton
-                position={outcome.position}
-                className="h-8 gap-1.5 px-3 text-xs"
-              />
-            ) : undefined,
-          })
-          // Every page, not one: the verified entry may sit on any of them.
-          await queryClient.invalidateQueries(trpc.board.queryFilter())
-        } else {
-          // No title above it: "that verify did not go through" says nothing
-          // the sentence below it does not already say better.
-          toast.error(outcome.message)
-        }
-      })
-    // Runs once per handle in the url; the ref above is the real guard.
-  }, [verify, queryClient, trpc])
 
   /**
    * Flags a boot screen.
@@ -222,7 +152,6 @@ export function App() {
               entries={shownEntries}
               loading={isLoading && !searching}
               onOpen={setOpen}
-              onVerify={onVerify}
             />
 
             {/* Paging is about the whole board; a set of results is not paged. */}

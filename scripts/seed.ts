@@ -239,35 +239,25 @@ if (clear) {
   console.log(`removed ${res.rows.length} seeded entries`)
 } else {
   await mkdir(UPLOADS, { recursive: true })
-  for (const [handle, seconds, daysAgo, verified, [cpuId, ramGb, storage]] of ENTRIES) {
+  // The `verified` element of each tuple is ignored now that ranking goes
+  // through X — every seeded row gets an identity, because every real one has.
+  for (const [handle, seconds, daysAgo, , [cpuId, ramGb, storage]] of ENTRIES) {
     const url = await bootScreenFor(seconds)
     const at = new Date(Date.now() - daysAgo * 86_400_000)
     await db.query(
       `INSERT INTO entries
-         (id, handle, time_seconds, boot_screen_url, verified, identity_key,
+         (id, handle, time_seconds, boot_screen_url, identity_key,
           cpu_id, ram_gb, storage, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9)
        ON CONFLICT (handle) DO UPDATE
          SET time_seconds = EXCLUDED.time_seconds,
              boot_screen_url = EXCLUDED.boot_screen_url,
-             verified = EXCLUDED.verified,
              identity_key = EXCLUDED.identity_key,
              cpu_id = EXCLUDED.cpu_id,
              ram_gb = EXCLUDED.ram_gb,
              storage = EXCLUDED.storage,
              updated_at = EXCLUDED.updated_at`,
-      [
-        crypto.randomUUID(),
-        handle,
-        seconds,
-        url,
-        verified,
-        verified ? `x:${handle}` : null,
-        cpuId,
-        ramGb,
-        storage,
-        at,
-      ],
+      [crypto.randomUUID(), handle, seconds, url, `x:${handle}`, cpuId, ramGb, storage, at],
     )
   }
   console.log(`seeded ${ENTRIES.length} entries`)

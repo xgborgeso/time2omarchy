@@ -4,7 +4,7 @@ import { specsSchema } from "../../lib/specs"
 import { handleSchema, timeSchema } from "../../lib/validation"
 import { loadBoard, loadStats, searchEntries } from "../board"
 import { identityFrom } from "../identity"
-import { submitRank, verifyEntry } from "../rank"
+import { submitRank } from "../rank"
 import { Limiter } from "../ratelimit"
 import { reportEntry } from "../reports"
 import { captureError } from "../sentry"
@@ -18,8 +18,6 @@ const HOUR = 60 * MINUTE
 /** Reads are generous; writes are cheap to send and expensive to serve. */
 const readLimit = new Limiter({ windowMs: MINUTE, max: 300 })
 const rankLimit = new Limiter({ windowMs: HOUR, max: 8 })
-/** Cheap and idempotent, and a refused verify is a normal thing to retry. */
-const verifyLimit = new Limiter({ windowMs: HOUR, max: 30 })
 /**
  * Generous, because the table dedupes anyway.
  *
@@ -84,6 +82,20 @@ export const appRouter = router({
     .input(z.object({ query: z.string().max(32) }))
     .query(({ input }) => searchEntries(input.query)),
 
+  /**
+   * The handle X answered with, or null.
+   *
+   * Not a session in the usual sense — there is no signed-in state to show and
+   * nothing to sign out of. The form asks this once so it knows whether to
+   * send someone to X before letting them fill anything in.
+   */
+  me: publicProcedure
+    .use(throttled(readLimit, "Too many requests."))
+    .query(async ({ ctx }) => {
+      const identity = await identityFrom(ctx.headers)
+      return { handle: identity?.handle ?? null }
+    }),
+
   /** Records that someone is here. The write half of what board used to do. */
   visit: publicProcedure
     .use(throttled(readLimit, "Too many requests."))
@@ -92,38 +104,6 @@ export const appRouter = router({
       const visitorId = visitorIdFrom(ctx.headers, ctx.resHeaders, ctx.secure)
       await touchPresence(visitorId, input.countView)
       return { ok: true as const }
-    }),
-
-  /**
-   * Takes over an entry that was ranked as a guest.
-   *
-   * The handle names which entry was asked for; it is never authority. The
-   * server acts only where X's answer matches it, and says so plainly when it
-   * does not — a verify on someone else's entry has to explain itself rather
-   * than quietly do nothing.
-   */
-  verify: publicProcedure
-    .use(throttled(verifyLimit, "Too many attempts. Try again later."))
-    .input(z.object({ handle: handleSchema }))
-    .mutation(async ({ ctx, input }) => {
-      try {
-        const identity = await identityFrom(ctx.headers)
-        if (!identity) {
-          return {
-            ok: false as const,
-            error: "Prove the entry with X first.",
-            field: "handle" as const,
-          }
-        }
-        return await verifyEntry(identity, input.handle)
-      } catch (err) {
-        await captureError(err)
-        return {
-          ok: false as const,
-          error: "Could not verify that entry",
-          field: "form" as const,
-        }
-      }
     }),
 
   /**
@@ -150,7 +130,6 @@ export const appRouter = router({
     .input(
       z
         .object({
-          handle: handleSchema,
           // Parsed here so "1:12" and "43s" keep working; the client sends text.
           time: timeSchema,
           bootScreenUrl: z.string().min(1),
@@ -159,11 +138,19 @@ export const appRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       try {
+        // No handle in the input at all: the only name an entry can carry is
+        // the one X answered with, so there is nothing to impersonate.
+        const identity = await identityFrom(ctx.headers)
+        if (!identity) {
+          return {
+            ok: false as const,
+            error: "Connect X before ranking.",
+            field: "form" as const,
+            needsSignIn: true,
+          }
+        }
         return await submitRank({
-          // Verification is the session and nothing else: whoever is signed in
-          // owns the entry, and the typed handle is only used without one.
-          identity: await identityFrom(ctx.headers),
-          handle: input.handle,
+          identity,
           timeSeconds: input.time,
           bootScreenUrl: input.bootScreenUrl,
           cpuId: input.cpuId,
