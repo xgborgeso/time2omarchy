@@ -13,6 +13,10 @@ export function Toaster(props: ToasterProps) {
     <Sonner
       theme="dark"
       position="top-center"
+      // Long enough to read and act on, with a way out: an error that vanishes
+      // mid-sentence is the same as no error at all.
+      duration={6000}
+      closeButton
       toastOptions={{
         classNames: {
           toast:

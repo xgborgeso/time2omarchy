@@ -9,6 +9,9 @@ const rankFn = vi.fn()
 const claimFn = vi.fn()
 const uploadFn = vi.fn()
 const signInFn = vi.fn()
+const toastError = vi.fn()
+
+vi.mock("sonner", () => ({ toast: { error: (...a: unknown[]) => toastError(...a) } }))
 const signOutFn = vi.fn()
 
 /** Reassigned per test; the hook reads it on every render. */
@@ -74,6 +77,7 @@ async function submit(handle: string, time: string, withSpecs = true) {
 beforeEach(() => {
   session = { data: null }
   signInFn.mockReset()
+  toastError.mockReset()
   claimFn.mockReset()
   signOutFn.mockReset()
   rankFn.mockReset()
@@ -271,6 +275,28 @@ describe("RankForm", () => {
 
     // The time is valid now, so the complaint has moved on to what is missing.
     expect(time).not.toHaveAttribute("aria-invalid", "true")
+  })
+
+  it("toasts when X cannot be reached, since no field is at fault", async () => {
+    // Nothing on the form is wrong, so there is nowhere inline to put this.
+    // A system outcome with no field to attach to is what a toast is for.
+    signInFn.mockResolvedValue({ error: { message: "Invalid origin" } })
+    rankFn.mockResolvedValue({
+      ok: true,
+      created: true,
+      improved: true,
+      keptBest: false,
+      bestTimeSeconds: 43,
+      entry: { rank: 1, timeSeconds: 43, verified: false },
+      board: { entries: [], counters: { entries: 1 } },
+    })
+    render(<RankForm onSuccess={() => {}} />, { wrapper })
+    const user = await submit("ada", "43")
+
+    await user.click(await screen.findByRole("button", { name: /claim this entry/i }))
+
+    await waitFor(() => expect(toastError).toHaveBeenCalled())
+    expect(String(toastError.mock.calls[0]?.[0])).toMatch(/invalid origin/i)
   })
 
   it("refuses to submit without a boot screen", async () => {

@@ -98,7 +98,9 @@ export function App() {
           toast.success(outcome.message)
           await queryClient.invalidateQueries({ queryKey: trpc.board.queryKey() })
         } else {
-          toast.error("That claim did not go through", { description: outcome.message })
+          // No title above it: "that claim did not go through" says nothing
+          // the sentence below it does not already say better.
+          toast.error(outcome.message)
         }
       })
     // Runs once per handle in the url; the ref above is the real guard.

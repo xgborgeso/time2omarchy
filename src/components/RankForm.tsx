@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
 } from "react"
+import { toast } from "sonner"
 import { FIELD_ROW, SpecsFields } from "@/components/SpecsFields"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -119,7 +120,10 @@ export function RankForm({ onSuccess }: Props) {
       errorCallbackURL: "/",
     })
     if (result?.error) {
-      setError({ message: result.error.message ?? "Could not reach X.", field: "form" })
+      // Not a validation error: nothing on the form is wrong, so there is no
+      // field to attach it to. Reaching X is a system outcome, and system
+      // outcomes belong in a toast.
+      toast.error(result.error.message ?? "Could not reach X. Try again.")
     }
   }
 
