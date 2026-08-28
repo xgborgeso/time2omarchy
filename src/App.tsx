@@ -15,11 +15,11 @@ import { RulesPage } from "@/components/RulesPage"
 import { SiteHeader } from "@/components/SiteHeader"
 import { StatsPage } from "@/components/stats/StatsPage"
 import { signIn } from "@/lib/auth-client"
-import { claimOutcome } from "@/lib/claim-outcome"
 import { useTRPC } from "@/lib/trpc"
 import type { BoardEntry, RankSuccess } from "@/lib/types"
 import { useDebounced } from "@/lib/use-debounced"
 import { usePresence } from "@/lib/use-presence"
+import { verifyOutcome } from "@/lib/verify-outcome"
 import { hashForView, type View, viewFromHash } from "@/lib/view"
 
 export function App() {
@@ -35,7 +35,7 @@ export function App() {
       { refetchInterval: page === 1 ? 10_000 : false, placeholderData: (p) => p },
     ),
   )
-  const claim = useMutation(trpc.claim.mutationOptions())
+  const verify = useMutation(trpc.verify.mutationOptions())
   const [open, setOpen] = useState<BoardEntry | null>(null)
   /** A handle searched for, because this page may not be the one holding it. */
   const [lookup, setLookup] = useState("")
@@ -78,47 +78,47 @@ export function App() {
    * trip through X reloads the page, so anything held in memory is gone by the
    * time the answer comes back.
    */
-  async function onClaim(entry: BoardEntry) {
+  async function onVerify(entry: BoardEntry) {
     await signIn.social({
       provider: "twitter",
-      callbackURL: `/?claim=${encodeURIComponent(entry.handle)}`,
+      callbackURL: `/?verify=${encodeURIComponent(entry.handle)}`,
       errorCallbackURL: "/",
     })
   }
 
   /**
-   * Finishes a claim that went through X and came back.
+   * Finishes a verify that went through X and came back.
    *
    * Guarded by a ref, not by the effect's dependencies: the mutation object
-   * changes identity on every render, so depending on it fired the claim in a
+   * changes identity on every render, so depending on it fired the verify in a
    * loop until the rate limit answered instead of the server.
    */
-  const claimed = useRef<string | null>(null)
+  const verified = useRef<string | null>(null)
 
   useEffect(() => {
-    const target = new URLSearchParams(window.location.search).get("claim")
-    if (!target || claimed.current === target) return
-    claimed.current = target
-    // Dropped straight away so a reload never repeats the claim.
+    const target = new URLSearchParams(window.location.search).get("verify")
+    if (!target || verified.current === target) return
+    verified.current = target
+    // Dropped straight away so a reload never repeats the verify.
     window.history.replaceState(null, "", window.location.pathname + window.location.hash)
 
-    void claim
+    void verify
       .mutateAsync({ handle: target })
       .catch(() => null)
       .then(async (result) => {
-        const outcome = claimOutcome(target, result)
+        const outcome = verifyOutcome(result)
         if (outcome.ok) {
           toast.success(outcome.message)
-          // Every page, not one: the claimed entry may sit on any of them.
+          // Every page, not one: the verified entry may sit on any of them.
           await queryClient.invalidateQueries(trpc.board.queryFilter())
         } else {
-          // No title above it: "that claim did not go through" says nothing
+          // No title above it: "that verify did not go through" says nothing
           // the sentence below it does not already say better.
           toast.error(outcome.message)
         }
       })
     // Runs once per handle in the url; the ref above is the real guard.
-  }, [claim, queryClient, trpc])
+  }, [verify, queryClient, trpc])
 
   function navigate(next: View) {
     const hash = hashForView(next)
@@ -176,7 +176,7 @@ export function App() {
               entries={shownEntries}
               loading={isLoading && !searching}
               onOpen={setOpen}
-              onClaim={onClaim}
+              onVerify={onVerify}
             />
 
             {/* Paging is about the whole board; a set of results is not paged. */}

@@ -16,17 +16,17 @@ describe("RulesPage", () => {
     expect(screen.getByText(/equal times share a rank/i)).toBeInTheDocument()
   })
 
-  it("explains what claiming buys, since the board shows a mark for it", () => {
+  it("explains what verifying buys, since the board shows a mark for it", () => {
     render(<RulesPage />)
-    expect(screen.getByText(/claiming your entry with x is optional/i)).toBeInTheDocument()
+    expect(screen.getByText(/verifying your entry with x is optional/i)).toBeInTheDocument()
   })
 
-  it("says a guest entry can be claimed later, which is not obvious", () => {
+  it("says a guest entry can be verified later, which is not obvious", () => {
     // Someone who ranked as a guest has to be told the entry is still theirs to
     // take, or the only way they find out is by trying.
     render(<RulesPage />)
     expect(
-      screen.getByText(/only a claimed handle can post a faster time later/i),
+      screen.getByText(/only a verified handle can post a faster time later/i),
     ).toBeInTheDocument()
   })
 
@@ -34,14 +34,14 @@ describe("RulesPage", () => {
     // Two entries at the same second is the normal case, so which of them is
     // listed above the other is a rule people will notice and ask about.
     render(<RulesPage />)
-    expect(screen.getByText(/a claimed entry is listed first/i)).toBeInTheDocument()
+    expect(screen.getByText(/a verified entry is listed first/i)).toBeInTheDocument()
   })
 
   it("explains the headline number, which does not match rank 1", () => {
-    // The hero shows the fastest *claimed* time while an unclaimed entry can
+    // The hero shows the fastest *verified* time while an unverified entry can
     // hold rank 1 — two different numbers on one screen, unexplained.
     render(<RulesPage />)
-    expect(screen.getByText(/fastest claimed time/i)).toBeInTheDocument()
+    expect(screen.getByText(/fastest verified time/i)).toBeInTheDocument()
   })
 
   it("promises nothing the product cannot do", () => {
@@ -52,11 +52,12 @@ describe("RulesPage", () => {
     expect(rules.join(" ")).not.toMatch(/\bedit\b|\bchanged\b/i)
   })
 
-  it("uses one word for the action, and keeps 'verified' for the state", () => {
-    // "Verify your handle" and "claim your entry" were the same operation
-    // under two names. The action is claiming; the badge is what it earns.
+  it("uses one word for the action and the state alike", () => {
+    // Verb and badge now share a root: you verify an entry, and it is
+    // verified. "Claim" was a second word for the same operation.
     render(<RulesPage />)
     const rules = screen.getAllByRole("listitem").map((li) => li.textContent ?? "")
-    expect(rules.join(" ")).not.toMatch(/verify|verifying/i)
+    expect(rules.join(" ")).not.toMatch(/\bclaim/i)
+    expect(rules.join(" ")).toMatch(/verif/i)
   })
 })

@@ -68,7 +68,7 @@ describe("StatsPage", () => {
   })
 
   it("says so when there are no stats, instead of rendering zeroes", async () => {
-    // Zeroes would read as "nobody has ranked", which is a different claim.
+    // Zeroes would read as "nobody has ranked", which is a different verify.
     // Resolving null exercises the same branch as a failed fetch without a
     // rejection the runner reports as unhandled before React Query sees it.
     statsFn.mockResolvedValue(null)

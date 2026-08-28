@@ -27,7 +27,7 @@ export type RankInput = {
  *
  * By account id first: an X handle can be changed, and the entry has to follow
  * the account rather than stay behind under the old name. Only then by handle,
- * which is how an anonymous entry — and a first-time claim of one — is found.
+ * which is how an anonymous entry — and the first time one is verified — is found.
  */
 async function findEntry(db: Db, handle: string, identityKey: string | null) {
   if (identityKey) {
@@ -63,7 +63,7 @@ export async function submitRank(input: RankInput): Promise<RankSuccess | RankFa
 
   const db = await getDb()
 
-  // Claiming is the whole of verification; there is nothing else to check.
+  // Verifying is the whole of it; there is nothing else to check.
   const identityKey = proven?.key ?? null
   const verified = proven !== null
 
@@ -151,7 +151,7 @@ export async function submitRank(input: RankInput): Promise<RankSuccess | RankFa
       handle,
       timeSeconds,
       bootScreenUrl,
-      // A claim promotes the entry for good; it never demotes a verified one.
+      // Verifying promotes the entry for good; it never demotes a verified one.
       verified: verified || current.verified,
       identityKey: identityKey ?? current.identityKey,
       ...specs,
@@ -184,7 +184,7 @@ export async function submitRank(input: RankInput): Promise<RankSuccess | RankFa
  * work, but it would make them find the boot screen and retype a time that is
  * already there — so this proves ownership and changes nothing else.
  */
-export async function claimEntry(
+export async function verifyEntry(
   identity: Identity,
   /** The entry the person asked for. A request, never authority. */
   requested: string,
@@ -225,19 +225,19 @@ export async function claimEntry(
       error:
         current.identityKey === identity.key
           ? `@${identity.handle} is already verified.`
-          : `@${identity.handle} is already claimed by another account.`,
+          : `@${identity.handle} is already verified by another account.`,
       field: "handle",
     }
   }
 
-  const claimed = await db
+  const verified = await db
     .update(entries)
     .set({ verified: true, identityKey: identity.key, updatedAt: new Date() })
     .where(eq(entries.id, current.id))
     .returning()
 
   const board = await loadBoard()
-  const row = claimed[0]!
+  const row = verified[0]!
   const entry = board.entries.find((e) => e.handle === row.handle) ?? toEntry(row, board)
   return { ok: true, entry }
 }

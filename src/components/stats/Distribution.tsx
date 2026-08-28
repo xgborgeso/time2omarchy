@@ -63,7 +63,6 @@ export function Distribution({ buckets, total, medianSeconds }: Props) {
             <ChartTooltip
               content={
                 <ChartTooltipContent
-                  labelKey="label"
                   formatter={(value, _name, item) => (
                     <span className="text-muted-foreground">
                       {Number(value).toLocaleString()}{" "}

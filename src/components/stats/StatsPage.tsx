@@ -61,7 +61,7 @@ export function StatsPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight sm:text-[26px]">Stats</h1>
         <p className="mt-1.5 text-[13px] font-light text-muted-foreground">
-          Every install since launch. Updated live.
+          Every install ranked here. Updated live.
         </p>
       </div>
 

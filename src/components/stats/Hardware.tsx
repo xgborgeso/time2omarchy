@@ -32,7 +32,7 @@ type Props = {
  * Below this a bucket is an anecdote, not a measurement.
  *
  * Three installs on a spinning disk sitting beside eighty on flash, drawn
- * identically, is the difference between reporting data and making a claim.
+ * identically, is the difference between reporting data and making a verify.
  */
 const ENOUGH = 10
 
@@ -196,14 +196,16 @@ function HardwareCard({ title, buckets, chosen, parent, onFilter }: CardProps) {
             accessibilityLayer
             data={buckets}
             layout="vertical"
-            margin={{ left: 4, right: 12 }}
+            margin={{ left: 0, right: 12 }}
           >
             <YAxis
               dataKey="label"
               type="category"
               tickLine={false}
               axisLine={false}
-              width={72}
+              // Wide enough for "Ryzen 9000" and "Ryzen 9 9950X" on one line;
+              // at 72 they wrapped mid-name, which read as two labels.
+              width={104}
               // SVG text takes its colour from `fill`, not from `color`, and
               // Recharts sets that as an attribute — so the token has to be
               // passed here or the labels keep the library's default grey.
@@ -214,7 +216,6 @@ function HardwareCard({ title, buckets, chosen, parent, onFilter }: CardProps) {
               cursor={false}
               content={
                 <ChartTooltipContent
-                  labelKey="label"
                   formatter={(value, _name, item) => (
                     <span className="text-muted-foreground">
                       {formatTime(Number(value))} median ·{" "}

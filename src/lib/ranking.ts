@@ -7,7 +7,7 @@ export function shouldReplace(
   return incomingSeconds <= existingSeconds
 }
 
-export type Claimant = {
+export type Contender = {
   timeSeconds: number
   verified: boolean
 }
@@ -18,15 +18,18 @@ export type Claimant = {
  * Ownership of a handle is only established by verifying it. Until then a
  * handle is just a string someone typed, so an unverified entry may open one
  * but never modify one — otherwise anyone could overwrite anyone's entry by
- * typing their handle and a faster time. A verified entry claims an unverified
- * one outright, so squatting an early entry buys nothing.
+ * typing their handle and a faster time. A verified entry takes over an
+ * unverified one outright, so squatting an early entry buys nothing.
  */
-export type EntryDecision = "create" | "replace" | "claim" | "keep" | "reject"
+export type EntryDecision = "create" | "replace" | "takeover" | "keep" | "reject"
 
-export function decideEntry(existing: Claimant | null, incoming: Claimant): EntryDecision {
+export function decideEntry(
+  existing: Contender | null,
+  incoming: Contender,
+): EntryDecision {
   if (!existing) return "create"
   if (!incoming.verified) return "reject"
-  if (!existing.verified) return "claim"
+  if (!existing.verified) return "takeover"
   return shouldReplace(existing.timeSeconds, incoming.timeSeconds) ? "replace" : "keep"
 }
 

@@ -114,11 +114,11 @@ export function RankForm({ onSuccess, className }: Props) {
    * Proving an entry is the only thing X is used for, so this hands the
    * handle being ranked to the callback and comes straight back to it.
    */
-  async function claimEntry(target: string) {
+  async function verifyEntry(target: string) {
     setError(null)
     const result = await signIn.social({
       provider: "twitter",
-      callbackURL: `/?claim=${encodeURIComponent(target)}`,
+      callbackURL: `/?verify=${encodeURIComponent(target)}`,
       errorCallbackURL: "/",
     })
     if (result?.error) {
@@ -344,7 +344,7 @@ export function RankForm({ onSuccess, className }: Props) {
       </Button>
 
       <p className="mt-3 text-center text-xs text-muted-foreground">
-        Anyone can rank. Only a claimed handle can post a faster time later.
+        Anyone can rank. Only a verified handle can post a faster time later.
       </p>
 
       {notice ? (
@@ -355,11 +355,11 @@ export function RankForm({ onSuccess, className }: Props) {
           {placed && !placed.entry.verified ? (
             <button
               type="button"
-              onClick={() => claimEntry(handle)}
+              onClick={() => verifyEntry(handle)}
               className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-lg border border-primary/40 px-5 text-sm font-bold uppercase text-foreground transition-colors hover:bg-muted/50"
             >
               <XMark className="size-3.5" />
-              Claim this entry
+              Verify this entry
             </button>
           ) : null}
           {placed ? (

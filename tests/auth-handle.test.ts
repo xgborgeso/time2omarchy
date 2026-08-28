@@ -12,7 +12,7 @@ import { refuseHandleChange } from "../src/server/auth"
 describe("refuseHandleChange", () => {
   it("drops a handle someone tries to set on themselves", async () => {
     // Without this, signing in and PATCHing handle to a stranger's would be
-    // enough to claim their entry.
+    // enough to verify their entry.
     const result = await refuseHandleChange({ name: "Ada", handle: "nixgoblin" })
     expect(result).toEqual({ data: { name: "Ada" } })
   })

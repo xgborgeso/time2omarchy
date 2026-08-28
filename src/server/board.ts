@@ -42,9 +42,9 @@ export async function loadBoard(page = 1): Promise<BoardResponse> {
     db.select({ n: count() }).from(entries),
     readCounters(),
     /**
-     * The leader the hero quotes, and it must be a claimed one.
+     * The leader the hero quotes, and it must be a verified one.
      *
-     * An unclaimed entry can hold rank 1 on the board — ranking is open, and
+     * An unverified entry can hold rank 1 on the board — ranking is open, and
      * that is deliberate — but the hero's number is the figure the homepage
      * puts its name to. Nothing stands behind a time someone typed, so a
      * doctored screenshot must not be able to become the headline.
@@ -57,7 +57,7 @@ export async function loadBoard(page = 1): Promise<BoardResponse> {
       .where(eq(entries.verified, true))
       .orderBy(asc(entries.timeSeconds), asc(entries.createdAt))
       .limit(1),
-    // Until anyone has claimed anything there is nothing to quote, and an
+    // Until anyone has verified anything there is nothing to quote, and an
     // empty hero above a full board would read as broken.
     db
       .select({ handle: entries.handle, timeSeconds: entries.timeSeconds })
@@ -68,7 +68,7 @@ export async function loadBoard(page = 1): Promise<BoardResponse> {
 
   const headline = leader[0] ?? anyone[0] ?? null
   const fastest = headline?.timeSeconds ?? null
-  const claimedHeadline = leader.length > 0
+  const verifiedHeadline = leader.length > 0
 
   const [faster, tied] = await Promise.all([
     // How many distinct times beat this page's first entry: the rank it holds
@@ -79,7 +79,7 @@ export async function loadBoard(page = 1): Promise<BoardResponse> {
           .select({ n: sql<number>`count(distinct ${entries.timeSeconds})` })
           .from(entries)
           .where(lt(entries.timeSeconds, rows[0].timeSeconds)),
-    // Counted over the same set the headline came from, or a claimed leader
+    // Counted over the same set the headline came from, or a verified leader
     // would be reported as tied with everyone who merely typed that time.
     fastest === null
       ? Promise.resolve([{ n: 0 }])
@@ -87,7 +87,7 @@ export async function loadBoard(page = 1): Promise<BoardResponse> {
           .select({ n: count() })
           .from(entries)
           .where(
-            claimedHeadline
+            verifiedHeadline
               ? and(eq(entries.timeSeconds, fastest), eq(entries.verified, true))
               : eq(entries.timeSeconds, fastest),
           ),
@@ -208,7 +208,7 @@ export async function loadStats(filter?: SpecFilter): Promise<StatsResponse> {
  * One entry, by handle, with its true rank on the whole board.
  *
  * The board itself is capped at 100 — at ten thousand entries that is most
- * people's own entry missing, and with it every way to claim it. The rank is
+ * people's own entry missing, and with it every way to verify it. The rank is
  * counted in the database rather than read off the page, so it is the real
  * position and not a position within a page.
  */

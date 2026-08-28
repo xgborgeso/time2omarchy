@@ -25,7 +25,7 @@ type Props = {
  * leaders first; submitting is what you do after seeing the time to beat.
  *
  * Deliberately not closed on success: the result carries the share button and
- * the offer to claim the entry, and that moment is the whole point of ranking.
+ * the offer to verify the entry, and that moment is the whole point of ranking.
  */
 export function RankDialog({ onSuccess }: Props) {
   const [open, setOpen] = useState(false)

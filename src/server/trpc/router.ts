@@ -4,7 +4,7 @@ import { specsSchema } from "../../lib/specs"
 import { handleSchema, timeSchema } from "../../lib/validation"
 import { loadBoard, loadStats, searchEntries } from "../board"
 import { identityFrom } from "../identity"
-import { claimEntry, submitRank } from "../rank"
+import { submitRank, verifyEntry } from "../rank"
 import { Limiter } from "../ratelimit"
 import { captureError } from "../sentry"
 import { touchPresence } from "../stats"
@@ -17,8 +17,8 @@ const HOUR = 60 * MINUTE
 /** Reads are generous; writes are cheap to send and expensive to serve. */
 const readLimit = new Limiter({ windowMs: MINUTE, max: 300 })
 const rankLimit = new Limiter({ windowMs: HOUR, max: 8 })
-/** Cheap and idempotent, and a refused claim is a normal thing to retry. */
-const claimLimit = new Limiter({ windowMs: HOUR, max: 30 })
+/** Cheap and idempotent, and a refused verify is a normal thing to retry. */
+const verifyLimit = new Limiter({ windowMs: HOUR, max: 30 })
 
 export const appRouter = router({
   health: publicProcedure.query(() => ({ ok: true as const, name: "time2omarchy" })),
@@ -66,7 +66,7 @@ export const appRouter = router({
    * Entries matching part of a handle, whatever page they are on.
    *
    * Fifty to a page. Past that someone's own entry is invisible to them, and
-   * so is every way to claim it. Not `handleSchema`: a half-typed handle is
+   * so is every way to verify it. Not `handleSchema`: a half-typed handle is
    * not a valid one, and refusing it would break the search on every keystroke
    * but the last.
    */
@@ -90,11 +90,11 @@ export const appRouter = router({
    *
    * The handle names which entry was asked for; it is never authority. The
    * server acts only where X's answer matches it, and says so plainly when it
-   * does not — a claim on someone else's entry has to explain itself rather
+   * does not — a verify on someone else's entry has to explain itself rather
    * than quietly do nothing.
    */
-  claim: publicProcedure
-    .use(throttled(claimLimit, "Too many attempts. Try again later."))
+  verify: publicProcedure
+    .use(throttled(verifyLimit, "Too many attempts. Try again later."))
     .input(z.object({ handle: handleSchema }))
     .mutation(async ({ ctx, input }) => {
       try {
@@ -106,12 +106,12 @@ export const appRouter = router({
             field: "handle" as const,
           }
         }
-        return await claimEntry(identity, input.handle)
+        return await verifyEntry(identity, input.handle)
       } catch (err) {
         await captureError(err)
         return {
           ok: false as const,
-          error: "Could not claim that entry",
+          error: "Could not verify that entry",
           field: "form" as const,
         }
       }

@@ -52,20 +52,21 @@ export function Trend({ daily }: { daily: DayCount[] }) {
       </CardHeader>
       <CardContent>
         <ChartContainer config={config} className="h-[160px] w-full">
-          <AreaChart accessibilityLayer data={data} margin={{ left: 4, right: 4 }}>
+          <AreaChart accessibilityLayer data={data} margin={{ left: 16, right: 16 }}>
             <CartesianGrid vertical={false} />
             <XAxis
               dataKey="label"
               tickLine={false}
               axisLine={false}
               tickMargin={8}
-              // Only the ends: fourteen labels on a card this wide collide.
-              ticks={[data[0]?.label, data.at(-1)?.label].filter(Boolean) as string[]}
+              // Fourteen labels on a card this wide collide, so only the two
+              // ends are drawn. Recharts drops an explicit first tick when it
+              // sits on the axis origin; this keeps both.
+              interval="preserveStartEnd"
+              ticks={data.length > 1 ? [data[0]!.label, data.at(-1)!.label] : undefined}
               tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
             />
-            <ChartTooltip
-              content={<ChartTooltipContent labelKey="label" indicator="line" />}
-            />
+            <ChartTooltip content={<ChartTooltipContent indicator="line" />} />
             <Area
               dataKey="count"
               type="monotone"

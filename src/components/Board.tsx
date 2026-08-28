@@ -10,7 +10,7 @@ type Props = {
   entries: BoardEntry[]
   loading: boolean
   onOpen: (entry: BoardEntry) => void
-  onClaim?: (entry: BoardEntry) => void
+  onVerify?: (entry: BoardEntry) => void
 }
 
 // minmax(0,1fr) rather than 1fr: a grid item defaults to min-width:auto,
@@ -25,7 +25,7 @@ const ROW =
  * five entries and a rule drawn after the tenth can land mid-tie. Only the
  * leader is marked, because that one is unambiguous.
  */
-export function Board({ entries, loading, onOpen, onClaim }: Props) {
+export function Board({ entries, loading, onOpen, onVerify }: Props) {
   if (loading && entries.length === 0) {
     return (
       <div className="mt-6 flex flex-col gap-px">
@@ -51,7 +51,7 @@ export function Board({ entries, loading, onOpen, onClaim }: Props) {
       </div>
 
       {entries.map((entry) => (
-        <Entry key={entry.handle} entry={entry} onOpen={onOpen} onClaim={onClaim} />
+        <Entry key={entry.handle} entry={entry} onOpen={onOpen} onVerify={onVerify} />
       ))}
     </section>
   )
@@ -69,7 +69,7 @@ function Dot() {
 type EntryProps = {
   entry: BoardEntry
   onOpen: (entry: BoardEntry) => void
-  onClaim?: (entry: BoardEntry) => void
+  onVerify?: (entry: BoardEntry) => void
   className?: string
 }
 
@@ -79,14 +79,14 @@ type EntryProps = {
  * The same markup either way: an entry found by lookup is the same object as
  * an entry in the top hundred, and looking different would suggest otherwise.
  */
-function Entry({ entry, onOpen, onClaim, className }: EntryProps) {
+function Entry({ entry, onOpen, onVerify, className }: EntryProps) {
   const leads = entry.rank === 1
   const specs = formatSpecsShort(entry)
   // Every unproven entry offers it: there is no logged-in state to know
   // whose is whose, and proving one is the only thing X is used for. A
-  // claim on someone else's comes back naming both accounts, so the
+  // verify on someone else's comes back naming both accounts, so the
   // offer stays honest even when the answer is no.
-  const claimable = !!onClaim && !entry.verified
+  const verifiable = !!onVerify && !entry.verified
   return (
     <div
       className={cn(
@@ -129,25 +129,30 @@ function Entry({ entry, onOpen, onClaim, className }: EntryProps) {
           {specs ? <span className="truncate">{specs}</span> : null}
           {specs ? <Dot /> : null}
           <span className="whitespace-nowrap">{relativeTime(entry.updatedAt)}</span>
-          {entry.verified || claimable ? <Dot /> : null}
+          {entry.verified || verifiable ? <Dot /> : null}
           {entry.verified ? (
+            // The check alone, the way X marks an account: a mark repeated
+            // down every verified entry does not need the word beside it. The
+            // meaning lives in the title for a cursor and in the label for a
+            // screen reader, so nothing is carried by the glyph alone.
             <span
+              role="img"
+              aria-label="Verified on X"
               title="Verified on X — this handle proved it owns the entry"
-              className="inline-flex items-center gap-1 whitespace-nowrap text-primary"
+              className="inline-flex shrink-0 text-primary"
             >
               <BadgeCheck aria-hidden="true" className="size-3.5" />
-              Verified
             </span>
-          ) : claimable ? (
+          ) : verifiable ? (
             // Text, not a control: on a line of small print a filled badge was
             // the loudest thing in the entry, and it is an aside, not the point.
             <button
               type="button"
-              onClick={() => onClaim?.(entry)}
-              aria-label={`Claim the entry for @${entry.handle}`}
+              onClick={() => onVerify?.(entry)}
+              aria-label={`Verify the entry for @${entry.handle}`}
               className="cursor-pointer whitespace-nowrap font-medium text-primary underline-offset-4 hover:underline"
             >
-              Claim
+              Verify
             </button>
           ) : null}
         </span>

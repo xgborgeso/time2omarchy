@@ -20,7 +20,7 @@ describe("BoardSearch", () => {
   })
 
   it("reports nothing at all until a search is long enough to run", async () => {
-    // The server ignores a single character, so claiming a result count for
+    // The server ignores a single character, so verifying a result count for
     // one would be reporting on a request that never happened.
     render(<BoardSearch value="v" onChange={() => {}} results={null} />)
     expect(screen.queryByText(/matching/)).toBeNull()

@@ -36,7 +36,7 @@ export const USER_FIELDS = {
  *
  * Better Auth has no "set once" for a field: anything the provider can supply,
  * a signed-in client can also send to `updateUser`. Left open, changing your
- * handle to a stranger's would be enough to claim their entry, so every update
+ * handle to a stranger's would be enough to verify their entry, so every update
  * has it stripped — sign-up is the only way in.
  */
 export async function refuseHandleChange(data: Record<string, unknown>) {
@@ -58,12 +58,12 @@ async function fetchXProfile(accessToken: string) {
 
   if (!res.ok) {
     // 402 is the one worth naming: the developer account is out of credits,
-    // so every claim fails at the last step, after the person has already
+    // so every verify fails at the last step, after the person has already
     // approved on X. It looks exactly like a bug until someone reads this.
     await captureError(
       new Error(
         res.status === 402
-          ? "X API credits exhausted — claims cannot complete until the developer account is funded."
+          ? "X API credits exhausted — verifies cannot complete until the developer account is funded."
           : `X profile lookup failed: ${res.status}`,
       ),
     )

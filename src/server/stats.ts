@@ -56,7 +56,7 @@ export async function touchPresence(visitorId: string, countView = true): Promis
   }
 
   if (flushViews) {
-    // Claim the batch before awaiting, so a request arriving mid-write starts
+    // Verify the batch before awaiting, so a request arriving mid-write starts
     // a fresh count rather than having its view written twice or not at all.
     const batch = pendingViews
     pendingViews = 0

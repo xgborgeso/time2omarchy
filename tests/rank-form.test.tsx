@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { RankForm } from "@/components/RankForm"
 
 const rankFn = vi.fn()
-const claimFn = vi.fn()
+const verifyFn = vi.fn()
 const uploadFn = vi.fn()
 const signInFn = vi.fn()
 const toastError = vi.fn()
@@ -26,7 +26,7 @@ vi.mock("@/lib/auth-client", () => ({
 vi.mock("@/lib/trpc", () => ({
   useTRPC: () => ({
     rank: { mutationOptions: () => ({ mutationFn: rankFn }) },
-    claim: { mutationOptions: () => ({ mutationFn: claimFn }) },
+    verify: { mutationOptions: () => ({ mutationFn: verifyFn }) },
   }),
 }))
 
@@ -78,7 +78,7 @@ beforeEach(() => {
   session = { data: null }
   signInFn.mockReset()
   toastError.mockReset()
-  claimFn.mockReset()
+  verifyFn.mockReset()
   signOutFn.mockReset()
   rankFn.mockReset()
   uploadFn.mockReset()
@@ -177,7 +177,7 @@ describe("RankForm", () => {
     render(<RankForm onSuccess={() => {}} />, { wrapper })
     await submit("ada", "43")
 
-    expect(await screen.findByRole("button", { name: /claim this entry/i })).toBeVisible()
+    expect(await screen.findByRole("button", { name: /verify this entry/i })).toBeVisible()
   })
 
   it("names the missing time instead of showing the schema that caught it", async () => {
@@ -293,7 +293,7 @@ describe("RankForm", () => {
     render(<RankForm onSuccess={() => {}} />, { wrapper })
     const user = await submit("ada", "43")
 
-    await user.click(await screen.findByRole("button", { name: /claim this entry/i }))
+    await user.click(await screen.findByRole("button", { name: /verify this entry/i }))
 
     await waitFor(() => expect(toastError).toHaveBeenCalled())
     expect(String(toastError.mock.calls[0]?.[0])).toMatch(/invalid origin/i)

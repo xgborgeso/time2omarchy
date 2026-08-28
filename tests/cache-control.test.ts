@@ -24,7 +24,7 @@ describe("cacheHeaders", () => {
     // tRPC batches, and a batch is one response: caching it would serve one
     // person's rank result to the next caller.
     expect(cacheHeaders(["board", "visit"], query)).toEqual({})
-    expect(cacheHeaders(["board", "claim"], query)).toEqual({})
+    expect(cacheHeaders(["board", "verify"], query)).toEqual({})
   })
 
   it("never caches an error", () => {
