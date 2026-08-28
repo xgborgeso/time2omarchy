@@ -24,8 +24,18 @@ export function StatsPage() {
     }),
   )
 
+  /**
+   * What the filter is called, for the line saying what is being shown.
+   *
+   * Looked for across all three charts rather than indexed by dimension: the
+   * CPU chart changes level as you drill, so its dimension is not a key.
+   */
   const chosen = filter
-    ? (data?.hardware[filter.dimension].find((b) => b.id === filter.id)?.label ?? filter.id)
+    ? ([
+        ...(data?.hardware.storage ?? []),
+        ...(data?.hardware.cpu ?? []),
+        ...(data?.hardware.ram ?? []),
+      ].find((bucket) => bucket.id === filter.id)?.label ?? filter.id)
     : null
 
   if (isLoading) {

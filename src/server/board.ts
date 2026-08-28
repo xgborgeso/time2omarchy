@@ -164,9 +164,10 @@ export async function loadStats(filter?: SpecFilter): Promise<StatsResponse> {
     updatedAt: row.updatedAt,
   }))
 
-  // Measured over everything, always. Narrowing these to the current filter
-  // would hide the row you need in order to change your mind.
-  const hardware = benchmark(all)
+  // Measured over everything, always: narrowing every chart to the filter
+  // would hide the bar you need in order to change your mind. The filter only
+  // decides how deep the CPU chart looks.
+  const hardware = benchmark(all, filter)
   const selected = filter ? all.filter((row) => matchesSpec(row, filter)) : all
 
   const values = selected.map((row) => row.timeSeconds)

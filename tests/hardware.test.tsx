@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react"
+import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, it, vi } from "vitest"
 import { Hardware } from "@/components/stats/Hardware"
@@ -10,44 +10,55 @@ const hardware: Benchmark = {
     { id: "ssd", label: "SATA SSD", entries: 25, fastestSeconds: 38, medianSeconds: 68 },
     { id: "hdd", label: "HDD", entries: 3, fastestSeconds: 180, medianSeconds: 240 },
   ],
-  vendor: [
+  cpu: [
     { id: "AMD", label: "AMD", entries: 60, fastestSeconds: 26, medianSeconds: 40 },
     { id: "Intel", label: "Intel", entries: 40, fastestSeconds: 30, medianSeconds: 52 },
   ],
+  cpuLevel: "vendor",
+  cpuParent: null,
   ram: [{ id: "32", label: "32 GB", entries: 50, fastestSeconds: 26, medianSeconds: 44 }],
 }
 
 describe("Hardware", () => {
-  it("answers what an install costs on each kind of drive", () => {
+  it("gives every spec its own chart", () => {
     render(<Hardware hardware={hardware} onFilter={() => {}} active={null} />)
-    const row = screen.getByTestId("bucket-storage-hdd")
-    expect(row).toHaveTextContent("HDD")
-    expect(row).toHaveTextContent("4:00")
-    expect(row).toHaveTextContent("3")
+    expect(screen.getByText("By drive")).toBeVisible()
+    expect(screen.getByText("By CPU")).toBeVisible()
+    expect(screen.getByText("By memory")).toBeVisible()
   })
 
-  it("warns where the sample is too small to mean anything", () => {
-    // Three HDD installs is an anecdote. Presenting it beside eighty NVMe
-    // ones without saying so is the difference between data and a claim.
+  it("warns where a sample is too small to mean anything", () => {
+    // Three HDD installs is an anecdote. Drawing it identically to eighty
+    // NVMe ones is the difference between data and a claim.
     render(<Hardware hardware={hardware} onFilter={() => {}} active={null} />)
-    expect(
-      within(screen.getByTestId("bucket-storage-hdd")).getByTitle(/too few/i),
-    ).toBeVisible()
-    expect(
-      within(screen.getByTestId("bucket-storage-nvme")).queryByTitle(/too few/i),
-    ).toBeNull()
+    expect(screen.getByText(/faded bars have under 10 installs/i)).toBeVisible()
   })
 
-  it("filters the page when a bucket is chosen", async () => {
+  it("says nothing about samples when every bucket is big enough", () => {
+    render(
+      <Hardware
+        hardware={{ ...hardware, storage: [hardware.storage[0]!] }}
+        onFilter={() => {}}
+        active={null}
+      />,
+    )
+    expect(screen.queryByText(/faded bars/i)).toBeNull()
+  })
+
+  it("narrows the page from a control that can be reached by keyboard", async () => {
+    // The filter used to be the chart bars themselves. A <path> cannot be
+    // tabbed to, and this is the main control on the page.
     const onFilter = vi.fn()
     const user = userEvent.setup()
     render(<Hardware hardware={hardware} onFilter={onFilter} active={null} />)
-    await user.click(screen.getByTestId("bucket-vendor-AMD"))
 
-    expect(onFilter).toHaveBeenCalledWith({ dimension: "vendor", id: "AMD" })
+    await user.click(screen.getByRole("combobox", { name: /narrow the stats/i }))
+    await user.click(screen.getByRole("option", { name: "SATA SSD" }))
+
+    expect(onFilter).toHaveBeenCalledWith({ dimension: "storage", id: "ssd" })
   })
 
-  it("clears the filter when the chosen bucket is chosen again", async () => {
+  it("clears the filter through the same control", async () => {
     const onFilter = vi.fn()
     const user = userEvent.setup()
     render(
@@ -57,7 +68,9 @@ describe("Hardware", () => {
         active={{ dimension: "vendor", id: "AMD" }}
       />,
     )
-    await user.click(screen.getByTestId("bucket-vendor-AMD"))
+
+    await user.click(screen.getByRole("combobox", { name: /narrow the stats/i }))
+    await user.click(screen.getByRole("option", { name: "All installs" }))
 
     expect(onFilter).toHaveBeenCalledWith(null)
   })
@@ -65,7 +78,7 @@ describe("Hardware", () => {
   it("says nothing at all when there is nothing measured yet", () => {
     const { container } = render(
       <Hardware
-        hardware={{ storage: [], vendor: [], ram: [] }}
+        hardware={{ storage: [], cpu: [], cpuLevel: "vendor", cpuParent: null, ram: [] }}
         onFilter={() => {}}
         active={null}
       />,

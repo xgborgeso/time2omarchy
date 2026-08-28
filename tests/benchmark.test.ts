@@ -42,7 +42,7 @@ describe("benchmark", () => {
   })
 
   it("groups by CPU vendor, which is what people actually argue about", () => {
-    const vendors = benchmark(rows).vendor
+    const vendors = benchmark(rows).cpu
     expect(vendors.find((b) => b.id === "AMD")?.entries).toBe(2)
     expect(vendors.find((b) => b.id === "Intel")?.entries).toBe(1)
   })
@@ -50,22 +50,29 @@ describe("benchmark", () => {
   it("names the bucket a chip outside the catalogue falls into", () => {
     // "other" is a real answer people pick, and dropping it would quietly
     // shrink the sample the rest of the table is measured against.
-    expect(benchmark(rows).vendor.find((b) => b.id === "Other")?.entries).toBe(1)
+    expect(benchmark(rows).cpu.find((b) => b.id === "Other")?.entries).toBe(1)
   })
 
   it("groups by memory too, so all three specs are answerable", () => {
     expect(benchmark(rows).ram.find((b) => b.id === "32")?.entries).toBe(1)
   })
 
-  it("orders every table fastest first, since that is the question", () => {
-    for (const buckets of Object.values(benchmark(rows))) {
+  it("orders every chart fastest first, since that is the question", () => {
+    const { storage, cpu, ram } = benchmark(rows)
+    for (const buckets of [storage, cpu, ram]) {
       const medians = buckets.map((b) => b.medianSeconds)
       expect(medians).toEqual([...medians].sort((a, b) => a - b))
     }
   })
 
-  it("returns empty tables for an empty board rather than throwing", () => {
-    expect(benchmark([])).toEqual({ storage: [], vendor: [], ram: [] })
+  it("returns empty charts for an empty board rather than throwing", () => {
+    expect(benchmark([])).toEqual({
+      storage: [],
+      cpu: [],
+      cpuLevel: "vendor",
+      cpuParent: null,
+      ram: [],
+    })
   })
 })
 
@@ -85,5 +92,66 @@ describe("matchesSpec", () => {
   it("matches memory by size, compared as the label writes it", () => {
     expect(matchesSpec(amd, { dimension: "ram", id: "32" })).toBe(true)
     expect(matchesSpec(amd, { dimension: "ram", id: "16" })).toBe(false)
+  })
+})
+
+describe("drilling into the CPU", () => {
+  const rows = [
+    row(30, "amd-ryzen-7-9800x3d", 32, "nvme"),
+    row(40, "amd-ryzen-9-9950x", 64, "nvme"),
+    row(50, "amd-ryzen-7-7800x3d", 32, "nvme"),
+    row(70, "intel-core-i9-14900k", 32, "nvme"),
+  ]
+
+  it("starts at the vendor, which is the readable overview", () => {
+    const b = benchmark(rows)
+    expect(b.cpuLevel).toBe("vendor")
+    expect(b.cpu.map((c) => c.id)).toEqual(["AMD", "Intel"])
+    expect(b.cpuParent).toBeNull()
+  })
+
+  it("shows one vendor's families once that vendor is chosen", () => {
+    // 41 families in one chart is unreadable; a vendor's dozen is not.
+    const b = benchmark(rows, { dimension: "vendor", id: "AMD" })
+
+    expect(b.cpuLevel).toBe("family")
+    expect(b.cpu.map((c) => c.id).sort()).toEqual(["Ryzen 7000", "Ryzen 9000"])
+    expect(b.cpuParent).toEqual({ dimension: "vendor", id: "AMD", label: "AMD" })
+  })
+
+  it("measures a family over its own installs, not the whole board", () => {
+    const b = benchmark(rows, { dimension: "vendor", id: "AMD" })
+    const zen5 = b.cpu.find((c) => c.id === "Ryzen 9000")
+
+    expect(zen5?.entries).toBe(2)
+    expect(zen5?.medianSeconds).toBe(35)
+  })
+
+  it("shows the models inside a family once that family is chosen", () => {
+    const b = benchmark(rows, { dimension: "family", id: "Ryzen 9000" })
+
+    expect(b.cpuLevel).toBe("model")
+    expect(b.cpu.map((c) => c.label)).toEqual(["Ryzen 7 9800X3D", "Ryzen 9 9950X"])
+    expect(b.cpuParent?.id).toBe("AMD")
+  })
+
+  it("keeps a chosen model beside its siblings, not alone", () => {
+    // A chart with one bar compares nothing. Staying at the family level is
+    // what makes choosing a model useful.
+    const b = benchmark(rows, { dimension: "model", id: "amd-ryzen-9-9950x" })
+
+    expect(b.cpuLevel).toBe("model")
+    expect(b.cpu.map((c) => c.id)).toContain("amd-ryzen-7-9800x3d")
+  })
+
+  it("stays at the vendor when the filter is not about CPUs at all", () => {
+    expect(benchmark(rows, { dimension: "storage", id: "nvme" }).cpuLevel).toBe("vendor")
+  })
+
+  it("measures drives and memory over the whole board regardless of the drill", () => {
+    // Narrowing every chart to the current filter would hide the bar you need
+    // in order to change your mind.
+    const b = benchmark(rows, { dimension: "vendor", id: "AMD" })
+    expect(b.storage.find((s) => s.id === "nvme")?.entries).toBe(4)
   })
 })

@@ -25,9 +25,16 @@ export type SpecBucket = {
   medianSeconds: number
 }
 
+/** How far into the chip catalogue the CPU chart is currently looking. */
+export type CpuLevel = "vendor" | "family" | "model"
+
 export type Benchmark = {
   storage: SpecBucket[]
-  vendor: SpecBucket[]
+  /** The CPU chart, at whichever level the drill has reached. */
+  cpu: SpecBucket[]
+  cpuLevel: CpuLevel
+  /** What was drilled into, so the way back can be offered. */
+  cpuParent: (SpecFilter & { label: string }) | null
   ram: SpecBucket[]
 }
 
@@ -79,18 +86,76 @@ function vendorOf(cpuId: string): string {
   return cpuById(cpuId)?.vendor ?? "Other"
 }
 
-export function benchmark(rows: readonly BenchmarkRow[]): Benchmark {
+/**
+ * The CPU chart, one level deep at a time.
+ *
+ * Forty-one families in a single chart is unreadable, and two hundred models
+ * is worse — so the chart shows vendors until one is chosen, then that
+ * vendor's families, then that family's models. Choosing a model keeps its
+ * siblings on screen: a chart with one bar compares nothing.
+ */
+function cpuChart(
+  rows: readonly BenchmarkRow[],
+  filter?: SpecFilter | null,
+): Pick<Benchmark, "cpu" | "cpuLevel" | "cpuParent"> {
+  const family = (row: BenchmarkRow) => cpuById(row.cpuId)?.family ?? null
+
+  if (filter?.dimension === "vendor") {
+    return {
+      cpuLevel: "family",
+      cpuParent: { dimension: "vendor", id: filter.id, label: filter.id },
+      cpu: bucketBy(
+        rows.filter((row) => vendorOf(row.cpuId) === filter.id),
+        family,
+        (id) => id,
+      ),
+    }
+  }
+
+  if (filter?.dimension === "family" || filter?.dimension === "model") {
+    // A chosen model still shows its family, so it can be compared.
+    const inFamily =
+      filter.dimension === "family" ? filter.id : (cpuById(filter.id)?.family ?? null)
+    const kin = rows.filter((row) => family(row) === inFamily)
+    return {
+      cpuLevel: "model",
+      cpuParent: inFamily
+        ? {
+            dimension: "vendor",
+            id: vendorOf(kin[0]?.cpuId ?? ""),
+            label: inFamily,
+          }
+        : null,
+      cpu: bucketBy(
+        kin,
+        (row) => row.cpuId,
+        (id) => cpuById(id)?.name ?? id,
+      ),
+    }
+  }
+
+  return {
+    cpuLevel: "vendor",
+    cpuParent: null,
+    cpu: bucketBy(
+      rows,
+      (row) => vendorOf(row.cpuId),
+      (id) => id,
+    ),
+  }
+}
+
+export function benchmark(
+  rows: readonly BenchmarkRow[],
+  filter?: SpecFilter | null,
+): Benchmark {
   return {
     storage: bucketBy(
       rows,
       (row) => (STORAGE.some((s) => s.id === row.storage) ? row.storage : null),
       (id) => storageLabel(id) ?? id,
     ),
-    vendor: bucketBy(
-      rows,
-      (row) => vendorOf(row.cpuId),
-      (id) => id,
-    ),
+    ...cpuChart(rows, filter),
     ram: bucketBy(
       rows,
       (row) =>
@@ -101,7 +166,10 @@ export function benchmark(rows: readonly BenchmarkRow[]): Benchmark {
 }
 
 /** Which dimension a chosen bucket belongs to, and which bucket it is. */
-export type SpecFilter = { dimension: keyof Benchmark; id: string }
+export type SpecFilter = {
+  dimension: "storage" | "ram" | CpuLevel
+  id: string
+}
 
 /**
  * Whether one entry belongs to the bucket that was chosen.
@@ -114,9 +182,13 @@ export function matchesSpec(row: BenchmarkRow, filter: SpecFilter): boolean {
   switch (filter.dimension) {
     case "storage":
       return row.storage === filter.id
-    case "vendor":
-      return vendorOf(row.cpuId) === filter.id
     case "ram":
       return String(row.ramGb) === filter.id
+    case "vendor":
+      return vendorOf(row.cpuId) === filter.id
+    case "family":
+      return cpuById(row.cpuId)?.family === filter.id
+    case "model":
+      return row.cpuId === filter.id
   }
 }

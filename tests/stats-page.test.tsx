@@ -32,7 +32,7 @@ function wrapper({ children }: { children: ReactNode }) {
 
 const stats: StatsResponse = {
   distribution: TIME_BUCKETS.map((b) => ({ ...b, count: 1 })),
-  hardware: { storage: [], vendor: [], ram: [] },
+  hardware: { storage: [], cpu: [], cpuLevel: "vendor", cpuParent: null, ram: [] },
   daily: [{ day: "2026-01-01", count: 2 }],
   entries: 9,
   fastestSeconds: 43,

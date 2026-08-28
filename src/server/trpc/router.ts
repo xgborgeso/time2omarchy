@@ -44,7 +44,7 @@ export const appRouter = router({
     .input(
       z
         .object({
-          dimension: z.enum(["storage", "vendor", "ram"]),
+          dimension: z.enum(["storage", "vendor", "family", "model", "ram"]),
           id: z.string().max(32),
         })
         .optional(),
