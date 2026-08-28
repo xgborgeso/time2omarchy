@@ -243,6 +243,41 @@ describe("RankForm", () => {
     expect(screen.queryByText(/verified as/i)).toBeNull()
   })
 
+  it("puts an error on the field it belongs to, not just at the top", async () => {
+    // Flagged by ui-ux-pro-max as high severity: a form-level alert leaves
+    // someone hunting for which field it means.
+    const user = userEvent.setup()
+    render(<RankForm onSuccess={() => {}} />, { wrapper })
+    await user.type(screen.getByRole("textbox", { name: /handle/i }), "ada")
+    await user.click(screen.getByRole("button", { name: /rank it/i }))
+
+    const time = screen.getByLabelText(/^time$/i)
+    expect(time).toHaveAttribute("aria-invalid", "true")
+    const describedBy = time.getAttribute("aria-describedby")
+    expect(describedBy).toBeTruthy()
+    expect(document.getElementById(describedBy as string)).toHaveTextContent("Add a time")
+  })
+
+  it("clears the field error once the form is resubmitted", async () => {
+    const user = userEvent.setup()
+    render(<RankForm onSuccess={() => {}} />, { wrapper })
+    // Held before typing: the label grows a "→ 43s" hint once it parses.
+    const time = screen.getByLabelText(/^time$/i)
+    await user.click(screen.getByRole("button", { name: /rank it/i }))
+    expect(time).toHaveAttribute("aria-invalid", "true")
+
+    await user.type(time, "43")
+    await user.click(screen.getByRole("button", { name: /rank it/i }))
+
+    // The time is valid now, so the complaint has moved on to what is missing.
+    expect(time).not.toHaveAttribute("aria-invalid", "true")
+  })
+
+  it("says up front that everything is required", async () => {
+    render(<RankForm onSuccess={() => {}} />, { wrapper })
+    expect(screen.getByText(/every field is required/i)).toBeVisible()
+  })
+
   it("refuses to submit without a boot screen", async () => {
     const user = userEvent.setup()
     render(<RankForm onSuccess={() => {}} />, { wrapper })

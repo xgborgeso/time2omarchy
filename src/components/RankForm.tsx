@@ -18,7 +18,7 @@ import { errorText } from "@/lib/error-text"
 import type { Specs, StorageId } from "@/lib/specs"
 import { formatTime, isTimeInRange, parseTime } from "@/lib/time"
 import { useTRPC } from "@/lib/trpc"
-import type { RankSuccess } from "@/lib/types"
+import type { RankFailure, RankSuccess } from "@/lib/types"
 import { uploadBootScreen } from "@/lib/upload"
 import { cn } from "@/lib/utils"
 import { timeError } from "@/lib/validation"
@@ -30,6 +30,29 @@ function XMark({ className }: { className?: string }) {
     <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className={className}>
       <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
     </svg>
+  )
+}
+
+/**
+ * A complaint and the field it is about.
+ *
+ * A form-level alert alone leaves someone hunting for which field it means,
+ * so every message names its field and is rendered beside it.
+ */
+type FieldError = { message: string; field?: RankFailure["field"] }
+
+/**
+ * The complaint about one field, tied to it by id for screen readers.
+ *
+ * `role="alert"` as well as `aria-describedby`: the first announces it when it
+ * appears, the second answers "which field?" for anyone who arrives later.
+ */
+function FieldMessage({ id, text }: { id: string; text: string | null }) {
+  if (!text) return null
+  return (
+    <p id={id} role="alert" className="text-[11px] text-destructive">
+      {text}
+    </p>
   )
 }
 
@@ -45,6 +68,7 @@ export function RankForm({ onSuccess }: Props) {
   const rank = useMutation(trpc.rank.mutationOptions())
   const handleId = useId()
   const timeId = useId()
+  const errorId = useId()
   const inputRef = useRef<HTMLInputElement>(null)
 
   const [handle, setHandle] = useState("")
@@ -53,7 +77,7 @@ export function RankForm({ onSuccess }: Props) {
   const [preview, setPreview] = useState<string | null>(null)
   const [dragging, setDragging] = useState(false)
   const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<FieldError | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [placed, setPlaced] = useState<RankSuccess | null>(null)
   const [specs, setSpecs] = useState<Specs>({ cpuId: null, ramGb: null, storage: null })
@@ -94,7 +118,9 @@ export function RankForm({ onSuccess }: Props) {
       callbackURL: `/?claim=${encodeURIComponent(target)}`,
       errorCallbackURL: "/",
     })
-    if (result?.error) setError(result.error.message ?? "Could not reach X.")
+    if (result?.error) {
+      setError({ message: result.error.message ?? "Could not reach X.", field: "form" })
+    }
   }
 
   const parsed = useMemo(() => {
@@ -118,20 +144,20 @@ export function RankForm({ onSuccess }: Props) {
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
-    if (!file) {
-      setError("Add a boot screen")
-      return
-    }
-    // Checked here for the same reason as the specs below: the server would
-    // reject it anyway, but only after an upload has been paid for.
+    // Checked in the order the form is read, so the first thing missing is
+    // the thing named — and none of it costs an upload first.
     const badTime = timeError(time)
     if (badTime) {
-      setError(badTime)
+      setError({ message: badTime, field: "time" })
+      return
+    }
+    if (!file) {
+      setError({ message: "Add a boot screen", field: "bootScreen" })
       return
     }
     if (!specs.cpuId || !specs.ramGb || !specs.storage) {
       // Checked before uploading: a missing spec should not cost a round trip.
-      setError("Pick your CPU, memory and drive — every entry needs them.")
+      setError({ message: "Pick your CPU, memory and drive.", field: "form" })
       return
     }
     setBusy(true)
@@ -142,7 +168,7 @@ export function RankForm({ onSuccess }: Props) {
       // Storage first: ranking takes a url, not a file.
       const uploaded = await uploadBootScreen(handle, file)
       if (!uploaded.ok) {
-        setError(uploaded.error)
+        setError({ message: uploaded.error, field: "bootScreen" })
         return
       }
 
@@ -158,7 +184,7 @@ export function RankForm({ onSuccess }: Props) {
       })
 
       if (!result.ok) {
-        setError(result.error)
+        setError({ message: result.error, field: result.field })
         return
       }
 
@@ -179,7 +205,7 @@ export function RankForm({ onSuccess }: Props) {
       onSuccess(result)
     } catch (err) {
       // Only transport failures reach here; domain outcomes come back as data.
-      setError(errorText(err, "Ranking failed"))
+      setError({ message: errorText(err, "Ranking failed"), field: "form" })
     } finally {
       setBusy(false)
     }
@@ -205,7 +231,13 @@ export function RankForm({ onSuccess }: Props) {
             value={handle}
             onChange={(e) => setHandle(e.target.value)}
             className="h-11"
+            aria-required="true"
+            aria-invalid={error?.field === "handle" || undefined}
+            aria-describedby={error?.field === "handle" ? errorId : undefined}
           />
+          {error?.field === "handle" ? (
+            <FieldMessage id={errorId} text={error.message} />
+          ) : null}
         </div>
 
         <div className="flex flex-col gap-1.5">
@@ -225,7 +257,13 @@ export function RankForm({ onSuccess }: Props) {
             value={time}
             onChange={(e) => setTime(e.target.value)}
             className="h-11 tabular-nums"
+            aria-required="true"
+            aria-invalid={error?.field === "time" || undefined}
+            aria-describedby={error?.field === "time" ? errorId : undefined}
           />
+          {error?.field === "time" ? (
+            <FieldMessage id={errorId} text={error.message} />
+          ) : null}
         </div>
 
         <div className="flex flex-col gap-1.5">
@@ -239,6 +277,8 @@ export function RankForm({ onSuccess }: Props) {
             }}
             onDragLeave={() => setDragging(false)}
             onDrop={onDrop}
+            aria-invalid={error?.field === "bootScreen" || undefined}
+            aria-describedby={error?.field === "bootScreen" ? errorId : undefined}
             className={cn(
               "flex h-11 items-center justify-center gap-2 overflow-hidden rounded-lg border border-dashed px-3.5 text-xs transition-colors",
               dragging
@@ -258,6 +298,9 @@ export function RankForm({ onSuccess }: Props) {
             )}
             <span className="truncate uppercase">{file ? "Change" : "Add"}</span>
           </button>
+          {error?.field === "bootScreen" ? (
+            <FieldMessage id={errorId} text={error.message} />
+          ) : null}
           <input
             ref={inputRef}
             type="file"
@@ -268,9 +311,11 @@ export function RankForm({ onSuccess }: Props) {
         </div>
       </div>
 
-      {error ? (
+      {/* Only what belongs to no single field; the rest is rendered beside
+          the input it names. */}
+      {error && (!error.field || error.field === "form") ? (
         <p role="alert" className="mt-3 text-xs text-destructive">
-          {error}
+          {error.message}
         </p>
       ) : null}
       {/* Second, and always visible: these are required, and a required field
@@ -290,7 +335,8 @@ export function RankForm({ onSuccess }: Props) {
       </Button>
 
       <p className="mt-3 text-center text-xs text-muted-foreground">
-        An unverified entry can be opened, but never changed afterwards.
+        Every field is required. An unverified entry can be opened, but never changed
+        afterwards.
       </p>
 
       {notice ? (
