@@ -18,7 +18,7 @@ export function Toaster(props: ToasterProps) {
           toast:
             "group rounded-lg border border-border bg-popover text-popover-foreground shadow-lg",
           description: "text-muted-foreground",
-          error: "border-destructive/40",
+          error: "border-destructive bg-destructive/10 text-foreground",
         },
       }}
       style={

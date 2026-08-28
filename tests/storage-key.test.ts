@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { isStoredBootScreen, localUploadName } from "@/lib/storage-key"
+import { isStoredBootScreen, localUploadName, uploadName } from "@/lib/storage-key"
 
 describe("localUploadName", () => {
   it("takes the bare filename from an uploads path", () => {
@@ -34,5 +34,33 @@ describe("isStoredBootScreen", () => {
 
   it("rejects traversal", () => {
     expect(isStoredBootScreen("/uploads/../../etc/passwd")).toBe(false)
+  })
+})
+
+describe("with a remote upload host", () => {
+  const base = "https://cdn.time2omarchy.com"
+
+  it("accepts a url under the host it was told about", () => {
+    expect(isStoredBootScreen(`${base}/uploads/ada-1.png`, base)).toBe(true)
+    expect(uploadName(`${base}/uploads/ada-1.png`, base)).toBe("ada-1.png")
+  })
+
+  it("refuses a url on any other host", () => {
+    // The gate that stops the board pointing every visitor at a remote image
+    // of someone else's choosing.
+    expect(isStoredBootScreen("https://evil.example/uploads/x.png", base)).toBe(false)
+    expect(
+      isStoredBootScreen("https://cdn.time2omarchy.com.evil.example/uploads/x.png", base),
+    ).toBe(false)
+  })
+
+  it("still refuses traversal and nested paths", () => {
+    expect(isStoredBootScreen(`${base}/uploads/../secret.png`, base)).toBe(false)
+    expect(isStoredBootScreen(`${base}/uploads/a/b.png`, base)).toBe(false)
+  })
+
+  it("keeps accepting local urls when no host is configured", () => {
+    expect(isStoredBootScreen("/uploads/ada-1.png", null)).toBe(true)
+    expect(isStoredBootScreen("https://anywhere/uploads/ada-1.png", null)).toBe(false)
   })
 })

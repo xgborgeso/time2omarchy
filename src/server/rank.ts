@@ -6,7 +6,7 @@ import type { BoardEntry, RankFailure, RankSuccess } from "../lib/types"
 import { loadBoard } from "./board"
 import { type Db, getDb } from "./db"
 import { entries } from "./schema"
-import { deleteBootScreen } from "./storage"
+import { deleteBootScreen, publicUploadBase } from "./storage"
 
 export type RankInput = {
   /** Already normalized and range-checked by the router's schemas. */
@@ -57,7 +57,7 @@ export async function submitRank(input: RankInput): Promise<RankSuccess | RankFa
   // The url arrives from the client now, so it has to be one we issued.
   // Without this the board would happily point every visitor at any remote
   // image someone cared to name.
-  if (!isStoredBootScreen(bootScreenUrl)) {
+  if (!isStoredBootScreen(bootScreenUrl, publicUploadBase())) {
     return { ok: false, error: "Upload the boot screen again.", field: "bootScreen" }
   }
 
@@ -194,7 +194,9 @@ export async function claimEntry(
   if (identity.handle !== requested) {
     return {
       ok: false,
-      error: `That entry belongs to @${requested}. You authorized as @${identity.handle}.`,
+      // Named accounts told each side who the other was for no benefit; the
+      // person already knows which entry they clicked.
+      error: "That entry belongs to a different X account.",
       field: "handle",
     }
   }

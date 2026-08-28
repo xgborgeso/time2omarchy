@@ -1,4 +1,4 @@
-import { asc, avg, count, desc, gte } from "drizzle-orm"
+import { asc, avg, count, desc, eq, gte, lt, sql } from "drizzle-orm"
 import { rankEntries } from "../lib/ranking"
 import { bucketTimes, dailySeries } from "../lib/stats"
 import type { BoardEntry, BoardResponse, StatsResponse } from "../lib/types"
@@ -120,5 +120,39 @@ export async function loadStats(): Promise<StatsResponse> {
     viewsToday: counters.viewsToday,
     rankedToday: todayCount,
     online: counters.online,
+  }
+}
+
+/**
+ * One entry, by handle, with its true rank on the whole board.
+ *
+ * The board itself is capped at 100 — at ten thousand entries that is most
+ * people's own entry missing, and with it every way to claim it. The rank is
+ * counted in the database rather than read off the page, so it is the real
+ * position and not a position within a page.
+ */
+export async function findEntryByHandle(handle: string): Promise<BoardEntry | null> {
+  const db = await getDb()
+  const rows = await db.select().from(entries).where(eq(entries.handle, handle)).limit(1)
+  const row = rows[0]
+  if (!row) return null
+
+  // Dense ranking: how many distinct faster times exist, plus one.
+  const faster = await db
+    .select({ n: sql<number>`count(distinct ${entries.timeSeconds})` })
+    .from(entries)
+    .where(lt(entries.timeSeconds, row.timeSeconds))
+
+  return {
+    rank: Number(faster[0]?.n ?? 0) + 1,
+    handle: row.handle,
+    timeSeconds: row.timeSeconds,
+    bootScreenUrl: row.bootScreenUrl,
+    verified: row.verified,
+    cpuId: row.cpuId,
+    ramGb: row.ramGb,
+    storage: row.storage,
+    createdAt: toIso(row.createdAt),
+    updatedAt: toIso(row.updatedAt),
   }
 }

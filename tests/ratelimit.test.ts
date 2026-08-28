@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { check, clientKey } from "@/lib/ratelimit"
+import { check, clientKey, clientKeyFrom } from "@/lib/ratelimit"
 
 const WINDOW = { windowMs: 60_000, max: 3 }
 
@@ -84,5 +84,39 @@ describe("Limiter", () => {
     limiter.check("new", 1000)
     expect(limiter.check("keep", 1002).allowed).toBe(false)
     expect(limiter.check("old", 1002).allowed).toBe(true)
+  })
+})
+
+describe("clientKeyFrom", () => {
+  const headers = (init: Record<string, string>) => new Headers(init)
+
+  it("ignores a forwarded header nobody vouched for", () => {
+    // With no proxy in front, a caller sets this itself — trusting it hands
+    // everyone an unlimited supply of identities.
+    const key = clientKeyFrom(headers({ "x-forwarded-for": "1.2.3.4" }), {
+      trustedHeader: null,
+    })
+    expect(key).not.toContain("1.2.3.4")
+  })
+
+  it("uses the header the platform is configured to set", () => {
+    const key = clientKeyFrom(headers({ "x-real-ip": "1.2.3.4" }), {
+      trustedHeader: "x-real-ip",
+    })
+    expect(key).toBe("1.2.3.4")
+  })
+
+  it("takes the first address, which is the caller", () => {
+    // Proxies append as a request travels; the client is at the front.
+    const key = clientKeyFrom(headers({ "x-forwarded-for": "9.9.9.9, 10.0.0.1" }), {
+      trustedHeader: "x-forwarded-for",
+    })
+    expect(key).toBe("9.9.9.9")
+  })
+
+  it("shares one bucket when the trusted header is missing", () => {
+    // Safer to throttle unknown callers against each other than to hand each
+    // of them a private allowance.
+    expect(clientKeyFrom(headers({}), { trustedHeader: "x-real-ip" })).toBe("unknown")
   })
 })

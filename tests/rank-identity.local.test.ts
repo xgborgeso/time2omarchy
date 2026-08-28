@@ -14,6 +14,7 @@ const opened = openDatabase().then((o) => o.db)
 vi.mock("../src/server/db", () => ({ getDb: () => opened }))
 
 const { submitRank, claimEntry } = await import("../src/server/rank")
+const { findEntryByHandle } = await import("../src/server/board")
 
 const ADA = { key: "x:1665012345678901234", handle: "ada" }
 
@@ -162,10 +163,11 @@ describe("claiming an entry that is not yours", () => {
     const result = await claimEntry({ key: "x:777", handle: "bob" }, "ada")
 
     expect(result.ok).toBe(false)
-    // Named on both sides, so it is obvious what went wrong and for whom.
+    // Explains itself without naming either account: the person knows which
+    // entry they clicked, and the entry's owner is not theirs to be told.
     if (!result.ok) {
-      expect(result.error).toContain("@ada")
-      expect(result.error).toContain("@bob")
+      expect(result.error).toMatch(/different X account/i)
+      expect(result.error).not.toContain("@")
     }
     const ada = await entryFor("ada")
     expect(ada?.verified).toBe(false)
@@ -191,5 +193,31 @@ describe("claiming an entry that is not yours", () => {
 
     expect(result.ok).toBe(false)
     expect((await entryFor("ada"))?.identityKey).toBe(ADA.key)
+  })
+})
+
+describe("finding one entry among many", () => {
+  it("returns an entry by handle whatever its rank", async () => {
+    // The board shows the top 100. At ten thousand entries that is the whole
+    // problem: someone at #4000 cannot see their own entry, and every claim
+    // affordance goes with it.
+    await submitRank(input({ handle: "ada", timeSeconds: 61 }))
+
+    const found = await findEntryByHandle("ada")
+
+    expect(found?.handle).toBe("ada")
+    expect(found?.timeSeconds).toBe(61)
+    expect(found?.rank).toBeGreaterThan(0)
+  })
+
+  it("ranks the found entry against the whole board, not a page of it", async () => {
+    await submitRank(input({ handle: "fast", timeSeconds: 20 }))
+    await submitRank(input({ handle: "slow", timeSeconds: 500 }))
+
+    expect((await findEntryByHandle("slow"))?.rank).toBe(2)
+  })
+
+  it("says nothing rather than guessing when the handle is unknown", async () => {
+    expect(await findEntryByHandle("nobody")).toBeNull()
   })
 })

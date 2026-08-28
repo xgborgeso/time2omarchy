@@ -1,9 +1,10 @@
 import { initTRPC, TRPCError } from "@trpc/server"
-import { clientKey } from "../../lib/ratelimit"
 import type { Limiter } from "../ratelimit"
 
 export type Context = {
   headers: Headers
+  /** Who to throttle. Resolved at the edge of the request, not guessed here. */
+  clientKey: string
   /** Where a Set-Cookie for the visitor id goes. */
   resHeaders: Headers
   secure: boolean
@@ -20,10 +21,8 @@ export const publicProcedure = t.procedure
  * what reaches a single instance.
  */
 export function throttled(limiter: Limiter, message: string) {
-  return t.middleware(({ next }) => {
-    // A route handler has no socket address to offer, so every caller shares
-    // one bucket until this runs behind a proxy that can supply one.
-    if (!limiter.check(clientKey(null)).allowed) {
+  return t.middleware(({ ctx, next }) => {
+    if (!limiter.check(ctx.clientKey).allowed) {
       throw new TRPCError({ code: "TOO_MANY_REQUESTS", message })
     }
     return next()

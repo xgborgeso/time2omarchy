@@ -27,5 +27,12 @@ export const trpc = createTRPCOptionsProxy({
   // The prerender has no visitor: this page is generated once per
   // revalidation, not once per person. Nothing prefetched here reads the
   // context — recording a visit is the client's job now, via `visit`.
-  ctx: { headers: new Headers(), resHeaders: new Headers(), secure: true },
+  ctx: {
+    headers: new Headers(),
+    resHeaders: new Headers(),
+    secure: true,
+    // A prerender is one render per revalidation, not one per caller: it has
+    // no address to throttle and nothing to throttle it against.
+    clientKey: "prerender",
+  },
 })

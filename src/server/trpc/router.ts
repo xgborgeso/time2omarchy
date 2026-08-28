@@ -2,7 +2,7 @@ import { z } from "zod"
 import { searchCpus } from "../../lib/cpus"
 import { specsSchema } from "../../lib/specs"
 import { handleSchema, timeSchema } from "../../lib/validation"
-import { loadBoard, loadStats } from "../board"
+import { findEntryByHandle, loadBoard, loadStats } from "../board"
 import { identityFrom } from "../identity"
 import { claimEntry, submitRank } from "../rank"
 import { Limiter } from "../ratelimit"
@@ -45,6 +45,17 @@ export const appRouter = router({
     .use(throttled(readLimit, "Too many requests."))
     .input(z.object({ query: z.string().max(64) }))
     .query(({ input }) => searchCpus(input.query)),
+
+  /**
+   * One entry by handle, whatever its rank.
+   *
+   * The board is capped at 100. Past that, someone's own entry is invisible to
+   * them — and so is every way to claim it.
+   */
+  entry: publicProcedure
+    .use(throttled(readLimit, "Too many requests."))
+    .input(z.object({ handle: handleSchema }))
+    .query(({ input }) => findEntryByHandle(input.handle)),
 
   /** Records that someone is here. The write half of what board used to do. */
   visit: publicProcedure

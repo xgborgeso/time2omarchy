@@ -12,10 +12,12 @@ import { RankForm } from "@/components/RankForm"
 import { RulesPage } from "@/components/RulesPage"
 import { SiteHeader } from "@/components/SiteHeader"
 import { StatsPage } from "@/components/stats/StatsPage"
+import { Input } from "@/components/ui/input"
 import { signIn } from "@/lib/auth-client"
 import { claimOutcome } from "@/lib/claim-outcome"
 import { useTRPC } from "@/lib/trpc"
 import type { BoardEntry, RankSuccess } from "@/lib/types"
+import { useDebounced } from "@/lib/use-debounced"
 import { usePresence } from "@/lib/use-presence"
 import { hashForView, type View, viewFromHash } from "@/lib/view"
 
@@ -28,6 +30,16 @@ export function App() {
   )
   const claim = useMutation(trpc.claim.mutationOptions())
   const [open, setOpen] = useState<BoardEntry | null>(null)
+  /** A handle looked up because the board's top hundred does not contain it. */
+  const [lookup, setLookup] = useState("")
+  const searched = useDebounced(lookup.trim().replace(/^@+/, "").toLowerCase(), 300)
+  const shown = new Set((data?.entries ?? []).map((e) => e.handle))
+  const { data: found } = useQuery({
+    ...trpc.entry.queryOptions({ handle: searched }),
+    // Only worth asking for what the board is not already showing.
+    enabled: searched.length > 0 && !shown.has(searched),
+  })
+
   const [view, setView] = useState<View>("board")
 
   const applyHash = useCallback(() => {
@@ -126,11 +138,23 @@ export function App() {
             <Hero counters={data?.counters} />
             <RankForm onSuccess={onSuccess} />
 
+            {/* The board shows the top hundred. Past that, this is the only
+                way someone reaches their own entry — or claims it. */}
+            <div className="mx-auto mt-10 flex w-full max-w-[792px] justify-end">
+              <Input
+                value={lookup}
+                onChange={(e) => setLookup(e.target.value)}
+                placeholder="Find a handle"
+                aria-label="Find an entry by handle"
+                className="h-9 w-full max-w-[14rem] text-sm"
+              />
+            </div>
             <Board
               entries={entries}
               loading={isLoading}
               onOpen={setOpen}
               onClaim={onClaim}
+              found={searched && !shown.has(searched) ? found : null}
             />
             {entries.length === 0 && !isLoading ? (
               <p className="border-y border-card py-10 text-center text-sm text-muted-foreground">

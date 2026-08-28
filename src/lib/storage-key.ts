@@ -15,12 +15,37 @@ export function localUploadName(url: string): string | null {
 }
 
 /**
+ * The stored name behind a boot screen url, wherever it is hosted.
+ *
+ * With no host configured only the local `/uploads/...` form is ours, which is
+ * how development works. With one, a url counts only if its origin is exactly
+ * that host — a prefix match would accept
+ * `https://cdn.example.com.evil.test/uploads/x.png`.
+ */
+export function uploadName(url: string, publicBase: string | null): string | null {
+  const trimmed = url.trim()
+  if (!publicBase) return localUploadName(trimmed)
+
+  let parsed: URL
+  let base: URL
+  try {
+    parsed = new URL(trimmed)
+    base = new URL(publicBase)
+  } catch {
+    return null
+  }
+  if (parsed.origin !== base.origin) return null
+
+  return localUploadName(parsed.pathname)
+}
+
+/**
  * Whether a url is one this app actually issued.
  *
  * Ranking takes a url rather than a file, so this is the gate that stops
  * someone putting an arbitrary remote image on the board for every visitor to
  * load.
  */
-export function isStoredBootScreen(url: string): boolean {
-  return localUploadName(url) !== null
+export function isStoredBootScreen(url: string, publicBase: string | null = null): boolean {
+  return uploadName(url, publicBase) !== null
 }

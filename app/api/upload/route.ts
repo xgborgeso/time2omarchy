@@ -5,8 +5,9 @@
  * uploader wants anyway: the file goes straight to storage and only the
  * resulting url is submitted with the rank.
  */
-import { clientKey } from "@/lib/ratelimit"
+import { clientKeyFrom } from "@/lib/ratelimit"
 import { handleSchema, MAX_BOOT_SCREEN_BYTES, validateBootScreen } from "@/lib/validation"
+import { TRUSTED_IP_HEADER } from "@/server/env"
 import { Limiter } from "@/server/ratelimit"
 import { captureError } from "@/server/sentry"
 import { storeBootScreen } from "@/server/storage"
@@ -35,7 +36,8 @@ export async function POST(request: Request): Promise<Response> {
       return fail("That boot screen is too large.", 413)
     }
 
-    if (!uploadLimit.check(clientKey(null)).allowed) {
+    const caller = clientKeyFrom(request.headers, { trustedHeader: TRUSTED_IP_HEADER })
+    if (!uploadLimit.check(caller).allowed) {
       return fail("Slow down. Try again in an hour.", 429)
     }
 

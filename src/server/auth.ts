@@ -10,6 +10,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle"
 import { userFromXProfile, type XProfile } from "../lib/identity"
 import { getDb } from "./db"
 import * as schema from "./schema"
+import { captureError } from "./sentry"
 
 /**
  * Extra columns on Better Auth's own `user` table.
@@ -54,9 +55,21 @@ async function fetchXProfile(accessToken: string) {
     headers: { Authorization: `Bearer ${accessToken}` },
     signal: AbortSignal.timeout(8000),
   })
-  // 402 here means the developer account is out of credits, not that the
-  // person failed to sign in — both end the same way, unverified.
-  if (!res.ok) return null
+
+  if (!res.ok) {
+    // 402 is the one worth naming: the developer account is out of credits,
+    // so every claim fails at the last step, after the person has already
+    // approved on X. It looks exactly like a bug until someone reads this.
+    await captureError(
+      new Error(
+        res.status === 402
+          ? "X API credits exhausted — claims cannot complete until the developer account is funded."
+          : `X profile lookup failed: ${res.status}`,
+      ),
+    )
+    return null
+  }
+
   return (await res.json()) as XProfile
 }
 

@@ -53,3 +53,23 @@ export function clientKey(socketAddress: string | null): string {
   // rather than each getting a private allowance.
   return "unknown"
 }
+
+/**
+ * The caller's key, taken from a header the platform sets.
+ *
+ * Which header can be trusted depends entirely on what sits in front: behind
+ * Cloudflare it is `cf-connecting-ip`, behind most proxies `x-forwarded-for`,
+ * and with nothing in front, none of them — a caller sets those itself. So the
+ * header is named by configuration rather than guessed, and an unset one keeps
+ * the shared bucket instead of inventing an identity per request.
+ */
+export function clientKeyFrom(
+  headers: Headers,
+  { trustedHeader }: { trustedHeader: string | null },
+): string {
+  if (!trustedHeader) return clientKey(null)
+
+  // Proxies append as a request travels, so the caller is at the front.
+  const forwarded = headers.get(trustedHeader)?.split(",")[0]?.trim()
+  return clientKey(forwarded ?? null)
+}
