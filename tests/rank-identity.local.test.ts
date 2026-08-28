@@ -143,3 +143,39 @@ describe("claiming an entry ranked as a guest", () => {
     expect((await entryFor("ada"))?.identityKey).toBe(ADA.key)
   })
 })
+
+describe("claiming an entry that is not yours", () => {
+  it("cannot touch it, because the entry to claim is never sent", async () => {
+    // Signed in as @bob, clicking Claim on @ada's entry. The request carries
+    // no handle at all — the server only ever looks up the caller's own.
+    await submitRank(input({ handle: "ada" }))
+
+    const result = await claimEntry({ key: "x:777", handle: "bob" })
+
+    expect(result.ok).toBe(false)
+    const ada = await entryFor("ada")
+    expect(ada?.verified).toBe(false)
+    expect(ada?.identityKey).toBeNull()
+  })
+
+  it("claims your own entry instead, when you have one", async () => {
+    // The only entry a session can ever reach is the one under its own handle.
+    await submitRank(input({ handle: "ada" }))
+    await submitRank(input({ handle: "bob" }))
+
+    const result = await claimEntry({ key: "x:777", handle: "bob" })
+
+    expect(result.ok).toBe(true)
+    expect((await entryFor("bob"))?.identityKey).toBe("x:777")
+    expect((await entryFor("ada"))?.identityKey).toBeNull()
+  })
+
+  it("cannot take an entry by renaming into a handle someone already holds", async () => {
+    // X frees a handle when it is changed. Whoever proved an entry keeps it.
+    await submitRank(input({ handle: "ada", identity: ADA }))
+    const result = await claimEntry({ key: "x:777", handle: "ada" })
+
+    expect(result.ok).toBe(false)
+    expect((await entryFor("ada"))?.identityKey).toBe(ADA.key)
+  })
+})
