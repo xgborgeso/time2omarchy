@@ -100,15 +100,32 @@ function cpuChart(
 ): Pick<Benchmark, "cpu" | "cpuLevel" | "cpuParent"> {
   const family = (row: BenchmarkRow) => cpuById(row.cpuId)?.family ?? null
 
+  /** The vendor chart, and where a drill falls back to when it finds nothing. */
+  const vendors = {
+    cpuLevel: "vendor" as const,
+    cpuParent: null,
+    cpu: bucketBy(
+      rows,
+      (row) => vendorOf(row.cpuId),
+      (id) => id,
+    ),
+  }
+
   if (filter?.dimension === "vendor") {
+    const families = bucketBy(
+      rows.filter((row) => vendorOf(row.cpuId) === filter.id),
+      family,
+      (id) => id,
+    )
+    // "Other" is every chip off the catalogue, so it has no families and no
+    // models. Drilling into it produced an empty chart, and an empty chart
+    // takes the way back with it.
+    if (families.length === 0) return vendors
+
     return {
       cpuLevel: "family",
       cpuParent: { dimension: "vendor", id: filter.id, label: filter.id },
-      cpu: bucketBy(
-        rows.filter((row) => vendorOf(row.cpuId) === filter.id),
-        family,
-        (id) => id,
-      ),
+      cpu: families,
     }
   }
 
@@ -117,6 +134,8 @@ function cpuChart(
     const inFamily =
       filter.dimension === "family" ? filter.id : (cpuById(filter.id)?.family ?? null)
     const kin = rows.filter((row) => family(row) === inFamily)
+    if (kin.length === 0) return vendors
+
     return {
       cpuLevel: "model",
       cpuParent: inFamily

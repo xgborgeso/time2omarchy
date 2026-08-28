@@ -144,6 +144,18 @@ describe("drilling into the CPU", () => {
     expect(b.cpu.map((c) => c.id)).toContain("amd-ryzen-7-9800x3d")
   })
 
+  it("stays put when a vendor has no level below it", () => {
+    // "Other" is every chip outside the catalogue, so it has no families and
+    // no models. Drilling in produced an empty chart and the card vanished,
+    // taking the only way back with it.
+    const mixed = [...rows, row(400, "other", 8, "hdd")]
+    const b = benchmark(mixed, { dimension: "vendor", id: "Other" })
+
+    expect(b.cpuLevel).toBe("vendor")
+    expect(b.cpuParent).toBeNull()
+    expect(b.cpu.map((c) => c.id)).toContain("Other")
+  })
+
   it("stays at the vendor when the filter is not about CPUs at all", () => {
     expect(benchmark(rows, { dimension: "storage", id: "nvme" }).cpuLevel).toBe("vendor")
   })
