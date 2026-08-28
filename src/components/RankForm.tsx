@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label"
 import type { Specs, StorageId } from "@/lib/specs"
 import { formatTime, isTimeInRange, parseTime } from "@/lib/time"
 import { useTRPC } from "@/lib/trpc"
-import type { ClaimIssued, RankSuccess } from "@/lib/types"
+import type { RankSuccess } from "@/lib/types"
 import { uploadBootScreen } from "@/lib/upload"
 import { cn } from "@/lib/utils"
 import { ShareButton } from "./ShareButton"
@@ -28,10 +28,8 @@ type Props = {
 export function RankForm({ onSuccess }: Props) {
   const trpc = useTRPC()
   const rank = useMutation(trpc.rank.mutationOptions())
-  const claimHandle = useMutation(trpc.claim.mutationOptions())
   const handleId = useId()
   const timeId = useId()
-  const postUrlId = useId()
   const inputRef = useRef<HTMLInputElement>(null)
 
   const [handle, setHandle] = useState("")
@@ -43,9 +41,6 @@ export function RankForm({ onSuccess }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
   const [placed, setPlaced] = useState<RankSuccess | null>(null)
-  /** Set once the handle is taken: the post text plus where the proof goes. */
-  const [claim, setClaim] = useState<ClaimIssued | null>(null)
-  const [postUrl, setPostUrl] = useState("")
   const [specs, setSpecs] = useState<Specs>({ cpuId: null, ramGb: null, storage: null })
 
   useEffect(() => {
@@ -92,21 +87,6 @@ export function RankForm({ onSuccess }: Props) {
     if (next) takeFile(next)
   }
 
-  /**
-   * Starts verification on request.
-   *
-   * The badge is a reward, not a toll, so it has to be reachable by someone who
-   * simply wants it. Without this the only route to proof is being refused,
-   * which means the people most motivated to verify cannot.
-   */
-  async function startClaim() {
-    setError(null)
-    setNotice(null)
-    const issued = await claimHandle.mutateAsync({ handle }).catch(() => null)
-    if (issued?.ok) setClaim(issued)
-    else setError("Could not start verification. Try again.")
-  }
-
   async function onSubmit(e: FormEvent) {
     e.preventDefault()
     if (!file) {
@@ -130,13 +110,10 @@ export function RankForm({ onSuccess }: Props) {
         return
       }
 
-      const proof =
-        claim && postUrl.trim() ? { nonce: claim.nonce, postUrl: postUrl.trim() } : {}
       const result = await rank.mutateAsync({
         handle,
         time,
         bootScreenUrl: uploaded.url,
-        ...proof,
         cpuId: specs.cpuId,
         ramGb: specs.ramGb,
         // The guard above proved these are set, and the select can only ever
@@ -146,17 +123,9 @@ export function RankForm({ onSuccess }: Props) {
 
       if (!result.ok) {
         setError(result.error)
-        // The handle is taken. Proof of ownership is the only way through, so
-        // fetch a nonce rather than making them guess what to do next.
-        if (result.needsProof && !claim) {
-          const issued = await claimHandle.mutateAsync({ handle }).catch(() => null)
-          if (issued?.ok) setClaim(issued)
-        }
         return
       }
 
-      setClaim(null)
-      setPostUrl("")
       if (result.keptBest) {
         setNotice(
           `Your best is still ${formatTime(result.bestTimeSeconds)}. Beat it to replace.`,
@@ -268,7 +237,7 @@ export function RankForm({ onSuccess }: Props) {
           disabled={busy}
           className="h-11 shrink-0 px-6 text-sm font-bold uppercase"
         >
-          {busy ? "Ranking…" : claim ? "Verify & rank" : "Rank it"}
+          {busy ? "Ranking…" : "Rank it"}
         </Button>
       </div>
 
@@ -282,63 +251,6 @@ export function RankForm({ onSuccess }: Props) {
       <div className="mt-3">
         <SpecsFields value={specs} onChange={setSpecs} />
       </div>
-      {!claim && handle.trim() ? (
-        <p className="mt-3 text-xs text-muted-foreground">
-          Already ranked, or want the verified mark?{" "}
-          <button
-            type="button"
-            onClick={startClaim}
-            disabled={claimHandle.isPending}
-            className="font-medium text-foreground underline underline-offset-4 hover:no-underline disabled:opacity-50"
-          >
-            Verify @{handle.trim()}
-          </button>
-        </p>
-      ) : null}
-      {claim ? (
-        <div className="mt-3 flex flex-col gap-3 rounded-lg border border-primary/40 bg-background p-4">
-          <div>
-            <p className="text-xs font-medium uppercase tracking-[0.16em] text-muted-foreground">
-              Prove @{handle} is yours
-            </p>
-            <p className="mt-1.5 text-xs font-light text-muted-foreground">
-              Post this from that account, then paste the link. The code is single-use and
-              expires in 15 minutes.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            <code className="min-w-0 flex-1 truncate rounded border border-border bg-muted px-3 py-2 text-xs text-foreground">
-              {claim.text}
-            </code>
-            <a
-              href={`https://x.com/intent/post?text=${encodeURIComponent(claim.text)}`}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex h-11 shrink-0 items-center rounded-lg bg-primary px-4 text-xs font-bold uppercase text-primary-foreground hover:bg-primary/80"
-            >
-              Post on X
-            </a>
-          </div>
-
-          <div className="flex flex-col gap-1.5">
-            <Label
-              htmlFor={postUrlId}
-              className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground"
-            >
-              link to your post
-            </Label>
-            <Input
-              id={postUrlId}
-              value={postUrl}
-              onChange={(e) => setPostUrl(e.target.value)}
-              placeholder="https://x.com/you/status/..."
-              className="h-11"
-            />
-          </div>
-        </div>
-      ) : null}
-
       {notice ? (
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
           <p role="status" className="text-xs text-primary">

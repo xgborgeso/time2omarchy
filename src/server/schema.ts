@@ -40,19 +40,6 @@ export const entries = pgTable(
   ],
 )
 
-export const claims = pgTable(
-  "claims",
-  {
-    nonce: text("nonce").primaryKey(),
-    handle: text("handle").notNull(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
-    /** Set the moment a claim is spent, so a public nonce cannot be replayed. */
-    consumedAt: timestamp("consumed_at", { withTimezone: true }),
-  },
-  (t) => [index("claims_handle_idx").on(t.handle)],
-)
-
 export const visitorDays = pgTable(
   "visitor_days",
   {

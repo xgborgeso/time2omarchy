@@ -64,14 +64,6 @@ export type RankFailure = {
   ok: false
   error: string
   field?: "handle" | "time" | "bootScreen" | "form"
-  /** The handle is taken and only proof of ownership can move it. */
-  needsProof?: boolean
-}
-
-export type ClaimIssued = {
-  ok: true
-  nonce: string
-  /** The exact text that has to appear in the post. */
-  text: string
-  expiresAt: string
+  /** The handle is taken; only its owner, signed in, can move it. */
+  needsSignIn?: boolean
 }

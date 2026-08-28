@@ -2,12 +2,10 @@ import { eq } from "drizzle-orm"
 import { decideEntry } from "../lib/ranking"
 import { isStoredBootScreen } from "../lib/storage-key"
 import type { BoardEntry, RankFailure, RankSuccess } from "../lib/types"
-import { identityKeyFor } from "../lib/verification"
 import { loadBoard } from "./board"
 import { getDb } from "./db"
 import { entries } from "./schema"
 import { deleteBootScreen } from "./storage"
-import { verifyClaim } from "./verify"
 
 export type RankInput = {
   /** Already normalized and range-checked by the router's schemas. */
@@ -15,9 +13,6 @@ export type RankInput = {
   timeSeconds: number
   /** A url this app issued; uploading is a separate step. */
   bootScreenUrl: string
-  /** Both or neither: proof that the handle is yours. */
-  nonce?: string
-  postUrl?: string
   /** Required hardware, validated against the catalogue by the router. */
   cpuId: string
   ramGb: number
@@ -41,25 +36,10 @@ export async function submitRank(input: RankInput): Promise<RankSuccess | RankFa
 
   const db = await getDb()
 
-  // Proof is optional: without it an entry may open a row but never touch one.
-  const nonce = input.nonce?.trim() ?? ""
-  const postUrl = input.postUrl?.trim() ?? ""
-  let identityKey: string | null = null
-  if (nonce && postUrl) {
-    const proof = await verifyClaim(nonce, postUrl)
-    if (!proof.ok) {
-      return { ok: false, error: proof.error, field: "handle" }
-    }
-    if (proof.identityKey !== identityKeyFor(handle)) {
-      return {
-        ok: false,
-        error: "That post proves a different handle.",
-        field: "handle",
-      }
-    }
-    identityKey = proof.identityKey
-  }
-  const verified = identityKey !== null
+  // Nothing proves a handle yet: X sign-in replaces the posted nonce, and
+  // until it lands every entry opens a row unverified.
+  const identityKey: string | null = null
+  const verified = false
 
   const existing = await db
     .select()
@@ -79,7 +59,7 @@ export async function submitRank(input: RankInput): Promise<RankSuccess | RankFa
       ok: false,
       error: `@${handle} is already on the board.`,
       field: "handle",
-      needsProof: true,
+      needsSignIn: true,
     }
   }
 

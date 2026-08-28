@@ -7,7 +7,6 @@ import { submitRank } from "../rank"
 import { Limiter } from "../ratelimit"
 import { captureError } from "../sentry"
 import { touchPresence } from "../stats"
-import { issueClaim } from "../verify"
 import { visitorIdFrom } from "../visitor"
 import { publicProcedure, router, throttled } from "./init"
 
@@ -16,7 +15,6 @@ const HOUR = 60 * MINUTE
 
 /** Reads are generous; writes are cheap to send and expensive to serve. */
 const readLimit = new Limiter({ windowMs: MINUTE, max: 300 })
-const claimLimit = new Limiter({ windowMs: HOUR, max: 12 })
 const rankLimit = new Limiter({ windowMs: HOUR, max: 8 })
 
 export const appRouter = router({
@@ -55,22 +53,6 @@ export const appRouter = router({
       return { ok: true as const }
     }),
 
-  claim: publicProcedure
-    .use(throttled(claimLimit, "Too many verification attempts. Try again later."))
-    .input(z.object({ handle: handleSchema }))
-    .mutation(async ({ input }) => {
-      try {
-        return { ok: true as const, ...(await issueClaim(input.handle)) }
-      } catch (err) {
-        await captureError(err)
-        return {
-          ok: false as const,
-          error: "Could not start verification",
-          field: "handle",
-        }
-      }
-    }),
-
   rank: publicProcedure
     .use(throttled(rankLimit, "Slow down. Try again in an hour."))
     .input(
@@ -80,8 +62,6 @@ export const appRouter = router({
           // Parsed here so "1:12" and "43s" keep working; the client sends text.
           time: timeSchema,
           bootScreenUrl: z.string().min(1),
-          nonce: z.string().optional(),
-          postUrl: z.string().optional(),
         })
         .extend(specsSchema.shape),
     )
@@ -91,8 +71,6 @@ export const appRouter = router({
           handle: input.handle,
           timeSeconds: input.time,
           bootScreenUrl: input.bootScreenUrl,
-          nonce: input.nonce,
-          postUrl: input.postUrl,
           cpuId: input.cpuId,
           ramGb: input.ramGb,
           storage: input.storage,

@@ -6,13 +6,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { RankForm } from "@/components/RankForm"
 
 const rankFn = vi.fn()
-const claimFn = vi.fn()
 const uploadFn = vi.fn()
 
 vi.mock("@/lib/trpc", () => ({
   useTRPC: () => ({
     rank: { mutationOptions: () => ({ mutationFn: rankFn }) },
-    claim: { mutationOptions: () => ({ mutationFn: claimFn }) },
   }),
 }))
 
@@ -20,7 +18,7 @@ vi.mock("@/lib/upload", () => ({
   uploadBootScreen: (...args: unknown[]) => uploadFn(...args),
 }))
 
-// Stubbed so these tests stay about upload, rank and proof rather than about
+// Stubbed so these tests stay about upload and ranking rather than about
 // driving a combobox. The picker is covered separately.
 vi.mock("@/components/SpecsFields", () => ({
   SpecsFields: ({ onChange }: { onChange: (s: unknown) => void }) => (
@@ -61,7 +59,6 @@ async function submit(handle: string, time: string, withSpecs = true) {
 
 beforeEach(() => {
   rankFn.mockReset()
-  claimFn.mockReset()
   uploadFn.mockReset()
   uploadFn.mockResolvedValue({ ok: true, url: "/uploads/x-1.png" })
 })
@@ -130,105 +127,16 @@ describe("RankForm", () => {
     expect(rankFn).not.toHaveBeenCalled()
   })
 
-  it("asks for proof when the handle is taken, without the user requesting it", async () => {
-    rankFn.mockResolvedValue({
-      ok: false,
-      error: "@ada is already on the board.",
-      field: "handle",
-      needsProof: true,
-    })
-    claimFn.mockResolvedValue({
-      ok: true,
-      nonce: "t2o-abc123",
-      text: "Verifying my time2omarchy entry: t2o-abc123",
-      expiresAt: "2026-01-01T00:00:00.000Z",
-    })
-    render(<RankForm onSuccess={() => {}} />, { wrapper })
-    await submit("ada", "43")
-
-    expect(await screen.findByRole("alert")).toHaveTextContent("already on the board")
-    // The proof panel appears with the exact text to post.
-    expect(
-      await screen.findByText("Verifying my time2omarchy entry: t2o-abc123"),
-    ).toBeInTheDocument()
-    expect(screen.getByLabelText(/link to your post/i)).toBeInTheDocument()
-    expect(claimFn.mock.calls[0]?.[0]).toEqual({ handle: "ada" })
-  })
-
-  it("sends the nonce and post url once proof has been pasted", async () => {
-    rankFn.mockResolvedValueOnce({
-      ok: false,
-      error: "@ada is already on the board.",
-      needsProof: true,
-    })
-    claimFn.mockResolvedValue({
-      ok: true,
-      nonce: "t2o-abc123",
-      text: "Verifying my time2omarchy entry: t2o-abc123",
-      expiresAt: "2026-01-01T00:00:00.000Z",
-    })
-    render(<RankForm onSuccess={() => {}} />, { wrapper })
-    const user = await submit("ada", "43")
-
-    const postUrl = await screen.findByLabelText(/link to your post/i)
-    await user.type(postUrl, "https://x.com/ada/status/20")
-
-    rankFn.mockResolvedValueOnce({
-      ok: true,
-      created: false,
-      improved: true,
-      keptBest: false,
-      bestTimeSeconds: 43,
-      entry: {},
-      board: { entries: [] },
-    })
-    await user.click(screen.getByRole("button", { name: /verify & rank/i }))
-
-    await waitFor(() => expect(rankFn).toHaveBeenCalledTimes(2))
-    expect(rankFn.mock.calls[1]?.[0]).toMatchObject({
-      nonce: "t2o-abc123",
-      postUrl: "https://x.com/ada/status/20",
-    })
-  })
-
-  it("relabels the button once proof is required", async () => {
-    rankFn.mockResolvedValue({ ok: false, error: "taken", needsProof: true })
-    claimFn.mockResolvedValue({
-      ok: true,
-      nonce: "n",
-      text: "t",
-      expiresAt: "2026-01-01T00:00:00.000Z",
-    })
-    render(<RankForm onSuccess={() => {}} />, { wrapper })
-    await submit("ada", "43")
-
-    expect(
-      await screen.findByRole("button", { name: /verify & rank/i }),
-    ).toBeInTheDocument()
-  })
-
-  it("lets you ask for proof without being refused first", async () => {
-    // The badge is meant to be a reward, so it has to be reachable by someone
-    // who wants it — not only offered as a consolation when a handle is taken.
-    claimFn.mockResolvedValue({
-      ok: true,
-      nonce: "t2o-abc123",
-      text: "Verifying my time2omarchy entry: t2o-abc123",
-      expiresAt: "2026-01-01T00:00:00.000Z",
-    })
+  it("never asks anyone to post a code to prove a handle", async () => {
+    // Proof is an X sign-in now. Nothing should send someone off to compose a
+    // post, paste a link back, or race a 15-minute nonce.
     const user = userEvent.setup()
     render(<RankForm onSuccess={() => {}} />, { wrapper })
     await user.type(screen.getByLabelText(/handle/i), "ada")
-    await user.click(screen.getByRole("button", { name: /verify @ada/i }))
 
-    expect(
-      await screen.findByText("Verifying my time2omarchy entry: t2o-abc123"),
-    ).toBeInTheDocument()
-    expect(rankFn).not.toHaveBeenCalled()
-  })
-
-  it("only offers to verify once a handle has been typed", async () => {
-    render(<RankForm onSuccess={() => {}} />, { wrapper })
+    expect(screen.queryByText(/post this from that account/i)).toBeNull()
+    expect(screen.queryByLabelText(/link to your post/i)).toBeNull()
+    expect(screen.queryByRole("link", { name: /post on x/i })).toBeNull()
     expect(screen.queryByRole("button", { name: /verify @/i })).toBeNull()
   })
 
