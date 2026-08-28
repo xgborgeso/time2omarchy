@@ -18,14 +18,16 @@ describe("RulesPage", () => {
 
   it("explains what claiming buys, since the board shows a mark for it", () => {
     render(<RulesPage />)
-    expect(screen.getByText(/signing in with x is optional/i)).toBeInTheDocument()
+    expect(screen.getByText(/claiming your entry with x is optional/i)).toBeInTheDocument()
   })
 
   it("says a guest entry can be claimed later, which is not obvious", () => {
     // Someone who ranked as a guest has to be told the entry is still theirs to
     // take, or the only way they find out is by trying.
     render(<RulesPage />)
-    expect(screen.getByText(/claim it later/i)).toBeInTheDocument()
+    expect(
+      screen.getByText(/only a claimed entry can be changed later/i),
+    ).toBeInTheDocument()
   })
 
   it("uses one word for the action, and keeps 'verified' for the state", () => {

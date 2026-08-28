@@ -22,12 +22,12 @@ export function RulesPage() {
           <li className="pl-2">One time per X handle. A faster one replaces it.</li>
           <li className="pl-2">A boot screen is required, shown publicly as proof.</li>
           <li className="pl-2">
-            Times are self-reported. Signing in with X is optional — it earns the check mark
-            and keeps the entry yours to update.
+            Times are self-reported. Anyone can rank — claiming your entry with X is
+            optional, and earns the check mark.
           </li>
           <li className="pl-2">
-            Ranked as a guest? The entry is still yours: sign in with the same handle to
-            claim it later, and your time and boot screen stay as they are.
+            Only a claimed entry can be changed later. Claim yours whenever you like: your
+            time and boot screen stay exactly as they are.
           </li>
         </ol>
       </section>

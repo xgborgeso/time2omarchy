@@ -344,7 +344,7 @@ export function RankForm({ onSuccess, className }: Props) {
       </Button>
 
       <p className="mt-3 text-center text-xs text-muted-foreground">
-        An unverified entry can be opened, but never changed afterwards.
+        Anyone can rank. Only a claimed entry can be changed later.
       </p>
 
       {notice ? (
