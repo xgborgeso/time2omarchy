@@ -22,22 +22,11 @@ type Props = {
  */
 const ENOUGH = 10
 
-const TABLES: { dimension: Dimension; title: string; caption: string }[] = [
-  {
-    dimension: "storage",
-    title: "By drive",
-    caption: "The single biggest factor in how long an install takes.",
-  },
-  {
-    dimension: "vendor",
-    title: "By CPU",
-    caption: "Same installer, same steps — different silicon.",
-  },
-  {
-    dimension: "ram",
-    title: "By memory",
-    caption: "Where more of it stops making a difference.",
-  },
+/** No captions: the numbers underneath say it, and said it better. */
+const TABLES: { dimension: Dimension; title: string }[] = [
+  { dimension: "storage", title: "By drive" },
+  { dimension: "vendor", title: "By CPU" },
+  { dimension: "ram", title: "By memory" },
 ]
 
 /**
@@ -70,17 +59,14 @@ export function Hardware({ hardware, active, onFilter }: Props) {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        {measured.map(({ dimension, title, caption }) => (
+        {measured.map(({ dimension, title }) => (
           <div
             key={dimension}
             className="flex flex-col gap-3 rounded-lg border border-border bg-card p-5"
           >
-            <div>
-              <h3 className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                {title}
-              </h3>
-              <p className="mt-1 text-[11px] font-light text-muted-foreground">{caption}</p>
-            </div>
+            <h3 className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+              {title}
+            </h3>
 
             <ul className="flex flex-col gap-2.5">
               {hardware[dimension].map((bucket) => (
