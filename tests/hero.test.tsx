@@ -38,18 +38,13 @@ describe("Hero", () => {
     expect(screen.getByText("FIRST")).toBeInTheDocument()
   })
 
-  it("names a sole leader", () => {
-    render(<Hero counters={counters()} />)
-    // The handle links out, so it is its own element rather than loose prose.
-    const link = screen.getByRole("link", { name: "@ada" })
-    expect(link).toHaveAttribute("href", "https://x.com/ada")
-    expect(screen.getByText(/holds it/)).toBeInTheDocument()
-  })
-
-  it("counts the holders instead of naming one when the top is tied", () => {
+  it("says the same thing whether the top is held or shared", () => {
+    // Ties are the normal case at second granularity, so a line that counted
+    // the holders read as a hedge. The leader is credited on the board, where
+    // their handle already links to X.
     render(<Hero counters={counters({ leaderCount: 3 })} />)
-    expect(screen.getByText(/3 share it/)).toBeInTheDocument()
-    expect(screen.queryByText(/@ada/)).toBeNull()
+    expect(screen.getByText(/fastest Omarchy install leaderboard/i)).toBeVisible()
+    expect(screen.queryByText(/@ada|share it|holds it/)).toBeNull()
   })
 
   it("survives having no counters at all, as on first paint", () => {

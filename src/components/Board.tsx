@@ -24,7 +24,7 @@ type Props = {
 // minmax(0,1fr) rather than 1fr: a grid item defaults to min-width:auto,
 // which stops `truncate` from ever shrinking the handle column.
 const ROW =
-  "grid grid-cols-[2rem_4.75rem_minmax(0,1fr)_2.75rem] items-center gap-2.5 sm:grid-cols-[3.5rem_7.25rem_minmax(0,1fr)_auto_4.75rem] sm:gap-5"
+  "grid grid-cols-[2rem_4.75rem_minmax(0,1fr)_2.75rem] items-center gap-2.5 sm:grid-cols-[3.5rem_7.25rem_minmax(0,1fr)_auto_5.5rem] sm:gap-5"
 
 /**
  * A fixed slot for the handle, so every badge beside one starts at the same x.
@@ -109,7 +109,9 @@ function Entry({ entry, onOpen, onClaim, className }: EntryProps) {
   return (
     <div
       className={cn(
-        `${ROW} border-b border-card px-3 py-3 sm:px-5`,
+        // Room to breathe: a badge sitting in a tight row reads as clutter,
+        // and outbid's entries are nearly twice this tall for the same reason.
+        `${ROW} border-b border-card px-3 py-4 sm:px-5 sm:py-5`,
         leads && "bg-muted/50",
         className,
       )}
@@ -193,9 +195,9 @@ function Entry({ entry, onOpen, onClaim, className }: EntryProps) {
           src={entry.bootScreenUrl}
           alt=""
           loading="lazy"
-          width={60}
-          height={44}
-          className="h-11 w-11 object-cover sm:w-15"
+          width={72}
+          height={52}
+          className="h-11 w-11 object-cover sm:h-13 sm:w-18"
         />
       </button>
     </div>
