@@ -108,27 +108,14 @@ describe("searchCpus", () => {
 
   it("caps results, so a broad query cannot return the whole catalogue", () => {
     // The picker renders what it is given; an unbounded list would jank.
-    expect(searchCpus("", 10)).toHaveLength(10)
     expect(searchCpus("core", 5)).toHaveLength(5)
+    expect(searchCpus("ryzen", 3)).toHaveLength(3)
   })
 
-  it("shows all three vendors before anyone types", () => {
-    // Slicing the catalogue alphabetically by id returned only AMD, which
-    // reads as though the other two are missing.
-    const vendors = new Set(searchCpus("").map((c) => c.vendor))
-    expect([...vendors].sort()).toEqual(["AMD", "Apple", "Intel"])
-  })
-
-  it("opens on current-generation chips, not the oldest ones", () => {
-    const names = searchCpus("").map((c) => c.name)
-    expect(names.some((n) => n.includes("9950X"))).toBe(true)
-    expect(names.some((n) => n.startsWith("M4"))).toBe(true)
-    expect(names.some((n) => n.includes("Ultra"))).toBe(true)
-    // Ryzen 1000 is eight years old; it should not be the first thing offered.
-    expect(names.some((n) => n.includes("1200"))).toBe(false)
-  })
-
-  it("keeps the opening set short enough to scan", () => {
-    expect(searchCpus("").length).toBeLessThanOrEqual(20)
+  it("returns nothing until something is typed", () => {
+    // 227 chips is a wall, not a menu. The search is the way in; an opening
+    // list only invites scrolling past the answer.
+    expect(searchCpus("")).toHaveLength(0)
+    expect(searchCpus("   ")).toHaveLength(0)
   })
 })

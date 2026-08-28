@@ -60,7 +60,8 @@ export function SpecsFields({ value, onChange }: Props) {
     // Keep the previous list on screen while the next one loads, so the
     // popover does not flash empty between keystrokes.
     placeholderData: (previous: Cpu[] | undefined) => previous,
-    enabled: open,
+    // An empty box has nothing to answer, so the open costs no round trip.
+    enabled: open && debounced.trim().length > 0,
   })
 
   // The chosen chip may not be in the current results, so remember it.
@@ -101,6 +102,14 @@ export function SpecsFields({ value, onChange }: Props) {
                 onValueChange={setQuery}
               />
               <CommandList>
+                {/* The list opens empty on purpose: 227 chips is a wall
+                    rather than a menu, and any opening selection is arbitrary
+                    enough to read as the only chips there are. */}
+                {!query.trim() && (
+                  <p className="px-3 py-4 text-center text-muted-foreground text-xs">
+                    Type to search — 7950X, M4 Pro, Core Ultra 9…
+                  </p>
+                )}
                 <CommandEmpty>
                   <span className="text-xs text-muted-foreground">
                     {isFetching ? "Searching…" : "No match."}

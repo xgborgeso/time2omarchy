@@ -1105,16 +1105,6 @@ export function cpusByVendor(cpus: readonly Cpu[] = CPUS): CpuGroup[] {
 }
 
 /**
- * What the picker shows before anyone types.
- *
- * The current desktop generation from each vendor. Slicing the catalogue
- * instead returns whatever sorts first by id — which is all AMD, and the
- * eight-year-old parts at that, reading as though the other vendors are
- * missing. Update these as generations ship; it is one line.
- */
-const OPENING_FAMILIES: readonly string[] = ["Ryzen 9000", "M4", "Core Ultra 200S"]
-
-/**
  * Substring match over vendor, family and model.
  *
  * Lives here rather than in the component so the server can run it: the
@@ -1123,9 +1113,9 @@ const OPENING_FAMILIES: readonly string[] = ["Ryzen 9000", "M4", "Core Ultra 200
  */
 export function searchCpus(query: string, limit = 40): Cpu[] {
   const needle = query.trim().toLowerCase()
-  if (!needle) {
-    return CPUS.filter((cpu) => OPENING_FAMILIES.includes(cpu.family)).slice(0, limit)
-  }
+  // Nothing until asked. 227 chips is a wall rather than a menu, and any
+  // opening selection is arbitrary — the search is the way in.
+  if (!needle) return []
 
   const terms = needle.split(/\s+/)
   return CPUS.filter((cpu) => {
