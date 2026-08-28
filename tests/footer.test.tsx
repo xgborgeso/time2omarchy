@@ -33,3 +33,19 @@ describe("Footer", () => {
     )
   })
 })
+
+describe("Footer order", () => {
+  it("leads with Stats, then Rules, then GitHub", async () => {
+    // Stats is the page people actually come back for; the rules are read
+    // once. GitHub is the way out, so it goes last.
+    render(<Footer onNavigate={() => {}} />)
+    const labels = ["Stats", "Rules", "GitHub"]
+    const positions = labels.map((label) =>
+      Array.from(document.querySelectorAll("footer button, footer a")).findIndex(
+        (el) => el.textContent?.trim() === label,
+      ),
+    )
+    expect(positions).toEqual([...positions].sort((a, b) => a - b))
+    expect(positions.every((p) => p >= 0)).toBe(true)
+  })
+})

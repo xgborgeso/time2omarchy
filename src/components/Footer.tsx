@@ -11,17 +11,17 @@ export function Footer({ onNavigate }: Props) {
     <footer className="mt-11 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-card pt-5 pb-10 text-xs text-muted-foreground">
       <button
         type="button"
-        onClick={() => onNavigate("rules")}
-        className="inline-flex min-h-11 items-center hover:text-foreground"
-      >
-        Rules
-      </button>
-      <button
-        type="button"
         onClick={() => onNavigate("stats")}
         className="inline-flex min-h-11 items-center hover:text-foreground"
       >
         Stats
+      </button>
+      <button
+        type="button"
+        onClick={() => onNavigate("rules")}
+        className="inline-flex min-h-11 items-center hover:text-foreground"
+      >
+        Rules
       </button>
       <a
         href={REPO_URL}

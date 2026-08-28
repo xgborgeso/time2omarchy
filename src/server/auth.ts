@@ -19,9 +19,29 @@ import * as schema from "./schema"
  * up otherwise as a failed sign-in after someone has already authorised on X.
  */
 export const USER_FIELDS = {
-  /** The X handle, lowercased. `input: false` so no client can set it. */
-  handle: { type: "string", required: true, input: false },
+  /**
+   * The X handle, lowercased, taken from the profile at sign-up.
+   *
+   * Ordinary input rather than `input: false`, because Better Auth filters
+   * `input: false` fields out of the provider profile as well — the value
+   * would never arrive and creation would fail on a required field it just
+   * discarded. `refuseHandleChange` is what stops it moving afterwards.
+   */
+  handle: { type: "string", required: true },
 } as const
+
+/**
+ * The handle decides who owns an entry, so it may only ever come from X.
+ *
+ * Better Auth has no "set once" for a field: anything the provider can supply,
+ * a signed-in client can also send to `updateUser`. Left open, changing your
+ * handle to a stranger's would be enough to claim their entry, so every update
+ * has it stripped — sign-up is the only way in.
+ */
+export async function refuseHandleChange(data: Record<string, unknown>) {
+  const { handle: _ignored, ...rest } = data
+  return { data: rest }
+}
 
 /**
  * X bills per resource read, so the profile is fetched exactly once.
@@ -48,6 +68,9 @@ function build(db: Awaited<ReturnType<typeof getDb>>) {
     // Nothing here signs in with a password; X is the only door.
     emailAndPassword: { enabled: false },
     user: { additionalFields: USER_FIELDS },
+    databaseHooks: {
+      user: { update: { before: refuseHandleChange } },
+    },
     socialProviders: {
       twitter: {
         clientId: process.env.TWITTER_CLIENT_ID ?? "",

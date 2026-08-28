@@ -51,13 +51,12 @@ export function Board({ entries, loading, onOpen, signedInHandle = null, onClaim
       {entries.map((entry) => {
         const leads = entry.rank === 1
         const specs = formatSpecsShort(entry)
-        // Signed in, only your own entry is yours to claim. Signed out we cannot
-        // know whose is whose, and the guest who ranked has no other way back
-        // in from here — so the offer stands on every unproven entry.
-        const claimable =
-          !!onClaim &&
-          !entry.verified &&
-          (signedInHandle === null || signedInHandle === entry.handle)
+        // Only your own, and only once signed in. Offering it on every
+        // unproven entry to a signed-out visitor promised something it could
+        // never deliver: clicking Claim on a stranger's entry sent you through
+        // X and back to silence, because the only entry a session can reach is
+        // its own. One button, on the one entry it works for.
+        const claimable = !!onClaim && !entry.verified && signedInHandle === entry.handle
         return (
           <div
             key={entry.handle}

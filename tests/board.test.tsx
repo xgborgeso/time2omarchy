@@ -168,11 +168,13 @@ describe("claiming from the board", () => {
     expect(within(entryFor("ada")).queryByRole("button", { name: /claim/i })).toBeNull()
   })
 
-  it("offers a claim to a signed-out visitor, who may be the owner", async () => {
-    // Signed out we cannot know whose row this is, and the person who ranked
-    // as a guest has no other way back in from here.
+  it("offers nothing to a signed-out visitor, whose entry we cannot know", async () => {
+    // It used to offer a claim on every unproven entry. Clicking one that was
+    // not yours sent you through X and back to silence — a session can only
+    // ever reach its own entry, so the button promised what it could not do.
     render(<Board entries={TIED} loading={false} onOpen={() => {}} onClaim={() => {}} />)
-    expect(within(entryFor("grace")).getByRole("button", { name: /claim/i })).toBeVisible()
-    expect(within(entryFor("ada")).queryByRole("button", { name: /claim/i })).toBeNull()
+    for (const handle of ["ada", "grace", "linus"]) {
+      expect(within(entryFor(handle)).queryByRole("button", { name: /claim/i })).toBeNull()
+    }
   })
 })
