@@ -11,6 +11,15 @@ describe("Footer", () => {
     expect(onNavigate).toHaveBeenCalledWith("rules")
   })
 
+  it("links to this repository, not to github.com", () => {
+    // It was a placeholder pointing at GitHub's homepage.
+    render(<Footer onNavigate={() => {}} />)
+    expect(screen.getByRole("link", { name: /github/i })).toHaveAttribute(
+      "href",
+      "https://github.com/xgborgeso/time2omarchy",
+    )
+  })
+
   it("credits Omarchy and DHH without implying endorsement", () => {
     // The wordmark is used nominatively; the disclaimer is a licence condition.
     render(<Footer onNavigate={() => {}} />)

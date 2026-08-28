@@ -1,5 +1,5 @@
 import { xUrl } from "@/lib/handle"
-import { OMARCHY_URL } from "@/lib/links"
+import { OMARCHY_URL, REPO_URL } from "@/lib/links"
 import type { View } from "@/lib/view"
 
 type Props = {
@@ -24,7 +24,7 @@ export function Footer({ onNavigate }: Props) {
         Stats
       </button>
       <a
-        href="https://github.com"
+        href={REPO_URL}
         target="_blank"
         rel="noreferrer"
         className="inline-flex min-h-11 items-center hover:text-foreground"

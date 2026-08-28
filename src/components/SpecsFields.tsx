@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { type Cpu, cpuLabel, cpusByVendor, OTHER_CPU_ID } from "@/lib/cpus"
+import { NEW_CPU_ISSUE_URL } from "@/lib/links"
 import { RAM_OPTIONS, type Specs, STORAGE } from "@/lib/specs"
 import { useTRPC } from "@/lib/trpc"
 import { useDebounced } from "@/lib/use-debounced"
@@ -31,9 +32,6 @@ type Props = {
   value: Specs
   onChange: (next: Specs) => void
 }
-
-const NEW_CPU_ISSUE =
-  "https://github.com/xgborgeso/time2omarchy/issues/new?template=add-cpu.yml&title=Add+CPU%3A+"
 
 /** Matches the labels on the form above, so the two rows read as one form. */
 const LABEL = "text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground"
@@ -108,27 +106,6 @@ export function SpecsFields({ value, onChange }: Props) {
                     {isFetching ? "Searching…" : "No match."}
                   </span>
                 </CommandEmpty>
-                {/* The catalogue can never be complete, and this field is
-                    required — without this, an unlisted chip would lock
-                    someone out of the board entirely. */}
-                <CommandGroup>
-                  <CommandItem
-                    value={OTHER_CPU_ID}
-                    onSelect={() => {
-                      setSelected(null)
-                      onChange({ ...value, cpuId: OTHER_CPU_ID })
-                      setOpen(false)
-                    }}
-                  >
-                    <CheckIcon
-                      className={cn(
-                        "size-4",
-                        value.cpuId === OTHER_CPU_ID ? "opacity-100" : "opacity-0",
-                      )}
-                    />
-                    Other / not listed
-                  </CommandItem>
-                </CommandGroup>
                 {cpusByVendor(results).map((group) => (
                   <CommandGroup key={group.vendor} heading={group.vendor}>
                     {group.cpus.map((cpu) => (
@@ -155,6 +132,28 @@ export function SpecsFields({ value, onChange }: Props) {
                     ))}
                   </CommandGroup>
                 ))}
+                {/* Last, deliberately: it is the fallback, not the first
+                    thing to reach for. The catalogue can never be complete,
+                    and this field is required — without it an unlisted chip
+                    would lock someone out of the board entirely. */}
+                <CommandGroup>
+                  <CommandItem
+                    value={OTHER_CPU_ID}
+                    onSelect={() => {
+                      setSelected(null)
+                      onChange({ ...value, cpuId: OTHER_CPU_ID })
+                      setOpen(false)
+                    }}
+                  >
+                    <CheckIcon
+                      className={cn(
+                        "size-4",
+                        value.cpuId === OTHER_CPU_ID ? "opacity-100" : "opacity-0",
+                      )}
+                    />
+                    Other / not listed
+                  </CommandItem>
+                </CommandGroup>
               </CommandList>
             </Command>
             {/* Outside CommandList on purpose: cmdk only renders CommandEmpty
@@ -162,7 +161,7 @@ export function SpecsFields({ value, onChange }: Props) {
                 there could never be seen. */}
             <div className="border-border border-t px-3 py-2">
               <a
-                href={`${NEW_CPU_ISSUE}${encodeURIComponent(query)}`}
+                href={`${NEW_CPU_ISSUE_URL}${encodeURIComponent(query)}`}
                 target="_blank"
                 rel="noreferrer"
                 className="text-muted-foreground text-xs underline underline-offset-4 hover:text-foreground"

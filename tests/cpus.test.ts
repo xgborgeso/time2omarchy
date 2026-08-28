@@ -112,7 +112,23 @@ describe("searchCpus", () => {
     expect(searchCpus("core", 5)).toHaveLength(5)
   })
 
-  it("offers a starting set when the query is empty", () => {
-    expect(searchCpus("").length).toBeGreaterThan(0)
+  it("shows all three vendors before anyone types", () => {
+    // Slicing the catalogue alphabetically by id returned only AMD, which
+    // reads as though the other two are missing.
+    const vendors = new Set(searchCpus("").map((c) => c.vendor))
+    expect([...vendors].sort()).toEqual(["AMD", "Apple", "Intel"])
+  })
+
+  it("opens on current-generation chips, not the oldest ones", () => {
+    const names = searchCpus("").map((c) => c.name)
+    expect(names.some((n) => n.includes("9950X"))).toBe(true)
+    expect(names.some((n) => n.startsWith("M4"))).toBe(true)
+    expect(names.some((n) => n.includes("Ultra"))).toBe(true)
+    // Ryzen 1000 is eight years old; it should not be the first thing offered.
+    expect(names.some((n) => n.includes("1200"))).toBe(false)
+  })
+
+  it("keeps the opening set short enough to scan", () => {
+    expect(searchCpus("").length).toBeLessThanOrEqual(20)
   })
 })
