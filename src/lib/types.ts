@@ -7,10 +7,10 @@ export type BoardEntry = {
   bootScreenUrl: string
   /** Proven to belong to its handle, not merely typed. */
   verified: boolean
-  /** Optional hardware; null when the ranker did not say. */
-  cpuId: string | null
-  ramGb: number | null
-  storage: string | null
+  /** Required hardware — every entry carries a machine. */
+  cpuId: string
+  ramGb: number
+  storage: string
   createdAt: string
   updatedAt: string
 }

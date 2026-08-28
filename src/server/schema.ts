@@ -22,13 +22,14 @@ export const entries = pgTable(
     /** Stable "source:id" identity, e.g. "x:123456". Null until verified. */
     identityKey: text("identity_key").unique(),
     /**
-     * Optional hardware. Install time is dominated by disk and CPU, so these
-     * are what make two times comparable. Ids come from the catalogue in
-     * `src/lib/cpus.ts` rather than free text, so they can be aggregated.
+     * Required hardware. Reported install times span roughly 45s to 8 minutes
+     * on the same software, so a time without a machine attached compares to
+     * nothing. Ids come from the catalogue in `src/lib/cpus.ts` rather than
+     * free text, so they can be aggregated.
      */
-    cpuId: text("cpu_id"),
-    ramGb: integer("ram_gb"),
-    storage: text("storage"),
+    cpuId: text("cpu_id").notNull(),
+    ramGb: integer("ram_gb").notNull(),
+    storage: text("storage").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },

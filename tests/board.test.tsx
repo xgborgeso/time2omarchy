@@ -11,9 +11,9 @@ function entry(
     timeSeconds: 43,
     bootScreenUrl: "/uploads/x.png",
     verified: false,
-    cpuId: null,
-    ramGb: null,
-    storage: null,
+    cpuId: "other",
+    ramGb: 16,
+    storage: "ssd",
     createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000Z",
     ...over,
@@ -73,9 +73,10 @@ describe("Board", () => {
     expect(screen.getByText("M4 Max · 32GB")).toBeInTheDocument()
   })
 
-  it("adds no hardware line when none was given", () => {
+  it("names the not-listed bucket rather than showing a gap", () => {
+    // Every entry has specs now, but the catalogue can miss a chip.
     render(<Board entries={TIED} loading={false} onOpen={() => {}} />)
-    expect(screen.queryByText(/GB/)).toBeNull()
+    expect(screen.getAllByText("Other CPU · 16GB").length).toBe(TIED.length)
   })
 
   it("formats times rather than printing raw seconds", () => {

@@ -45,7 +45,8 @@ describe("schema", () => {
     try {
       const first = await openDatabase(dir)
       await first.client.query(
-        "INSERT INTO entries (handle, time_seconds, boot_screen_url) VALUES ('kept', 43, '/a.png')",
+        "INSERT INTO entries (handle, time_seconds, boot_screen_url, cpu_id, ram_gb, storage)" +
+          " VALUES ('kept', 43, '/a.png', 'other', 16, 'ssd')",
       )
       await first.client.close()
 
@@ -64,7 +65,8 @@ describe("schema", () => {
   it("keeps identity_key nullable so unverified rows can coexist", async () => {
     const client = await freshDb()
     await client.query(
-      "INSERT INTO entries (handle, time_seconds, boot_screen_url) VALUES ('a', 43, '/a.png'), ('b', 51, '/b.png')",
+      "INSERT INTO entries (handle, time_seconds, boot_screen_url, cpu_id, ram_gb, storage)" +
+        " VALUES ('a', 43, '/a.png', 'other', 16, 'ssd'), ('b', 51, '/b.png', 'other', 32, 'nvme')",
     )
     const res = await client.query<{ n: number }>("SELECT count(*)::int AS n FROM entries")
     expect(res.rows[0]?.n).toBe(2)

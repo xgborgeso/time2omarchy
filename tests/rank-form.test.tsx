@@ -20,6 +20,19 @@ vi.mock("@/lib/upload", () => ({
   uploadBootScreen: (...args: unknown[]) => uploadFn(...args),
 }))
 
+// Stubbed so these tests stay about upload, rank and proof rather than about
+// driving a combobox. The picker is covered separately.
+vi.mock("@/components/SpecsFields", () => ({
+  SpecsFields: ({ onChange }: { onChange: (s: unknown) => void }) => (
+    <button
+      type="button"
+      onClick={() => onChange({ cpuId: "apple-m4-max", ramGb: 32, storage: "nvme" })}
+    >
+      fill specs
+    </button>
+  ),
+}))
+
 function wrapper({ children }: { children: ReactNode }) {
   // retry off: a failing mutation should surface immediately, not after backoff.
   const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
@@ -31,7 +44,7 @@ function bootScreen(): File {
 }
 
 /** Fills the form and submits, as a person would. */
-async function submit(handle: string, time: string) {
+async function submit(handle: string, time: string, withSpecs = true) {
   const user = userEvent.setup()
   await user.type(screen.getByLabelText(/handle/i), handle)
   await user.type(screen.getByLabelText(/^time$/i), time)
@@ -39,6 +52,9 @@ async function submit(handle: string, time: string) {
     document.querySelector("input[type=file]") as HTMLInputElement,
     bootScreen(),
   )
+  if (withSpecs) {
+    await user.click(screen.getByRole("button", { name: /fill specs/i }))
+  }
   await user.click(screen.getByRole("button", { name: /rank it/i }))
   return user
 }
@@ -51,6 +67,38 @@ beforeEach(() => {
 })
 
 describe("RankForm", () => {
+  it("refuses to submit without specs, since every entry needs a machine", async () => {
+    // Reported install times span 45s to eight minutes on identical software,
+    // so a time with no machine attached compares to nothing.
+    render(<RankForm onSuccess={() => {}} />, { wrapper })
+    await submit("ada", "43", false)
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/CPU, memory and drive/i)
+    expect(uploadFn).not.toHaveBeenCalled()
+    expect(rankFn).not.toHaveBeenCalled()
+  })
+
+  it("sends the specs along with the rank", async () => {
+    rankFn.mockResolvedValue({
+      ok: true,
+      created: true,
+      improved: true,
+      keptBest: false,
+      bestTimeSeconds: 43,
+      entry: {},
+      board: { entries: [] },
+    })
+    render(<RankForm onSuccess={() => {}} />, { wrapper })
+    await submit("ada", "43")
+
+    await waitFor(() => expect(rankFn).toHaveBeenCalled())
+    expect(rankFn.mock.calls[0]?.[0]).toMatchObject({
+      cpuId: "apple-m4-max",
+      ramGb: 32,
+      storage: "nvme",
+    })
+  })
+
   it("uploads first, then ranks with the returned url", async () => {
     rankFn.mockResolvedValue({
       ok: true,

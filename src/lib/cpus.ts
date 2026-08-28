@@ -1066,6 +1066,15 @@ export const CPUS: readonly Cpu[] = [
 
 export const CPU_IDS: readonly string[] = CPUS.map((cpu) => cpu.id)
 
+/**
+ * Chosen when a chip is not in the catalogue.
+ *
+ * The list can never be complete, and the CPU field is required — without an
+ * escape hatch, anyone with an unlisted chip could not rank at all. Stats
+ * exclude this bucket rather than pretending it is a model.
+ */
+export const OTHER_CPU_ID = "other"
+
 const BY_ID = new Map(CPUS.map((cpu) => [cpu.id, cpu]))
 
 export function cpuById(id: string): Cpu | null {

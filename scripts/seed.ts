@@ -17,7 +17,7 @@ const run = promisify(execFile)
  * 43s and 64s are shared, so the board exercises competition ranking and the
  * verified-listed-first order rather than only the happy path.
  */
-type Specs = [cpuId: string | null, ramGb: number | null, storage: string | null]
+type Specs = [cpuId: string, ramGb: number, storage: string]
 
 const SAMPLE: Array<
   [handle: string, seconds: number, daysAgo: number, verified: boolean, specs: Specs]
@@ -25,10 +25,10 @@ const SAMPLE: Array<
   ["ada", 43, 3, true, ["amd-ryzen-9-9950x", 64, "nvme"]],
   ["kernelpanic", 43, 0.2, false, ["intel-core-i9-14900k", 32, "nvme"]],
   ["bob", 51, 1, true, ["amd-ryzen-7-7800x3d", 32, "nvme"]],
-  ["nixgoblin", 64, 2, false, [null, 16, "ssd"]],
+  ["nixgoblin", 64, 2, false, ["amd-ryzen-5-5600x", 16, "ssd"]],
   ["hyprfan", 64, 0.008, false, ["apple-m4-pro", 24, "nvme"]],
   ["archbtw", 64, 4, true, ["intel-core-i7-13700k", 32, "nvme"]],
-  ["ricermaxx", 135, 6, false, [null, null, null]],
+  ["ricermaxx", 135, 6, false, ["other", 16, "hdd"]],
   ["slowboot", 187, 0.125, true, ["intel-core-i7-1260p", 8, "hdd"]],
 ]
 

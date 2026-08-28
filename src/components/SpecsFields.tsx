@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { type Cpu, cpuLabel, cpusByVendor } from "@/lib/cpus"
+import { type Cpu, cpuLabel, cpusByVendor, OTHER_CPU_ID } from "@/lib/cpus"
 import { RAM_OPTIONS, type Specs, STORAGE } from "@/lib/specs"
 import { useTRPC } from "@/lib/trpc"
 import { useDebounced } from "@/lib/use-debounced"
@@ -84,8 +84,12 @@ export function SpecsFields({ value, onChange }: Props) {
               aria-expanded={open}
               className="h-11 justify-between font-normal"
             >
-              <span className={cn("truncate", !selected && "text-muted-foreground")}>
-                {selected ? cpuLabel(selected) : "Any"}
+              <span className={cn("truncate", !value.cpuId && "text-muted-foreground")}>
+                {selected
+                  ? cpuLabel(selected)
+                  : value.cpuId === OTHER_CPU_ID
+                    ? "Other / not listed"
+                    : "Choose a CPU"}
               </span>
               <ChevronsUpDownIcon className="size-4 shrink-0 opacity-50" />
             </Button>
@@ -116,6 +120,27 @@ export function SpecsFields({ value, onChange }: Props) {
                     </span>
                   )}
                 </CommandEmpty>
+                {/* The catalogue can never be complete, and this field is
+                    required — without this, an unlisted chip would lock
+                    someone out of the board entirely. */}
+                <CommandGroup>
+                  <CommandItem
+                    value={OTHER_CPU_ID}
+                    onSelect={() => {
+                      setSelected(null)
+                      onChange({ ...value, cpuId: OTHER_CPU_ID })
+                      setOpen(false)
+                    }}
+                  >
+                    <CheckIcon
+                      className={cn(
+                        "size-4",
+                        value.cpuId === OTHER_CPU_ID ? "opacity-100" : "opacity-0",
+                      )}
+                    />
+                    Other / not listed
+                  </CommandItem>
+                </CommandGroup>
                 {cpusByVendor(results).map((group) => (
                   <CommandGroup key={group.vendor} heading={group.vendor}>
                     {group.cpus.map((cpu) => (
@@ -157,7 +182,7 @@ export function SpecsFields({ value, onChange }: Props) {
           onValueChange={(next) => onChange({ ...value, ramGb: Number(next) })}
         >
           <SelectTrigger id={ramId} className="!h-11 w-full">
-            <SelectValue placeholder="Any" />
+            <SelectValue placeholder="Choose" />
           </SelectTrigger>
           <SelectContent>
             {RAM_OPTIONS.map((gb) => (
@@ -178,7 +203,7 @@ export function SpecsFields({ value, onChange }: Props) {
           onValueChange={(next) => onChange({ ...value, storage: next })}
         >
           <SelectTrigger id={storageId} className="!h-11 w-full">
-            <SelectValue placeholder="Any" />
+            <SelectValue placeholder="Choose" />
           </SelectTrigger>
           <SelectContent>
             {STORAGE.map((kind) => (

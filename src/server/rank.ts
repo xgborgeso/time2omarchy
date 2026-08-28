@@ -18,18 +18,18 @@ export type RankInput = {
   /** Both or neither: proof that the handle is yours. */
   nonce?: string
   postUrl?: string
-  /** Optional hardware, validated against the catalogue by the router. */
-  cpuId?: string | null
-  ramGb?: number | null
-  storage?: string | null
+  /** Required hardware, validated against the catalogue by the router. */
+  cpuId: string
+  ramGb: number
+  storage: string
 }
 
 export async function submitRank(input: RankInput): Promise<RankSuccess | RankFailure> {
   const { handle, timeSeconds, bootScreenUrl } = input
   const specs = {
-    cpuId: input.cpuId ?? null,
-    ramGb: input.ramGb ?? null,
-    storage: input.storage ?? null,
+    cpuId: input.cpuId,
+    ramGb: input.ramGb,
+    storage: input.storage,
   }
 
   // The url arrives from the client now, so it has to be one we issued.
@@ -136,10 +136,7 @@ export async function submitRank(input: RankInput): Promise<RankSuccess | RankFa
       // A claim promotes the row for good; it never demotes a verified one.
       verified: verified || current.verified,
       identityKey: identityKey ?? current.identityKey,
-      // Only overwrite what was actually supplied this time.
-      cpuId: specs.cpuId ?? current.cpuId,
-      ramGb: specs.ramGb ?? current.ramGb,
-      storage: specs.storage ?? current.storage,
+      ...specs,
       updatedAt: now,
     })
     .where(eq(entries.handle, handle))

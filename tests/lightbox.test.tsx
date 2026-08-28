@@ -41,15 +41,10 @@ describe("Lightbox", () => {
     expect(screen.getByText("Intel Core i7-13700K · 32GB · NVMe")).toBeInTheDocument()
   })
 
-  it("says nothing about hardware when none was given", () => {
-    // An empty specs line is worse than no line.
-    render(
-      <Lightbox
-        entry={{ ...entry, cpuId: null, ramGb: null, storage: null }}
-        onClose={() => {}}
-      />,
-    )
-    expect(screen.queryByText(/NVMe/)).toBeNull()
+  it("names the not-listed bucket rather than showing a gap", () => {
+    // Specs are required, but the catalogue can still miss a chip.
+    render(<Lightbox entry={{ ...entry, cpuId: "other" }} onClose={() => {}} />)
+    expect(screen.getByText("Other CPU · 32GB · NVMe")).toBeInTheDocument()
   })
 
   it("closes on Escape", async () => {

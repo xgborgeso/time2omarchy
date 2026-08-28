@@ -13,7 +13,7 @@ import { SpecsFields } from "@/components/SpecsFields"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import type { Specs } from "@/lib/specs"
+import type { Specs, StorageId } from "@/lib/specs"
 import { formatTime, isTimeInRange, parseTime } from "@/lib/time"
 import { useTRPC } from "@/lib/trpc"
 import type { ClaimIssued, RankSuccess } from "@/lib/types"
@@ -46,7 +46,6 @@ export function RankForm({ onSuccess }: Props) {
   /** Set once the handle is taken: the post text plus where the proof goes. */
   const [claim, setClaim] = useState<ClaimIssued | null>(null)
   const [postUrl, setPostUrl] = useState("")
-  const [showSpecs, setShowSpecs] = useState(false)
   const [specs, setSpecs] = useState<Specs>({ cpuId: null, ramGb: null, storage: null })
 
   useEffect(() => {
@@ -114,6 +113,11 @@ export function RankForm({ onSuccess }: Props) {
       setError("Add a boot screen")
       return
     }
+    if (!specs.cpuId || !specs.ramGb || !specs.storage) {
+      // Checked before uploading: a missing spec should not cost a round trip.
+      setError("Pick your CPU, memory and drive — every entry needs them.")
+      return
+    }
     setBusy(true)
     setError(null)
     setNotice(null)
@@ -133,6 +137,11 @@ export function RankForm({ onSuccess }: Props) {
         time,
         bootScreenUrl: uploaded.url,
         ...proof,
+        cpuId: specs.cpuId,
+        ramGb: specs.ramGb,
+        // The guard above proved these are set, and the select can only ever
+        // produce an id the schema accepts.
+        storage: specs.storage as StorageId,
       })
 
       if (!result.ok) {
@@ -268,16 +277,10 @@ export function RankForm({ onSuccess }: Props) {
           {error}
         </p>
       ) : null}
-      <div className="mt-3 flex flex-col gap-3">
-        <button
-          type="button"
-          onClick={() => setShowSpecs((open) => !open)}
-          aria-expanded={showSpecs}
-          className="self-start text-xs text-muted-foreground underline underline-offset-4 hover:no-underline"
-        >
-          {showSpecs ? "Hide specs" : "Add specs (optional)"}
-        </button>
-        {showSpecs ? <SpecsFields value={specs} onChange={setSpecs} /> : null}
+      {/* Always visible: these are required, and a required field behind a
+          disclosure is a trap. */}
+      <div className="mt-3">
+        <SpecsFields value={specs} onChange={setSpecs} />
       </div>
       {!claim && handle.trim() ? (
         <p className="mt-3 text-xs text-muted-foreground">

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 import {
   formatSpecs,
   formatSpecsShort,
+  OTHER_CPU_ID,
   RAM_OPTIONS,
   STORAGE,
   specsSchema,
@@ -9,12 +10,7 @@ import {
 } from "@/lib/specs"
 
 describe("specsSchema", () => {
-  it("accepts an entry with no specs at all", () => {
-    // Specs are optional; requiring them would gate ranking, which nothing does.
-    expect(specsSchema.safeParse({}).success).toBe(true)
-  })
-
-  it("accepts a complete, valid set", () => {
+  it("accepts a complete set", () => {
     const r = specsSchema.safeParse({
       cpuId: "intel-core-i7-13700k",
       ramGb: 32,
@@ -23,8 +19,17 @@ describe("specsSchema", () => {
     expect(r.success).toBe(true)
   })
 
-  it("accepts a partial set, since people know some of their machine", () => {
-    expect(specsSchema.safeParse({ storage: "nvme" }).success).toBe(true)
+  it("requires all three, because partial data makes the stats lie", () => {
+    expect(specsSchema.safeParse({}).success).toBe(false)
+    expect(specsSchema.safeParse({ storage: "nvme" }).success).toBe(false)
+    expect(specsSchema.safeParse({ cpuId: "apple-m4-max", ramGb: 32 }).success).toBe(false)
+  })
+
+  it("accepts the not-listed sentinel, so an unlisted chip cannot block a rank", () => {
+    // The catalogue can never be complete. Requiring an answer is fine;
+    // requiring a *listed* answer would lock people out entirely.
+    const r = specsSchema.safeParse({ cpuId: OTHER_CPU_ID, ramGb: 32, storage: "nvme" })
+    expect(r.success).toBe(true)
   })
 
   it("refuses a cpu that is not in the catalogue", () => {
@@ -43,6 +48,12 @@ describe("specsSchema", () => {
 })
 
 describe("formatSpecs", () => {
+  it("names the not-listed bucket rather than leaving a gap", () => {
+    expect(formatSpecs({ cpuId: OTHER_CPU_ID, ramGb: 16, storage: "ssd" })).toBe(
+      "Other CPU · 16GB · SATA SSD",
+    )
+  })
+
   it("reads as cpu, memory, disk", () => {
     expect(formatSpecs({ cpuId: "intel-core-i7-13700k", ramGb: 32, storage: "nvme" })).toBe(
       "Intel Core i7-13700K · 32GB · NVMe",

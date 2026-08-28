@@ -20,10 +20,12 @@ describe("local PGlite", () => {
         const rows = await db
           .insert(entries)
           .values({
-            id: crypto.randomUUID(),
             handle,
             timeSeconds,
             bootScreenUrl: `/uploads/${handle}.png`,
+            cpuId: "other",
+            ramGb: 16,
+            storage: "ssd",
             createdAt: new Date(),
             updatedAt: new Date(),
           })
