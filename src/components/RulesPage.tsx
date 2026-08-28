@@ -30,6 +30,10 @@ export function RulesPage() {
             Only a claimed handle can post a faster time later. Claim yours whenever you
             like: your time and boot screen stay exactly as they are.
           </li>
+          <li className="pl-2">
+            The number at the top of the page is the fastest claimed time. Anyone can hold
+            rank 1, but a headline needs an account standing behind it.
+          </li>
         </ol>
       </section>
     </div>

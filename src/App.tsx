@@ -41,7 +41,7 @@ export function App() {
   const [lookup, setLookup] = useState("")
   // Debounced so a typed handle costs one query, not one per keystroke.
   const searched = useDebounced(lookup.trim(), 300)
-  const { data: matches } = useQuery({
+  const { data: matches, isFetching: searchPending } = useQuery({
     ...trpc.search.queryOptions({ query: searched }),
     // The server ignores anything shorter; no reason to ask it twice.
     enabled: searched.replace(/^@+/, "").length >= 2,
@@ -165,7 +165,10 @@ export function App() {
               <BoardSearch
                 value={lookup}
                 onChange={setLookup}
-                results={searching ? shownEntries.length : null}
+                // Reported only once the answer has landed: mid-debounce the
+                // field holds a query no count describes yet.
+                term={searched}
+                results={searching && !searchPending ? shownEntries.length : null}
               />
             </div>
 

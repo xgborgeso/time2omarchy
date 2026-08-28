@@ -7,7 +7,7 @@ describe("RulesPage", () => {
     // These were hand-rolled spans once and drifted out of alignment.
     render(<RulesPage />)
     expect(screen.getByRole("list")).toBeInTheDocument()
-    expect(screen.getAllByRole("listitem")).toHaveLength(6)
+    expect(screen.getAllByRole("listitem")).toHaveLength(7)
   })
 
   it("states the two rules the ranking code actually enforces", () => {
@@ -35,6 +35,13 @@ describe("RulesPage", () => {
     // listed above the other is a rule people will notice and ask about.
     render(<RulesPage />)
     expect(screen.getByText(/a claimed entry is listed first/i)).toBeInTheDocument()
+  })
+
+  it("explains the headline number, which does not match rank 1", () => {
+    // The hero shows the fastest *claimed* time while an unclaimed entry can
+    // hold rank 1 — two different numbers on one screen, unexplained.
+    render(<RulesPage />)
+    expect(screen.getByText(/fastest claimed time/i)).toBeInTheDocument()
   })
 
   it("promises nothing the product cannot do", () => {
