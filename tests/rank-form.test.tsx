@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
-import { render, screen, waitFor } from "@testing-library/react"
+import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
@@ -173,12 +173,62 @@ describe("RankForm", () => {
     expect(screen.queryByRole("button", { name: /verify @/i })).toBeNull()
   })
 
-  it("offers to sign in with X, since that is the whole of verification now", async () => {
+  it("offers to sign in from the handle field, where the handle is decided", async () => {
+    // Buried in small print below the form, this was missed entirely — and
+    // the field is where a mistyped handle happens in the first place.
     const user = userEvent.setup()
     render(<RankForm onSuccess={() => {}} />, { wrapper })
-    await user.click(screen.getByRole("button", { name: /sign in with x/i }))
+    const field = screen.getByRole("textbox", { name: /handle/i }).closest("[role=group]")
+    expect(field).not.toBeNull()
+    const signIn = within(field as HTMLElement).getByRole("button", {
+      name: /sign in/i,
+    })
+    await user.click(signIn)
 
     expect(signInFn).toHaveBeenCalledWith(expect.objectContaining({ provider: "twitter" }))
+  })
+
+  it("offers to verify the entry it just put on the board", async () => {
+    // The moment right after ranking is when the badge is worth most: the
+    // position is real and the share button is already there.
+    rankFn.mockResolvedValue({
+      ok: true,
+      created: true,
+      improved: true,
+      keptBest: false,
+      bestTimeSeconds: 43,
+      entry: { rank: 1, timeSeconds: 43 },
+      board: { entries: [], counters: { entries: 1 } },
+    })
+    render(<RankForm onSuccess={() => {}} />, { wrapper })
+    await submit("ada", "43")
+
+    expect(await screen.findByRole("button", { name: /verify this entry/i })).toBeVisible()
+  })
+
+  it("does not offer to verify an entry that already is", async () => {
+    session = { data: { user: { handle: "ada" } } }
+    rankFn.mockResolvedValue({
+      ok: true,
+      created: true,
+      improved: true,
+      keptBest: false,
+      bestTimeSeconds: 43,
+      entry: { rank: 1, timeSeconds: 43 },
+      board: { entries: [], counters: { entries: 1 } },
+    })
+    const user = userEvent.setup()
+    render(<RankForm onSuccess={() => {}} />, { wrapper })
+    await user.type(screen.getByLabelText(/^time$/i), "43")
+    await user.upload(
+      document.querySelector("input[type=file]") as HTMLInputElement,
+      bootScreen(),
+    )
+    await user.click(screen.getByRole("button", { name: /fill specs/i }))
+    await user.click(screen.getByRole("button", { name: /rank it/i }))
+
+    await waitFor(() => expect(rankFn).toHaveBeenCalled())
+    expect(screen.queryByRole("button", { name: /verify this entry/i })).toBeNull()
   })
 
   it("says so when sign-in cannot even be started", async () => {
@@ -186,7 +236,7 @@ describe("RankForm", () => {
     signInFn.mockResolvedValue({ error: { message: "Invalid origin" } })
     const user = userEvent.setup()
     render(<RankForm onSuccess={() => {}} />, { wrapper })
-    await user.click(screen.getByRole("button", { name: /sign in with x/i }))
+    await user.click(screen.getByRole("button", { name: /^sign in$/i }))
 
     expect(await screen.findByRole("alert")).toHaveTextContent(/invalid origin/i)
   })
@@ -199,7 +249,7 @@ describe("RankForm", () => {
 
     expect(screen.getByText("@ada")).toBeVisible()
     expect(screen.queryByRole("textbox", { name: /handle/i })).toBeNull()
-    expect(screen.queryByRole("button", { name: /sign in with x/i })).toBeNull()
+    expect(screen.queryByRole("button", { name: /^sign in$/i })).toBeNull()
   })
 
   it("ranks as the signed-in account without a handle being typed", async () => {

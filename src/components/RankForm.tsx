@@ -12,6 +12,12 @@ import {
 import { SpecsFields } from "@/components/SpecsFields"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from "@/components/ui/input-group"
 import { Label } from "@/components/ui/label"
 import { signIn, signOut, useSession } from "@/lib/auth-client"
 import { errorText } from "@/lib/error-text"
@@ -23,6 +29,15 @@ import { uploadBootScreen } from "@/lib/upload"
 import { cn } from "@/lib/utils"
 import { timeError } from "@/lib/validation"
 import { ShareButton } from "./ShareButton"
+
+/** X's mark, at the size the surrounding text is set in. */
+function XMark({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className={className}>
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
+  )
+}
 
 type Props = {
   onSuccess: (result: RankSuccess) => void
@@ -208,18 +223,39 @@ export function RankForm({ onSuccess, entries = [] }: Props) {
               className="flex h-11 items-center gap-2 rounded-lg border border-primary/40 bg-background px-3"
             >
               <VerifiedIcon className="size-4 shrink-0 text-primary" aria-hidden="true" />
-              <span className="truncate text-sm">@{signedInHandle}</span>
+              <span className="flex-1 truncate text-sm">@{signedInHandle}</span>
+              <button
+                type="button"
+                onClick={() => signOut()}
+                className="shrink-0 text-[11px] uppercase tracking-[0.16em] text-muted-foreground hover:text-foreground"
+              >
+                sign out
+              </button>
             </div>
           ) : (
-            <Input
-              id={handleId}
-              name="handle"
-              autoComplete="username"
-              placeholder="@handle"
-              value={typedHandle}
-              onChange={(e) => setTypedHandle(e.target.value)}
-              className="h-11"
-            />
+            // The offer sits in the field because the field is the decision:
+            // this is exactly where a handle gets mistyped for someone else's.
+            <InputGroup className="h-11">
+              <InputGroupInput
+                id={handleId}
+                name="handle"
+                autoComplete="username"
+                placeholder="@handle"
+                value={typedHandle}
+                onChange={(e) => setTypedHandle(e.target.value)}
+              />
+              <InputGroupAddon align="inline-end">
+                <InputGroupButton
+                  type="button"
+                  size="xs"
+                  onClick={startSignIn}
+                  className="gap-1.5"
+                >
+                  <XMark className="size-3" />
+                  Sign in
+                </InputGroupButton>
+              </InputGroupAddon>
+            </InputGroup>
           )}
         </div>
 
@@ -303,43 +339,26 @@ export function RankForm({ onSuccess, entries = [] }: Props) {
       </div>
       <p className="mt-3 text-xs text-muted-foreground">
         {signedInHandle ? (
-          <>
-            {claimable ? (
-              <>
-                @{signedInHandle} is already on the board, unverified.{" "}
-                <button
-                  type="button"
-                  onClick={claimEntry}
-                  disabled={claim.isPending}
-                  className="font-medium text-foreground underline underline-offset-4 hover:no-underline disabled:opacity-50"
-                >
-                  Claim it
-                </button>{" "}
-                to take it over — your time and boot screen stay as they are.{" "}
-              </>
-            ) : (
-              <>Verified as @{signedInHandle}. </>
-            )}
-            <button
-              type="button"
-              onClick={() => signOut()}
-              className="font-medium text-foreground underline underline-offset-4 hover:no-underline"
-            >
-              Sign out
-            </button>
-          </>
+          claimable ? (
+            <>
+              @{signedInHandle} is already on the board, unverified.{" "}
+              <button
+                type="button"
+                onClick={claimEntry}
+                disabled={claim.isPending}
+                className="font-medium text-foreground underline underline-offset-4 hover:no-underline disabled:opacity-50"
+              >
+                Claim it
+              </button>{" "}
+              to take it over — your time and boot screen stay as they are.
+            </>
+          ) : (
+            <>Verified as @{signedInHandle}. Your entry is yours to change.</>
+          )
         ) : (
-          <>
-            Ranking as a guest.{" "}
-            <button
-              type="button"
-              onClick={startSignIn}
-              className="font-medium text-foreground underline underline-offset-4 hover:no-underline"
-            >
-              Sign in with X
-            </button>{" "}
-            for the verified mark — it is also the only way to change an entry later.
-          </>
+          // No second sign-in button: the field above already offers it, and
+          // two of them read as two different things.
+          <>An unverified entry can be opened, but never changed afterwards.</>
         )}
       </p>
 
@@ -348,6 +367,16 @@ export function RankForm({ onSuccess, entries = [] }: Props) {
           <p role="status" className="text-xs text-primary">
             {notice}
           </p>
+          {placed && !signedInHandle ? (
+            <button
+              type="button"
+              onClick={startSignIn}
+              className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-lg border border-primary/40 px-5 text-sm font-bold uppercase text-foreground transition-colors hover:bg-muted/50"
+            >
+              <XMark className="size-3.5" />
+              Verify this entry
+            </button>
+          ) : null}
           {placed ? (
             <ShareButton
               position={{
