@@ -12,13 +12,36 @@ describe("verifyOutcome", () => {
     expect(outcome).toEqual({
       ok: false,
       message: "That entry belongs to @nixgoblin. You authorized as @xgborgeso.",
+      position: null,
     })
   })
 
   it("says one word on success, because the mark says the rest", () => {
     // The check has just appeared on the entry. Anything longer is the toast
     // explaining something the board is already showing.
-    expect(verifyOutcome({ ok: true })).toEqual({ ok: true, message: "Verified" })
+    expect(verifyOutcome({ ok: true })).toEqual({
+      ok: true,
+      message: "Verified",
+      position: null,
+    })
+  })
+
+  it("carries the tweet, because verifying is the only moment that can", () => {
+    // The redirect back from X has already discarded the form, so if the
+    // share is not attached to this result it has nowhere left to live.
+    const outcome = verifyOutcome({
+      ok: true,
+      entry: { rank: 3, timeSeconds: 41 },
+      total: 1200,
+    })
+    expect(outcome.position).toEqual({ rank: 3, timeSeconds: 41, total: 1200 })
+  })
+
+  it("offers no share to an entry that was refused", () => {
+    // A refused verify leaves the row unproven, and an unproven row is
+    // exactly the one that must not post "#1" from someone else's account.
+    const outcome = verifyOutcome({ ok: false, error: "That entry doesn't belong to you." })
+    expect(outcome.position).toBeNull()
   })
 
   it("reads as one sentence, with no title to repeat it", () => {

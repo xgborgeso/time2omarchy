@@ -188,7 +188,9 @@ export async function verifyEntry(
   identity: Identity,
   /** The entry the person asked for. A request, never authority. */
   requested: string,
-): Promise<{ ok: true; entry: BoardEntry } | RankFailure> {
+  // The board size travels with the entry because verifying is now the only
+  // moment that offers a share, and the tweet names the field it beat.
+): Promise<{ ok: true; entry: BoardEntry; total: number } | RankFailure> {
   // Checked before anything is looked up, so a refusal says something rather
   // than leaving someone staring at a button that did nothing.
   if (identity.handle !== requested) {
@@ -239,7 +241,7 @@ export async function verifyEntry(
   const board = await loadBoard()
   const row = verified[0]!
   const entry = board.entries.find((e) => e.handle === row.handle) ?? toEntry(row, board)
-  return { ok: true, entry }
+  return { ok: true, entry, total: board.counters.entries }
 }
 
 function toEntry(

@@ -15,6 +15,7 @@ import { RulesPage } from "@/components/RulesPage"
 import { SiteHeader } from "@/components/SiteHeader"
 import { StatsPage } from "@/components/stats/StatsPage"
 import { signIn } from "@/lib/auth-client"
+import { type BoardPosition, shareIntentUrl } from "@/lib/share"
 import { useTRPC } from "@/lib/trpc"
 import type { BoardEntry, RankSuccess } from "@/lib/types"
 import { useDebounced } from "@/lib/use-debounced"
@@ -108,7 +109,25 @@ export function App() {
       .then(async (result) => {
         const outcome = verifyOutcome(result)
         if (outcome.ok) {
-          toast.success(outcome.message)
+          toast.success(outcome.message, {
+            // The one place a share can be offered: the entry is proven, and
+            // the account that proved it is the account X will post from, so
+            // the brag and the row finally name the same person. Left up
+            // until it is dismissed — six seconds is not long enough to
+            // decide to post something.
+            duration: outcome.position ? Number.POSITIVE_INFINITY : undefined,
+            action: outcome.position
+              ? {
+                  label: "Share",
+                  onClick: () =>
+                    window.open(
+                      shareIntentUrl(outcome.position as BoardPosition),
+                      "_blank",
+                      "noopener,noreferrer",
+                    ),
+                }
+              : undefined,
+          })
           // Every page, not one: the verified entry may sit on any of them.
           await queryClient.invalidateQueries(trpc.board.queryFilter())
         } else {

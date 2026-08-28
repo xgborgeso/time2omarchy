@@ -362,7 +362,13 @@ export function RankForm({ onSuccess, className }: Props) {
               Verify this entry
             </button>
           ) : null}
-          {placed ? (
+          {/* Only a proven entry gets the pre-filled brag. X posts from
+              whatever account is logged in there, so an unverified row could
+              put "#1 — 35s" in one account's timeline while the board credits
+              another. The verify above is the way to this button; a handle
+              that proved itself once still has its session and lands here
+              straight away when it beats its own time. */}
+          {placed?.entry.verified ? (
             <ShareButton
               position={{
                 rank: placed.entry.rank,
