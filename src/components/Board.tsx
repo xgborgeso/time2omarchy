@@ -133,19 +133,21 @@ function Entry({ entry, onOpen, onClaim, className }: EntryProps) {
               reason — it is the same invitation, met where the entry lives. */}
           {entry.verified ? (
             <Badge
-              variant="verified"
+              variant="outline"
               title="Verified on X — this handle proved it owns the entry"
             >
-              <BadgeCheck aria-hidden="true" />
+              <BadgeCheck aria-hidden="true" className="text-primary" />
               Verified
             </Badge>
           ) : claimable ? (
+            // The stock hover rules only fire on an anchor (`[a&]:hover:`),
+            // and this is a button, so the hover is the one thing added.
             <Badge asChild variant="default">
               <button
                 type="button"
                 onClick={() => onClaim?.(entry)}
                 aria-label={`Claim the entry for @${entry.handle}`}
-                className="cursor-pointer uppercase tracking-[0.08em] hover:bg-primary/80"
+                className="cursor-pointer hover:bg-primary/90"
               >
                 Claim
               </button>
