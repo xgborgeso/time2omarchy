@@ -12,10 +12,10 @@ import { Hero } from "@/components/Hero"
 import { Lightbox } from "@/components/Lightbox"
 import { RankDialog } from "@/components/RankDialog"
 import { RulesPage } from "@/components/RulesPage"
+import { ShareButton } from "@/components/ShareButton"
 import { SiteHeader } from "@/components/SiteHeader"
 import { StatsPage } from "@/components/stats/StatsPage"
 import { signIn } from "@/lib/auth-client"
-import { type BoardPosition, shareIntentUrl } from "@/lib/share"
 import { useTRPC } from "@/lib/trpc"
 import type { BoardEntry, RankSuccess } from "@/lib/types"
 import { useDebounced } from "@/lib/use-debounced"
@@ -116,17 +116,16 @@ export function App() {
             // until it is dismissed — six seconds is not long enough to
             // decide to post something.
             duration: outcome.position ? Number.POSITIVE_INFINITY : undefined,
-            action: outcome.position
-              ? {
-                  label: "Share",
-                  onClick: () =>
-                    window.open(
-                      shareIntentUrl(outcome.position as BoardPosition),
-                      "_blank",
-                      "noopener,noreferrer",
-                    ),
-                }
-              : undefined,
+            // The real button rather than a label and a handler: it is an
+            // anchor, so middle-click and open-in-new-tab behave, and it
+            // carries X's mark, which is the only thing naming where the
+            // press goes. Shrunk to the height a toast action wants.
+            action: outcome.position ? (
+              <ShareButton
+                position={outcome.position}
+                className="h-8 gap-1.5 px-3 text-xs"
+              />
+            ) : undefined,
           })
           // Every page, not one: the verified entry may sit on any of them.
           await queryClient.invalidateQueries(trpc.board.queryFilter())

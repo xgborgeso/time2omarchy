@@ -8,7 +8,11 @@ import type { BoardPosition } from "./share"
  * the failure that made a refused verify look like a broken button.
  */
 export type VerifyResult =
-  | { ok: true; entry?: { rank: number; timeSeconds: number }; total?: number }
+  | {
+      ok: true
+      entry?: { handle: string; rank: number; timeSeconds: number }
+      total?: number
+    }
   | { ok: false; error?: string }
   | null
 
@@ -26,22 +30,24 @@ export type VerifyOutcome = {
 }
 
 export function verifyOutcome(result: VerifyResult): VerifyOutcome {
-  // Leads with what was won, then with what it buys: the mark is the reward,
-  // and being the only one who can change the entry is the lasting part. The
-  // wording matches the rules page, which promises exactly this.
-  // One word: the check mark has just appeared on the entry, so the toast
-  // only has to confirm it landed.
+  // A whole sentence in the second person, the way every refusal beside it is
+  // written — "Verified" alone was the one message on the site in a different
+  // voice. It names the account, because proving which account is the point,
+  // and then points at the button rather than explaining a rule.
   if (result?.ok) {
     const { entry, total } = result
+    // Absent only if the server answered without the entry, which no live
+    // path does; the toast then simply carries no share.
+    const position =
+      entry && total != null
+        ? { rank: entry.rank, timeSeconds: entry.timeSeconds, total }
+        : null
+    const named = entry ? `@${entry.handle} is verified.` : "Verified."
     return {
       ok: true,
-      message: "Verified",
-      // Absent only if the server answered without the entry, which no live
-      // path does; the toast then simply carries no share.
-      position:
-        entry && total != null
-          ? { rank: entry.rank, timeSeconds: entry.timeSeconds, total }
-          : null,
+      // The invitation is only honest when there is something to press.
+      message: position ? `${named} Go tell them.` : named,
+      position,
     }
   }
   return {

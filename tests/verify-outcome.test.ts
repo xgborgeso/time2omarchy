@@ -16,12 +16,12 @@ describe("verifyOutcome", () => {
     })
   })
 
-  it("says one word on success, because the mark says the rest", () => {
-    // The check has just appeared on the entry. Anything longer is the toast
-    // explaining something the board is already showing.
+  it("falls back to the bare word when the server named no entry", () => {
+    // No live path returns this, and with no entry there is nothing to share,
+    // so the invitation would point at a button that is not there.
     expect(verifyOutcome({ ok: true })).toEqual({
       ok: true,
-      message: "Verified",
+      message: "Verified.",
       position: null,
     })
   })
@@ -31,10 +31,13 @@ describe("verifyOutcome", () => {
     // share is not attached to this result it has nowhere left to live.
     const outcome = verifyOutcome({
       ok: true,
-      entry: { rank: 3, timeSeconds: 41 },
+      entry: { handle: "xgborgeso", rank: 3, timeSeconds: 41 },
       total: 1200,
     })
     expect(outcome.position).toEqual({ rank: 3, timeSeconds: 41, total: 1200 })
+    // A whole sentence in the same voice as every refusal beside it, naming
+    // the account that was proved and then pointing at the button.
+    expect(outcome.message).toBe("@xgborgeso is verified. Go tell them.")
   })
 
   it("offers no share to an entry that was refused", () => {
