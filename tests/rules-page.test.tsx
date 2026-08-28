@@ -26,8 +26,23 @@ describe("RulesPage", () => {
     // take, or the only way they find out is by trying.
     render(<RulesPage />)
     expect(
-      screen.getByText(/only a claimed entry can be changed later/i),
+      screen.getByText(/only a claimed handle can post a faster time later/i),
     ).toBeInTheDocument()
+  })
+
+  it("states the tie-break, which decides who is seen first", () => {
+    // Two entries at the same second is the normal case, so which of them is
+    // listed above the other is a rule people will notice and ask about.
+    render(<RulesPage />)
+    expect(screen.getByText(/a claimed entry is listed first/i)).toBeInTheDocument()
+  })
+
+  it("promises nothing the product cannot do", () => {
+    // There is no edit screen. A faster time is posted by ranking again, and
+    // the rules said "changed", which reads as an editor that does not exist.
+    render(<RulesPage />)
+    const rules = screen.getAllByRole("listitem").map((li) => li.textContent ?? "")
+    expect(rules.join(" ")).not.toMatch(/\bedit\b|\bchanged\b/i)
   })
 
   it("uses one word for the action, and keeps 'verified' for the state", () => {
