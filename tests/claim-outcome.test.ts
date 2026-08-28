@@ -18,7 +18,7 @@ describe("claimOutcome", () => {
   it("says which entry was proven on success", () => {
     expect(claimOutcome("ada", { ok: true })).toEqual({
       ok: true,
-      message: "@ada is verified",
+      message: "Verified — @ada is yours to update",
     })
   })
 

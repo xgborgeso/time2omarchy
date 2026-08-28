@@ -10,7 +10,12 @@ export type ClaimResult = { ok: true } | { ok: false; error?: string } | null
 export type ClaimOutcome = { ok: boolean; message: string }
 
 export function claimOutcome(target: string, result: ClaimResult): ClaimOutcome {
-  if (result?.ok) return { ok: true, message: `@${target} is verified` }
+  // Leads with what was won, then with what it buys: the mark is the reward,
+  // and being the only one who can change the entry is the lasting part. The
+  // wording matches the rules page, which promises exactly this.
+  if (result?.ok) {
+    return { ok: true, message: `Verified — @${target} is yours to update` }
+  }
   return {
     ok: false,
     // Null means the request itself failed — a rate limit, or no network.
