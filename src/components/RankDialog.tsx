@@ -41,8 +41,10 @@ export function RankDialog({ onSuccess }: Props) {
         <DialogContent className="sm:max-w-[720px]">
           <DialogHeader>
             <DialogTitle>Rank your install</DialogTitle>
-            <DialogDescription>
-              Every field is required, and the boot screen is shown publicly as proof.
+            {/* The form says the one thing worth saying, under its own button.
+                Repeating it here was the same sentence twice on one screen. */}
+            <DialogDescription className="sr-only">
+              Your handle, your time, the machine it ran on, and the boot screen.
             </DialogDescription>
           </DialogHeader>
           <RankForm onSuccess={onSuccess} className="w-full" />

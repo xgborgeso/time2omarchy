@@ -1,5 +1,4 @@
 import { BadgeCheck } from "lucide-react"
-import { Fragment } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { xUrl } from "@/lib/handle"
@@ -27,17 +26,20 @@ type Props = {
 const ROW =
   "grid grid-cols-[2rem_4.75rem_minmax(0,1fr)_2.75rem] items-center gap-2.5 sm:grid-cols-[3.5rem_7.25rem_minmax(0,1fr)_auto_4.75rem] sm:gap-5"
 
-/** Where a tier ends. The board is cut after the 10th and the 20th entry. */
-const TIERS = [10, 20]
-
-/** The first three, which get the weight everyone is actually competing for. */
-const PODIUM = 3
+/**
+ * A fixed slot for the handle, so every badge beside one starts at the same x.
+ *
+ * Without it the badges follow the text and step raggedly down the board. The
+ * handle truncates instead, which it has to anyway at fifteen characters.
+ */
+const HANDLE = "w-[7.5rem] sm:w-[10.5rem]"
 
 /**
  * One page of the board.
  *
- * Equal times share a rank, so the podium can hold more than three entries —
- * the tint follows the rank, not the position in the list.
+ * No tiers and no podium: equal times share a rank, so "the top three" can be
+ * five entries and a rule drawn after the tenth can land mid-tie. Only the
+ * leader is marked, because that one is unambiguous.
  */
 export function Board({ entries, loading, onOpen, onClaim, found = null }: Props) {
   if (loading && entries.length === 0) {
@@ -76,22 +78,8 @@ export function Board({ entries, loading, onOpen, onClaim, found = null }: Props
         </div>
       ) : null}
 
-      {entries.map((entry, i) => (
-        <Fragment key={entry.handle}>
-          {/* A labelled rule where each tier ends, so the top of the board
-              reads as a podium rather than a list that keeps going. Drawn
-              from the entry's real rank, so a later page shows none of them. */}
-          {TIERS.includes(entry.rank - 1) && i > 0 ? (
-            <div className="flex items-center gap-3 px-3 py-4 sm:px-5">
-              <span className="h-px flex-1 bg-border" />
-              <span className="rounded-full border border-border px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                Top {entry.rank - 1}
-              </span>
-              <span className="h-px flex-1 bg-border" />
-            </div>
-          ) : null}
-          <Entry entry={entry} onOpen={onOpen} onClaim={onClaim} />
-        </Fragment>
+      {entries.map((entry) => (
+        <Entry key={entry.handle} entry={entry} onOpen={onOpen} onClaim={onClaim} />
       ))}
     </section>
   )
@@ -112,9 +100,6 @@ type EntryProps = {
  */
 function Entry({ entry, onOpen, onClaim, className }: EntryProps) {
   const leads = entry.rank === 1
-  // The three everyone is actually competing for. Weighted by tint rather
-  // than by size, so the columns stay aligned down the whole board.
-  const podium = entry.rank <= PODIUM
   const specs = formatSpecsShort(entry)
   // Every unproven entry offers it: there is no logged-in state to know
   // whose is whose, and proving one is the only thing X is used for. A
@@ -123,18 +108,16 @@ function Entry({ entry, onOpen, onClaim, className }: EntryProps) {
   const claimable = !!onClaim && !entry.verified
   return (
     <div
-      data-podium={podium || undefined}
       className={cn(
         `${ROW} border-b border-card px-3 py-3 sm:px-5`,
-        podium && "bg-primary/5",
-        leads && "bg-primary/10",
+        leads && "bg-muted/50",
         className,
       )}
     >
       <span
         className={cn(
           "text-xs tabular-nums sm:text-[13px]",
-          podium ? "font-medium text-primary" : "text-muted-foreground",
+          leads ? "font-medium text-primary" : "text-muted-foreground",
         )}
       >
         #{entry.rank}
@@ -153,7 +136,10 @@ function Entry({ entry, onOpen, onClaim, className }: EntryProps) {
             href={xUrl(entry.handle)}
             target="_blank"
             rel="noreferrer"
-            className="-my-2 truncate py-2 text-[13px] hover:text-primary sm:text-sm"
+            className={cn(
+              "-my-2 shrink-0 truncate py-2 text-[13px] hover:text-primary sm:text-sm",
+              HANDLE,
+            )}
           >
             @{entry.handle}
           </a>

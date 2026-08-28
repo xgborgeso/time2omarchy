@@ -150,9 +150,10 @@ export function App() {
             <Hero counters={data?.counters} />
             <RankDialog onSuccess={onSuccess} />
 
-            {/* The board shows the top hundred. Past that, this is the only
-                way someone reaches their own entry — or claims it. */}
-            <div className="mx-auto mt-10 flex w-full max-w-[792px] justify-end">
+            {/* Fifty to a page. Past that, this is the only way someone
+                reaches their own entry — or claims it. Padded to match an
+                entry's own inset, so it lines up with the board's right edge. */}
+            <div className="mt-12 flex justify-end px-3 sm:mt-16 sm:px-5">
               <Input
                 value={lookup}
                 onChange={(e) => setLookup(e.target.value)}

@@ -344,8 +344,7 @@ export function RankForm({ onSuccess, className }: Props) {
       </Button>
 
       <p className="mt-3 text-center text-xs text-muted-foreground">
-        Every field is required. An unverified entry can be opened, but never changed
-        afterwards.
+        An unverified entry can be opened, but never changed afterwards.
       </p>
 
       {notice ? (
