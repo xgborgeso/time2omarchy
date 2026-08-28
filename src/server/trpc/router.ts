@@ -1,4 +1,5 @@
 import { z } from "zod"
+import { searchCpus } from "../../lib/cpus"
 import { specsSchema } from "../../lib/specs"
 import { handleSchema, timeSchema } from "../../lib/validation"
 import { loadBoard, loadStats } from "../board"
@@ -32,6 +33,17 @@ export const appRouter = router({
   stats: publicProcedure
     .use(throttled(readLimit, "Too many requests."))
     .query(() => loadStats()),
+
+  /**
+   * The CPU catalogue, searched on the server.
+   *
+   * Kept off the client bundle deliberately: 227 chips are only needed by
+   * someone who opens the specs picker, which most visitors never do.
+   */
+  cpus: publicProcedure
+    .use(throttled(readLimit, "Too many requests."))
+    .input(z.object({ query: z.string().max(64) }))
+    .query(({ input }) => searchCpus(input.query)),
 
   /** Records that someone is here. The write half of what board used to do. */
   visit: publicProcedure

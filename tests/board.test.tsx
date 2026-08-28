@@ -61,6 +61,23 @@ describe("Board", () => {
     expect(within(rowFor("grace")).queryByLabelText("Handle verified on X")).toBeNull()
   })
 
+  it("shows the hardware on a row that has it", () => {
+    render(
+      <Board
+        entries={[entry({ handle: "ada", rank: 1, cpuId: "apple-m4-max", ramGb: 32 })]}
+        loading={false}
+        onOpen={() => {}}
+      />,
+    )
+    // Short form: the row has no width for the vendor or the disk.
+    expect(screen.getByText("M4 Max · 32GB")).toBeInTheDocument()
+  })
+
+  it("adds no hardware line when none was given", () => {
+    render(<Board entries={TIED} loading={false} onOpen={() => {}} />)
+    expect(screen.queryByText(/GB/)).toBeNull()
+  })
+
   it("formats times rather than printing raw seconds", () => {
     render(
       <Board

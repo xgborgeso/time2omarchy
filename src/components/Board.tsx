@@ -1,6 +1,7 @@
 import { BadgeCheck } from "lucide-react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { xUrl } from "@/lib/handle"
+import { formatSpecsShort } from "@/lib/specs"
 import { formatTime, relativeTime } from "@/lib/time"
 import type { BoardEntry } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -45,6 +46,7 @@ export function Board({ entries, loading, onOpen }: Props) {
 
       {entries.map((entry) => {
         const leads = entry.rank === 1
+        const specs = formatSpecsShort(entry)
         return (
           <div
             key={entry.handle}
@@ -69,28 +71,37 @@ export function Board({ entries, loading, onOpen }: Props) {
             >
               {formatTime(entry.timeSeconds)}
             </span>
-            <span className="flex min-w-0 items-center gap-1.5">
-              <a
-                href={xUrl(entry.handle)}
-                target="_blank"
-                rel="noreferrer"
-                className="-my-2 truncate py-2 text-[13px] hover:text-primary sm:text-sm"
-              >
-                @{entry.handle}
-              </a>
-              {entry.verified ? (
-                <span
-                  role="img"
-                  aria-label="Handle verified on X"
-                  // Sighted users never see an aria-label, and without this the
-                  // mark is unexplained decoration. Lucide icons take no title.
-                  title="Verified on X — this handle proved it owns the entry"
-                  className="inline-flex shrink-0"
+            <span className="flex min-w-0 flex-col justify-center">
+              <span className="flex min-w-0 items-center gap-1.5">
+                <a
+                  href={xUrl(entry.handle)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="-my-2 truncate py-2 text-[13px] hover:text-primary sm:text-sm"
                 >
-                  <BadgeCheck
-                    aria-hidden="true"
-                    className="size-3.5 text-primary sm:size-4"
-                  />
+                  @{entry.handle}
+                </a>
+                {entry.verified ? (
+                  <span
+                    role="img"
+                    aria-label="Handle verified on X"
+                    // Sighted users never see an aria-label, and without this the
+                    // mark is unexplained decoration. Lucide icons take no title.
+                    title="Verified on X — this handle proved it owns the entry"
+                    className="inline-flex shrink-0"
+                  >
+                    <BadgeCheck
+                      aria-hidden="true"
+                      className="size-3.5 text-primary sm:size-4"
+                    />
+                  </span>
+                ) : null}
+              </span>
+              {/* Hidden on phones, where the row has no width to spare.
+                  The full line, with storage, is in the lightbox. */}
+              {specs ? (
+                <span className="hidden truncate text-[11px] text-muted-foreground sm:block">
+                  {specs}
                 </span>
               ) : null}
             </span>

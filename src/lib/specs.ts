@@ -57,3 +57,16 @@ export function formatSpecs({ cpuId, ramGb, storage }: Specs): string | null {
 
   return parts.length > 0 ? parts.join(" · ") : null
 }
+
+/**
+ * Specs compressed for a board row.
+ *
+ * The vendor and the disk are dropped: a row already carries rank, time,
+ * handle, date and a thumbnail, and the model plus memory is the part that
+ * makes two times comparable at a glance. The full line is in the lightbox.
+ */
+export function formatSpecsShort({ cpuId, ramGb }: Specs): string | null {
+  const cpu = cpuId ? cpuById(cpuId) : null
+  const parts = [cpu?.name ?? null, ramGb ? `${ramGb}GB` : null].filter(Boolean)
+  return parts.length > 0 ? parts.join(" · ") : null
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { CPU_IDS, CPUS, cpuById, cpuLabel, cpusByVendor } from "@/lib/cpus"
+import { CPU_IDS, CPUS, cpuById, cpuLabel, cpusByVendor, searchCpus } from "@/lib/cpus"
 
 describe("the catalogue", () => {
   it("is not empty", () => {
@@ -78,5 +78,41 @@ describe("cpusByVendor", () => {
   it("orders vendors alphabetically for a stable dropdown", () => {
     const vendors = cpusByVendor().map((g) => g.vendor)
     expect(vendors).toEqual([...vendors].sort())
+  })
+})
+
+describe("searchCpus", () => {
+  it("matches on the model number people actually remember", () => {
+    const ids = searchCpus("7800X3D").map((c) => c.id)
+    expect(ids).toContain("amd-ryzen-7-7800x3d")
+  })
+
+  it("matches on vendor", () => {
+    expect(searchCpus("apple").every((c) => c.vendor === "Apple")).toBe(true)
+  })
+
+  it("matches every term, not just the first", () => {
+    // "intel ultra 9" must not return every Intel chip.
+    const found = searchCpus("intel ultra 9")
+    expect(found.length).toBeGreaterThan(0)
+    expect(found.every((c) => c.name.toLowerCase().includes("ultra 9"))).toBe(true)
+  })
+
+  it("ignores case and surrounding space", () => {
+    expect(searchCpus("  m4 max  ").map((c) => c.id)).toContain("apple-m4-max")
+  })
+
+  it("returns nothing for a chip that is not listed", () => {
+    expect(searchCpus("pentium ii")).toHaveLength(0)
+  })
+
+  it("caps results, so a broad query cannot return the whole catalogue", () => {
+    // The picker renders what it is given; an unbounded list would jank.
+    expect(searchCpus("", 10)).toHaveLength(10)
+    expect(searchCpus("core", 5)).toHaveLength(5)
+  })
+
+  it("offers a starting set when the query is empty", () => {
+    expect(searchCpus("").length).toBeGreaterThan(0)
   })
 })

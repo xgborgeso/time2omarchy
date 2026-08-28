@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest"
-import { formatSpecs, RAM_OPTIONS, STORAGE, specsSchema, storageLabel } from "@/lib/specs"
+import {
+  formatSpecs,
+  formatSpecsShort,
+  RAM_OPTIONS,
+  STORAGE,
+  specsSchema,
+  storageLabel,
+} from "@/lib/specs"
 
 describe("specsSchema", () => {
   it("accepts an entry with no specs at all", () => {
@@ -65,5 +72,24 @@ describe("options", () => {
     for (const kind of STORAGE) {
       expect(storageLabel(kind.id)).toBe(kind.label)
     }
+  })
+})
+
+describe("formatSpecsShort", () => {
+  it("drops the vendor and the disk, which a board row has no width for", () => {
+    expect(
+      formatSpecsShort({ cpuId: "intel-core-i7-13700k", ramGb: 32, storage: "nvme" }),
+    ).toBe("Core i7-13700K · 32GB")
+  })
+
+  it("falls back to whichever part was given", () => {
+    expect(formatSpecsShort({ cpuId: "apple-m4-max", ramGb: null, storage: "nvme" })).toBe(
+      "M4 Max",
+    )
+    expect(formatSpecsShort({ cpuId: null, ramGb: 16, storage: null })).toBe("16GB")
+  })
+
+  it("returns null when there is nothing to show", () => {
+    expect(formatSpecsShort({ cpuId: null, ramGb: null, storage: null })).toBeNull()
   })
 })
