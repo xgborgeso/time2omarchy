@@ -32,11 +32,137 @@ const SAMPLE: Array<
   ["slowboot", 187, 0.125, true, ["intel-core-i7-1260p", 8, "hdd"]],
 ]
 
+type Entry = (typeof SAMPLE)[number]
+
+/**
+ * Enough entries to see the board as it will actually look.
+ *
+ * Fifty fits on a page, so a hundred and twenty gives three pages, a tail deep
+ * enough that the handle lookup is the only way to reach it, and a spread of
+ * times wide enough for the distribution chart to have a shape.
+ */
+const FILLER = 112
+
+const FIRST = [
+  "void",
+  "tux",
+  "hypr",
+  "arch",
+  "kernel",
+  "sudo",
+  "grub",
+  "wayland",
+  "nix",
+  "zsh",
+  "ryzen",
+  "silicon",
+  "quantum",
+  "neon",
+  "static",
+  "async",
+  "raw",
+  "cold",
+  "fast",
+  "lean",
+]
+const SECOND = [
+  "smith",
+  "racer",
+  "pilot",
+  "wizard",
+  "goblin",
+  "hermit",
+  "runner",
+  "monk",
+  "hacker",
+  "witch",
+  "nomad",
+  "surfer",
+  "ghost",
+  "punk",
+  "bard",
+  "scout",
+  "ranger",
+  "druid",
+]
+
+const CPUS: Specs[] = [
+  ["amd-ryzen-7-9800x3d", 32, "nvme"],
+  ["amd-ryzen-9-9950x", 64, "nvme"],
+  ["intel-core-ultra-7-265k", 32, "nvme"],
+  ["apple-m4-pro", 24, "nvme"],
+  ["amd-ryzen-5-7600x", 16, "nvme"],
+  ["intel-core-i5-12600k", 16, "ssd"],
+  ["amd-ryzen-7-5800x", 32, "ssd"],
+  ["intel-core-i7-1260p", 16, "ssd"],
+  ["other", 8, "hdd"],
+]
+
+/**
+ * A fixed sequence, so reseeding produces the same board.
+ *
+ * `Math.random` would reshuffle the leaderboard on every seed, which makes any
+ * visual change impossible to judge against the last one.
+ */
+function sequence(seed: number): () => number {
+  let state = seed
+  return () => {
+    state = (state * 1_664_525 + 1_013_904_223) % 4_294_967_296
+    return state / 4_294_967_296
+  }
+}
+
+function filler(): Entry[] {
+  const next = sequence(20_260_828)
+  const used = new Set(SAMPLE.map(([handle]) => handle))
+  const entries: Entry[] = []
+
+  while (entries.length < FILLER) {
+    const handle = `${FIRST[Math.floor(next() * FIRST.length)]}${SECOND[Math.floor(next() * SECOND.length)]}${entries.length % 3 === 0 ? Math.floor(next() * 90 + 10) : ""}`
+    if (used.has(handle)) continue
+    used.add(handle)
+
+    // Weighted towards the fast end, with a long tail: that is the shape real
+    // install times take, and a uniform spread would flatten the chart.
+    const roll = next()
+    const seconds = Math.round(
+      roll < 0.5 ? 25 + next() * 40 : roll < 0.85 ? 65 + next() * 55 : 120 + next() * 280,
+    )
+    entries.push([
+      handle,
+      seconds,
+      Number((next() * 9).toFixed(3)),
+      // Roughly a third proven, so both badge states are on screen at once.
+      next() < 0.34,
+      CPUS[Math.floor(next() * CPUS.length)] as Specs,
+    ])
+  }
+  return entries
+}
+
+const ENTRIES: Entry[] = [...SAMPLE, ...filler()]
+
 const UPLOADS = path.resolve("public/uploads")
 
 const MONO = "/usr/share/fonts/TTF/JetBrainsMonoNerdFont-Regular.ttf"
 
-/** Approximates the Omarchy installer's success screen, using the real logo. */
+/**
+ * Approximates the Omarchy installer's success screen, using the real logo.
+ *
+ * One image per distinct time rather than per entry: a hundred and twenty
+ * ImageMagick invocations take minutes, and every entry with the same time
+ * would produce an identical picture anyway.
+ */
+const screens = new Map<number, Promise<string>>()
+
+function bootScreenFor(seconds: number): Promise<string> {
+  const existing = screens.get(seconds)
+  if (existing) return existing
+  const made = bootScreen(`t${seconds}`, seconds)
+  screens.set(seconds, made)
+  return made
+}
+
 async function bootScreen(handle: string, seconds: number): Promise<string> {
   const file = `${handle}-seed.png`
   const logo = path.join(UPLOADS, ".logo-green.svg")
@@ -94,7 +220,7 @@ const clear = process.argv.includes("--clear")
 const { client: db } = await openDatabase("./data/dev")
 
 if (clear) {
-  const handles = SAMPLE.map(([h]) => h)
+  const handles = ENTRIES.map(([h]) => h)
   const res = await db.query<{ handle: string }>(
     "DELETE FROM entries WHERE handle = ANY($1) RETURNING handle",
     [handles],
@@ -102,8 +228,8 @@ if (clear) {
   console.log(`removed ${res.rows.length} seeded entries`)
 } else {
   await mkdir(UPLOADS, { recursive: true })
-  for (const [handle, seconds, daysAgo, verified, [cpuId, ramGb, storage]] of SAMPLE) {
-    const url = await bootScreen(handle, seconds)
+  for (const [handle, seconds, daysAgo, verified, [cpuId, ramGb, storage]] of ENTRIES) {
+    const url = await bootScreenFor(seconds)
     const at = new Date(Date.now() - daysAgo * 86_400_000)
     await db.query(
       `INSERT INTO entries
@@ -133,7 +259,7 @@ if (clear) {
       ],
     )
   }
-  console.log(`seeded ${SAMPLE.length} entries`)
+  console.log(`seeded ${ENTRIES.length} entries`)
 }
 
 await db.close()

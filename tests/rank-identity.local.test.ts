@@ -14,7 +14,7 @@ const opened = openDatabase().then((o) => o.db)
 vi.mock("../src/server/db", () => ({ getDb: () => opened }))
 
 const { submitRank, claimEntry } = await import("../src/server/rank")
-const { findEntryByHandle } = await import("../src/server/board")
+const { findEntryByHandle, loadBoard } = await import("../src/server/board")
 
 const ADA = { key: "x:1665012345678901234", handle: "ada" }
 
@@ -219,5 +219,42 @@ describe("finding one entry among many", () => {
 
   it("says nothing rather than guessing when the handle is unknown", async () => {
     expect(await findEntryByHandle("nobody")).toBeNull()
+  })
+})
+
+describe("paging the board", () => {
+  it("ranks a later page against the whole board, not the page", async () => {
+    // Page two starts at the 51st entry, and its rank must say so. Ranking a
+    // slice on its own would restart every page at #1.
+    for (let i = 0; i < 60; i++) {
+      await submitRank(input({ handle: `p${i}`, timeSeconds: 30 + i }))
+    }
+
+    const second = await loadBoard(2)
+
+    expect(second.page).toBe(2)
+    expect(second.total).toBe(60)
+    expect(second.entries).toHaveLength(10)
+    expect(second.entries[0]?.rank).toBe(51)
+  })
+
+  it("keeps ties sharing a rank across a page boundary", async () => {
+    for (let i = 0; i < 60; i++) {
+      // Every entry ties with its neighbour, so 60 entries hold 30 ranks.
+      await submitRank(input({ handle: `t${i}`, timeSeconds: 30 + Math.floor(i / 2) }))
+    }
+
+    const first = await loadBoard(1)
+    expect(first.entries[0]?.rank).toBe(1)
+    expect(first.entries[1]?.rank).toBe(1)
+    expect(first.entries[2]?.rank).toBe(2)
+    expect(first.total).toBe(60)
+  })
+
+  it("clamps a page past the end rather than failing", async () => {
+    await submitRank(input({ handle: "only" }))
+    const far = await loadBoard(99)
+    expect(far.entries).toEqual([])
+    expect(far.total).toBe(1)
   })
 })

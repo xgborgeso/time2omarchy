@@ -29,7 +29,8 @@ export const appRouter = router({
   // one per person, and could not set the visitor cookie at all.
   board: publicProcedure
     .use(throttled(readLimit, "Too many requests."))
-    .query(() => loadBoard()),
+    .input(z.object({ page: z.number().int().min(1).max(10_000).default(1) }).optional())
+    .query(({ input }) => loadBoard(input?.page ?? 1)),
 
   stats: publicProcedure
     .use(throttled(readLimit, "Too many requests."))

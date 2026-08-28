@@ -50,6 +50,14 @@ export type Rankable = {
  */
 export function rankEntries<T extends Rankable>(
   entries: readonly T[],
+  /**
+   * The rank the first entry holds on the whole board.
+   *
+   * A page of results is a slice, and a slice ranked on its own restarts at #1
+   * every page. The caller counts how many distinct faster times exist and
+   * passes the rank that follows them.
+   */
+  startRank = 1,
 ): (T & { rank: number })[] {
   const sorted = [...entries].sort(
     (a, b) =>
@@ -58,7 +66,7 @@ export function rankEntries<T extends Rankable>(
       a.createdAt.localeCompare(b.createdAt),
   )
 
-  let rank = 0
+  let rank = startRank - 1
   let previousTime: number | null = null
   return sorted.map((entry) => {
     if (entry.timeSeconds !== previousTime) {

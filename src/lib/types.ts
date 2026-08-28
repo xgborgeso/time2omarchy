@@ -35,6 +35,10 @@ export type BoardResponse = {
   entries: BoardEntry[]
   activity: ActivityItem[]
   counters: Counters
+  /** Which page these entries are, and how many entries exist behind them. */
+  page: number
+  perPage: number
+  total: number
 }
 
 export type StatsResponse = {

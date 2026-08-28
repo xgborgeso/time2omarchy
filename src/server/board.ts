@@ -13,15 +13,22 @@ function toIso(value: Date | string): string {
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString()
 }
 
-export async function loadBoard(): Promise<BoardResponse> {
+/** A page the eye can still scan, and the unit the pager counts in. */
+export const PER_PAGE = 50
+
+export async function loadBoard(page = 1): Promise<BoardResponse> {
   const db = await getDb()
-  const [rows, activityRows, total, counters] = await Promise.all([
+  const current = Math.max(1, Math.trunc(page) || 1)
+  const offset = (current - 1) * PER_PAGE
+
+  const [rows, activityRows, total, counters, leader] = await Promise.all([
     db
       .select()
       .from(entries)
-      // Mirrors rankEntries so the right 100 rows survive the limit.
+      // Mirrors rankEntries so the page holds the rows it should.
       .orderBy(asc(entries.timeSeconds), desc(entries.verified), asc(entries.createdAt))
-      .limit(100),
+      .limit(PER_PAGE)
+      .offset(offset),
     db
       .select({
         handle: entries.handle,
@@ -33,6 +40,32 @@ export async function loadBoard(): Promise<BoardResponse> {
       .limit(8),
     db.select({ n: count() }).from(entries),
     readCounters(),
+    // The leader belongs to the board, not to the page being looked at.
+    db
+      .select({
+        handle: entries.handle,
+        timeSeconds: entries.timeSeconds,
+        verified: entries.verified,
+      })
+      .from(entries)
+      .orderBy(asc(entries.timeSeconds), desc(entries.verified), asc(entries.createdAt))
+      .limit(1),
+  ])
+
+  const fastest = leader[0]?.timeSeconds ?? null
+
+  const [faster, tied] = await Promise.all([
+    // How many distinct times beat this page's first entry: the rank it holds
+    // on the whole board, which is where a page's numbering has to start.
+    offset === 0 || !rows[0]
+      ? Promise.resolve([{ n: 0 }])
+      : db
+          .select({ n: sql<number>`count(distinct ${entries.timeSeconds})` })
+          .from(entries)
+          .where(lt(entries.timeSeconds, rows[0].timeSeconds)),
+    fastest === null
+      ? Promise.resolve([{ n: 0 }])
+      : db.select({ n: count() }).from(entries).where(eq(entries.timeSeconds, fastest)),
   ])
 
   const ranked: BoardEntry[] = rankEntries(
@@ -47,19 +80,23 @@ export async function loadBoard(): Promise<BoardResponse> {
       createdAt: toIso(row.createdAt),
       updatedAt: toIso(row.updatedAt),
     })),
+    Number(faster[0]?.n ?? 0) + 1,
   )
 
   return {
     entries: ranked,
+    page: current,
+    perPage: PER_PAGE,
+    total: total[0]?.n ?? ranked.length,
     activity: activityRows.map((row) => ({
       handle: row.handle,
       timeSeconds: row.timeSeconds,
       updatedAt: toIso(row.updatedAt),
     })),
     counters: {
-      fastestSeconds: ranked[0]?.timeSeconds ?? null,
-      leaderHandle: ranked[0]?.handle ?? null,
-      leaderCount: ranked.filter((e) => e.rank === 1).length,
+      fastestSeconds: fastest,
+      leaderHandle: leader[0]?.handle ?? null,
+      leaderCount: Number(tied[0]?.n ?? 0),
       entries: total[0]?.n ?? ranked.length,
       visitorsToday: counters.visitorsToday,
       online: counters.online,

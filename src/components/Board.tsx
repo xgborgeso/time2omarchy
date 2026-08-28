@@ -1,4 +1,5 @@
 import { BadgeCheck } from "lucide-react"
+import { Fragment } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { xUrl } from "@/lib/handle"
@@ -26,7 +27,18 @@ type Props = {
 const ROW =
   "grid grid-cols-[2rem_4.75rem_minmax(0,1fr)_2.75rem] items-center gap-2.5 sm:grid-cols-[3.5rem_7.25rem_minmax(0,1fr)_auto_4.75rem] sm:gap-5"
 
-/** The whole board. Equal times share a rank, so there is no podium to fill. */
+/** Where a tier ends. The board is cut after the 10th and the 20th entry. */
+const TIERS = [10, 20]
+
+/** The first three, which get the weight everyone is actually competing for. */
+const PODIUM = 3
+
+/**
+ * One page of the board.
+ *
+ * Equal times share a rank, so the podium can hold more than three entries —
+ * the tint follows the rank, not the position in the list.
+ */
 export function Board({ entries, loading, onOpen, onClaim, found = null }: Props) {
   if (loading && entries.length === 0) {
     return (
@@ -64,8 +76,22 @@ export function Board({ entries, loading, onOpen, onClaim, found = null }: Props
         </div>
       ) : null}
 
-      {entries.map((entry) => (
-        <Entry key={entry.handle} entry={entry} onOpen={onOpen} onClaim={onClaim} />
+      {entries.map((entry, i) => (
+        <Fragment key={entry.handle}>
+          {/* A labelled rule where each tier ends, so the top of the board
+              reads as a podium rather than a list that keeps going. Drawn
+              from the entry's real rank, so a later page shows none of them. */}
+          {TIERS.includes(entry.rank - 1) && i > 0 ? (
+            <div className="flex items-center gap-3 px-3 py-4 sm:px-5">
+              <span className="h-px flex-1 bg-border" />
+              <span className="rounded-full border border-border px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                Top {entry.rank - 1}
+              </span>
+              <span className="h-px flex-1 bg-border" />
+            </div>
+          ) : null}
+          <Entry entry={entry} onOpen={onOpen} onClaim={onClaim} />
+        </Fragment>
       ))}
     </section>
   )
@@ -86,6 +112,9 @@ type EntryProps = {
  */
 function Entry({ entry, onOpen, onClaim, className }: EntryProps) {
   const leads = entry.rank === 1
+  // The three everyone is actually competing for. Weighted by tint rather
+  // than by size, so the columns stay aligned down the whole board.
+  const podium = entry.rank <= PODIUM
   const specs = formatSpecsShort(entry)
   // Every unproven entry offers it: there is no logged-in state to know
   // whose is whose, and proving one is the only thing X is used for. A
@@ -94,16 +123,18 @@ function Entry({ entry, onOpen, onClaim, className }: EntryProps) {
   const claimable = !!onClaim && !entry.verified
   return (
     <div
+      data-podium={podium || undefined}
       className={cn(
         `${ROW} border-b border-card px-3 py-3 sm:px-5`,
-        leads && "bg-muted/50",
+        podium && "bg-primary/5",
+        leads && "bg-primary/10",
         className,
       )}
     >
       <span
         className={cn(
           "text-xs tabular-nums sm:text-[13px]",
-          leads ? "font-medium text-primary" : "text-muted-foreground",
+          podium ? "font-medium text-primary" : "text-muted-foreground",
         )}
       >
         #{entry.rank}

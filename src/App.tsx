@@ -5,10 +5,11 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 import { Activity } from "@/components/Activity"
 import { Board } from "@/components/Board"
+import { BoardPager } from "@/components/BoardPager"
 import { Footer } from "@/components/Footer"
 import { Hero } from "@/components/Hero"
 import { Lightbox } from "@/components/Lightbox"
-import { RankForm } from "@/components/RankForm"
+import { RankDialog } from "@/components/RankDialog"
 import { RulesPage } from "@/components/RulesPage"
 import { SiteHeader } from "@/components/SiteHeader"
 import { StatsPage } from "@/components/stats/StatsPage"
@@ -25,8 +26,14 @@ export function App() {
   const queryClient = useQueryClient()
   const trpc = useTRPC()
   usePresence()
+  const [page, setPage] = useState(1)
   const { data, isLoading } = useQuery(
-    trpc.board.queryOptions(undefined, { refetchInterval: 10_000 }),
+    trpc.board.queryOptions(
+      { page },
+      // Only the first page is live. Deeper pages would reshuffle under
+      // someone mid-read for entries they are not watching anyway.
+      { refetchInterval: page === 1 ? 10_000 : false, placeholderData: (p) => p },
+    ),
   )
   const claim = useMutation(trpc.claim.mutationOptions())
   const [open, setOpen] = useState<BoardEntry | null>(null)
@@ -96,7 +103,8 @@ export function App() {
         const outcome = claimOutcome(target, result)
         if (outcome.ok) {
           toast.success(outcome.message)
-          await queryClient.invalidateQueries({ queryKey: trpc.board.queryKey() })
+          // Every page, not one: the claimed entry may sit on any of them.
+          await queryClient.invalidateQueries(trpc.board.queryFilter())
         } else {
           // No title above it: "that claim did not go through" says nothing
           // the sentence below it does not already say better.
@@ -118,9 +126,11 @@ export function App() {
   }
 
   function onSuccess(result: RankSuccess) {
-    // The mutation already returned the new board, so seed it rather than
-    // making every client refetch what it was just handed.
-    queryClient.setQueryData(trpc.board.queryKey(), result.board)
+    // The mutation already returned the first page, so seed it rather than
+    // making every client refetch what it was just handed. Anyone reading a
+    // later page is sent back to the top, where their own entry now is.
+    queryClient.setQueryData(trpc.board.queryKey({ page: 1 }), result.board)
+    setPage(1)
     void queryClient.invalidateQueries(trpc.stats.queryFilter())
   }
 
@@ -138,7 +148,7 @@ export function App() {
         ) : (
           <>
             <Hero counters={data?.counters} />
-            <RankForm onSuccess={onSuccess} />
+            <RankDialog onSuccess={onSuccess} />
 
             {/* The board shows the top hundred. Past that, this is the only
                 way someone reaches their own entry — or claims it. */}
@@ -157,6 +167,15 @@ export function App() {
               onOpen={setOpen}
               onClaim={onClaim}
               found={searched && !shown.has(searched) ? found : null}
+            />
+            <BoardPager
+              page={data?.page ?? 1}
+              perPage={data?.perPage ?? 0}
+              total={data?.total ?? 0}
+              onPage={(next) => {
+                setPage(next)
+                window.scrollTo({ top: 0 })
+              }}
             />
             {entries.length === 0 && !isLoading ? (
               <p className="border-y border-card py-10 text-center text-sm text-muted-foreground">

@@ -62,9 +62,11 @@ const LABEL = "text-[11px] font-medium uppercase tracking-[0.16em] text-muted-fo
 
 type Props = {
   onSuccess: (result: RankSuccess) => void
+  /** Replaces the card chrome, for when the form already sits inside one. */
+  className?: string
 }
 
-export function RankForm({ onSuccess }: Props) {
+export function RankForm({ onSuccess, className }: Props) {
   const trpc = useTRPC()
   const rank = useMutation(trpc.rank.mutationOptions())
   const handleId = useId()
@@ -218,7 +220,10 @@ export function RankForm({ onSuccess }: Props) {
   return (
     <form
       onSubmit={onSubmit}
-      className="mx-auto mt-10 w-full max-w-[792px] rounded-lg border border-border bg-card p-4"
+      className={
+        className ??
+        "mx-auto mt-10 w-full max-w-[792px] rounded-lg border border-border bg-card p-4"
+      }
     >
       {/* Two rows that mean something, then one action. First the run —
           who, how fast, and the proof — then the machine it ran on. */}

@@ -184,3 +184,40 @@ describe("an entry the board is not showing", () => {
     expect(onClaim).toHaveBeenCalledWith(expect.objectContaining({ handle: "faraway" }))
   })
 })
+
+describe("tiers", () => {
+  const many = Array.from({ length: 25 }, (_, i) =>
+    entry({ handle: `h${i + 1}`, rank: i + 1, timeSeconds: 30 + i }),
+  )
+
+  it("separates the board into the tiers people compete for", async () => {
+    // Copied from outbid.lol: a labelled rule marks where each tier ends, so
+    // the top of the board reads as a podium rather than a list that goes on.
+    render(<Board entries={many} loading={false} onOpen={() => {}} />)
+    expect(screen.getByText("Top 10")).toBeVisible()
+    expect(screen.getByText("Top 20")).toBeVisible()
+  })
+
+  it("gives the first three entries their own treatment", async () => {
+    render(<Board entries={many} loading={false} onOpen={() => {}} />)
+    for (const handle of ["h1", "h2", "h3"]) {
+      expect(entryFor(handle)).toHaveAttribute("data-podium", "true")
+    }
+    expect(entryFor("h4")).not.toHaveAttribute("data-podium")
+  })
+
+  it("draws no separator the board is too short to have earned", async () => {
+    render(<Board entries={many.slice(0, 6)} loading={false} onOpen={() => {}} />)
+    expect(screen.queryByText("Top 10")).toBeNull()
+    expect(screen.queryByText("Top 20")).toBeNull()
+  })
+
+  it("never repeats the podium on a later page", async () => {
+    // Ranks 51+ are nobody's podium, however far down the page they sit.
+    const second = Array.from({ length: 5 }, (_, i) =>
+      entry({ handle: `p${i}`, rank: 51 + i, timeSeconds: 200 + i }),
+    )
+    render(<Board entries={second} loading={false} onOpen={() => {}} />)
+    expect(entryFor("p0")).not.toHaveAttribute("data-podium")
+  })
+})
