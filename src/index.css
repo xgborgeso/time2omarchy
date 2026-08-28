@@ -159,6 +159,17 @@
   body {
     @apply bg-background text-foreground antialiased;
   }
+
+  /* Tailwind v4's preflight leaves buttons on the browser's arrow cursor.
+     shadcn's components are built assuming the pointer, so put it back —
+     including the elements Radix gives a button or option role rather than a
+     <button> tag. Disabled controls keep the default, since they do nothing. */
+  button:not(:disabled),
+  [role="button"]:not(:disabled),
+  [role="option"]:not([aria-disabled="true"]),
+  [role="menuitem"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
 }
 
 /* Accessibility, not styling: honouring a reduced-motion preference has to
