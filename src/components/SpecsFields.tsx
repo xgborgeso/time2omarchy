@@ -47,6 +47,15 @@ export const SEARCH_EXAMPLES = ["9800X3D", "Core Ultra 7", "M4 Pro"] as const
 const LABEL = "text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground"
 
 /**
+ * One template for every field row in the rank form.
+ *
+ * Both rows share it so their column edges line up exactly — that alignment is
+ * the whole difference between a form that looks designed and one that looks
+ * like fields stacked until they fit.
+ */
+export const FIELD_ROW = "grid gap-3 sm:grid-cols-[minmax(0,1fr)_8.5rem_10.5rem]"
+
+/**
  * Optional hardware.
  *
  * Chosen from a catalogue rather than typed, because the whole reason to
@@ -78,8 +87,8 @@ export function SpecsFields({ value, onChange }: Props) {
   const [selected, setSelected] = useState<Cpu | null>(null)
 
   return (
-    <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-end">
-      <div className="flex flex-1 flex-col gap-1.5">
+    <div className={FIELD_ROW}>
+      <div className="flex min-w-0 flex-col gap-1.5">
         <Label htmlFor={cpuFieldId} className={LABEL}>
           cpu
         </Label>
@@ -192,7 +201,7 @@ export function SpecsFields({ value, onChange }: Props) {
         </Popover>
       </div>
 
-      <div className="flex flex-col gap-1.5 sm:w-[7.5rem]">
+      <div className="flex flex-col gap-1.5">
         <Label htmlFor={ramId} className={LABEL}>
           ram
         </Label>
@@ -213,7 +222,7 @@ export function SpecsFields({ value, onChange }: Props) {
         </Select>
       </div>
 
-      <div className="flex flex-col gap-1.5 sm:w-[9.5rem]">
+      <div className="flex flex-col gap-1.5">
         <Label htmlFor={storageId} className={LABEL}>
           storage
         </Label>

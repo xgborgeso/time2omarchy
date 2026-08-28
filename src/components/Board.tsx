@@ -89,12 +89,15 @@ export function Board({ entries, loading, onOpen, onClaim }: Props) {
                   @{entry.handle}
                 </a>
                 {claimable ? (
+                  // Text, not a button shape: an entry is a line of
+                  // information, and a filled control on every unproven one
+                  // turns the board into a wall of buttons.
                   <Button
                     type="button"
-                    variant="outline"
+                    variant="link"
                     size="xs"
                     onClick={() => onClaim?.(entry)}
-                    className="shrink-0 text-muted-foreground hover:text-foreground"
+                    className="h-auto shrink-0 px-0 text-[11px] text-muted-foreground uppercase tracking-[0.12em] hover:text-primary"
                   >
                     Claim
                   </Button>

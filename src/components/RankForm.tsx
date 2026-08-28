@@ -9,7 +9,7 @@ import {
   useRef,
   useState,
 } from "react"
-import { SpecsFields } from "@/components/SpecsFields"
+import { FIELD_ROW, SpecsFields } from "@/components/SpecsFields"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -32,6 +32,9 @@ function XMark({ className }: { className?: string }) {
     </svg>
   )
 }
+
+/** One label style for every field, so the two rows read as one form. */
+const LABEL = "text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground"
 
 type Props = {
   onSuccess: (result: RankSuccess) => void
@@ -187,12 +190,11 @@ export function RankForm({ onSuccess }: Props) {
       onSubmit={onSubmit}
       className="mx-auto mt-10 w-full max-w-[792px] rounded-lg border border-border bg-card p-4"
     >
-      <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-end">
-        <div className="flex flex-1 flex-col gap-1.5">
-          <Label
-            htmlFor={handleId}
-            className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground"
-          >
+      {/* Two rows that mean something, then one action. First the run —
+          who, how fast, and the proof — then the machine it ran on. */}
+      <div className={FIELD_ROW}>
+        <div className="flex min-w-0 flex-col gap-1.5">
+          <Label htmlFor={handleId} className={LABEL}>
             handle
           </Label>
           <Input
@@ -206,11 +208,8 @@ export function RankForm({ onSuccess }: Props) {
           />
         </div>
 
-        <div className="flex w-full flex-col gap-1.5 sm:w-32">
-          <Label
-            htmlFor={timeId}
-            className="flex gap-1 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground"
-          >
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor={timeId} className={cn(LABEL, "flex gap-1")}>
             time
             {parsed ? (
               <span className={parsed.inRange ? "text-primary" : "text-destructive"}>
@@ -228,6 +227,45 @@ export function RankForm({ onSuccess }: Props) {
             className="h-11 tabular-nums"
           />
         </div>
+
+        <div className="flex flex-col gap-1.5">
+          <span className={LABEL}>boot screen</span>
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            onDragOver={(e) => {
+              e.preventDefault()
+              setDragging(true)
+            }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={onDrop}
+            className={cn(
+              "flex h-11 items-center justify-center gap-2 overflow-hidden rounded-lg border border-dashed px-3.5 text-xs transition-colors",
+              dragging
+                ? "border-primary bg-muted/50 text-primary"
+                : "border-border text-muted-foreground hover:border-primary",
+            )}
+          >
+            {preview ? (
+              // biome-ignore lint/performance/noImgElement: boot screens are remote user uploads; next/image needs images.remotePatterns for the host, and the upload pipeline moves to UploadThing next
+              <img
+                src={preview}
+                alt="Selected boot screen"
+                className="h-full w-14 shrink-0 object-cover"
+              />
+            ) : (
+              <ImageIcon className="size-4 shrink-0" aria-hidden="true" />
+            )}
+            <span className="truncate uppercase">{file ? "Change" : "Add"}</span>
+          </button>
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/gif,image/avif"
+            className="sr-only"
+            onChange={(e) => takeFile(e.target.files?.[0] ?? null)}
+          />
+        </div>
       </div>
 
       {error ? (
@@ -241,54 +279,17 @@ export function RankForm({ onSuccess }: Props) {
         <SpecsFields value={specs} onChange={setSpecs} />
       </div>
 
-      {/* Last, in this order on purpose: nothing should invite you to submit
-          before you have been asked for everything. */}
-      <div className="mt-3 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center">
-        <button
-          type="button"
-          onClick={() => inputRef.current?.click()}
-          onDragOver={(e) => {
-            e.preventDefault()
-            setDragging(true)
-          }}
-          onDragLeave={() => setDragging(false)}
-          onDrop={onDrop}
-          className={cn(
-            "flex h-11 shrink-0 items-center justify-center gap-2 overflow-hidden rounded-lg border border-dashed px-3.5 text-xs transition-colors",
-            dragging
-              ? "border-primary bg-muted/50 text-primary"
-              : "border-border text-muted-foreground hover:border-primary",
-          )}
-        >
-          {preview ? (
-            // biome-ignore lint/performance/noImgElement: boot screens are remote user uploads; next/image needs images.remotePatterns for the host, and the upload pipeline moves to UploadThing next
-            <img
-              src={preview}
-              alt="Selected boot screen"
-              className="h-full w-14 object-cover"
-            />
-          ) : (
-            <ImageIcon className="size-4" aria-hidden="true" />
-          )}
-          <span className="uppercase">{file ? "Change" : "Boot screen"}</span>
-        </button>
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/png,image/jpeg,image/webp,image/gif,image/avif"
-          className="sr-only"
-          onChange={(e) => takeFile(e.target.files?.[0] ?? null)}
-        />
+      {/* Last on purpose: nothing should invite you to submit before you
+          have been asked for everything. */}
+      <Button
+        type="submit"
+        disabled={busy}
+        className="mt-4 h-11 w-full text-sm font-bold uppercase"
+      >
+        {busy ? "Ranking…" : "Rank it"}
+      </Button>
 
-        <Button
-          type="submit"
-          disabled={busy}
-          className="h-11 shrink-0 px-6 text-sm font-bold uppercase sm:ml-auto"
-        >
-          {busy ? "Ranking…" : "Rank it"}
-        </Button>
-      </div>
-      <p className="mt-3 text-xs text-muted-foreground">
+      <p className="mt-3 text-center text-xs text-muted-foreground">
         An unverified entry can be opened, but never changed afterwards.
       </p>
 

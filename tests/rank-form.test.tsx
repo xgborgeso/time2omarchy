@@ -34,6 +34,7 @@ vi.mock("@/lib/upload", () => ({
 // Stubbed so these tests stay about upload and ranking rather than about
 // driving a combobox. The picker is covered separately.
 vi.mock("@/components/SpecsFields", () => ({
+  FIELD_ROW: "",
   SpecsFields: ({ onChange }: { onChange: (s: unknown) => void }) => (
     <button
       type="button"
