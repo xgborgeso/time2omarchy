@@ -126,10 +126,11 @@ function Entry({ entry, onOpen, onClaim, className }: EntryProps) {
           >
             @{entry.handle}
           </a>
-          {/* One slot, one shape. Proven entries carry a check, unproven ones
-              carry the invitation to prove them — both badges, so the line
-              reads the same either way. A button here was a second visual
-              language sitting inside a row of text. */}
+          {/* One slot, one shape, two jobs. Both are badges so the line reads
+              the same either way, and the fill is what separates them: filled
+              is something to do, outlined is something that is already true.
+              Claim borrows the primary fill from Rank it for exactly that
+              reason — it is the same invitation, met where the entry lives. */}
           {entry.verified ? (
             <Badge
               variant="verified"
@@ -139,12 +140,12 @@ function Entry({ entry, onOpen, onClaim, className }: EntryProps) {
               Verified
             </Badge>
           ) : claimable ? (
-            <Badge asChild variant="outline">
+            <Badge asChild variant="default">
               <button
                 type="button"
                 onClick={() => onClaim?.(entry)}
                 aria-label={`Claim the entry for @${entry.handle}`}
-                className="cursor-pointer hover:border-primary/40 hover:text-primary"
+                className="cursor-pointer uppercase tracking-[0.08em] hover:bg-primary/80"
               >
                 Claim
               </button>
