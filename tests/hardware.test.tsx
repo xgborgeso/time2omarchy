@@ -27,13 +27,6 @@ describe("Hardware", () => {
     expect(screen.getByText("By memory")).toBeVisible()
   })
 
-  it("warns where a sample is too small to mean anything", () => {
-    // Three HDD installs is an anecdote. Drawing it identically to eighty
-    // NVMe ones is the difference between data and a verify.
-    render(<Hardware hardware={hardware} onFilter={() => {}} active={null} />)
-    expect(screen.getByText(/faded bars have under 10 installs/i)).toBeVisible()
-  })
-
   it("says nothing about samples when every bucket is big enough", () => {
     render(
       <Hardware

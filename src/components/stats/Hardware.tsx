@@ -1,6 +1,6 @@
 "use client"
 
-import { ChevronLeftIcon, TriangleAlert } from "lucide-react"
+import { ChevronLeftIcon } from "lucide-react"
 import { Bar, BarChart, Cell, XAxis, YAxis } from "recharts"
 import { Button } from "@/components/ui/button"
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -27,14 +27,6 @@ type Props = {
   active: SpecFilter | null
   onFilter: (next: SpecFilter | null) => void
 }
-
-/**
- * Below this a bucket is an anecdote, not a measurement.
- *
- * Three installs on a spinning disk sitting beside eighty on flash, drawn
- * identically, is the difference between reporting data and making a verify.
- */
-const ENOUGH = 10
 
 /** What the CPU card is titled at each depth. */
 const CPU_TITLES: Record<CpuLevel, string> = {
@@ -162,8 +154,6 @@ type CardProps = {
 }
 
 function HardwareCard({ title, buckets, chosen, parent, onFilter }: CardProps) {
-  const thin = buckets.some((bucket) => bucket.entries < ENOUGH)
-
   return (
     <Card className="gap-3">
       <CardHeader>
@@ -230,27 +220,15 @@ function HardwareCard({ title, buckets, chosen, parent, onFilter }: CardProps) {
                 <Cell
                   key={bucket.id}
                   fill="var(--color-medianSeconds)"
-                  // Faded where the sample is thin, or where another bucket is
-                  // the one the page is currently describing.
-                  fillOpacity={
-                    bucket.entries < ENOUGH
-                      ? 0.35
-                      : chosen && chosen !== bucket.id
-                        ? 0.4
-                        : 1
-                  }
+                  // Dimmed only to show which bucket the page is describing.
+                  // Sample size is not weighted in: the tooltip carries the
+                  // install count, and a second signal for it was noise.
+                  fillOpacity={chosen && chosen !== bucket.id ? 0.4 : 1}
                 />
               ))}
             </Bar>
           </BarChart>
         </ChartContainer>
-
-        {thin ? (
-          <p className="mt-2 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-            <TriangleAlert aria-hidden="true" className="size-3 shrink-0" />
-            Faded bars have under {ENOUGH} installs
-          </p>
-        ) : null}
       </CardContent>
     </Card>
   )
