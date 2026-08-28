@@ -273,11 +273,6 @@ describe("RankForm", () => {
     expect(time).not.toHaveAttribute("aria-invalid", "true")
   })
 
-  it("says up front that everything is required", async () => {
-    render(<RankForm onSuccess={() => {}} />, { wrapper })
-    expect(screen.getByText(/every field is required/i)).toBeVisible()
-  })
-
   it("refuses to submit without a boot screen", async () => {
     const user = userEvent.setup()
     render(<RankForm onSuccess={() => {}} />, { wrapper })

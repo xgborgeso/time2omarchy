@@ -21,3 +21,4 @@ public/uploads/*
 # belong in a repo this deliberately lean.
 .agents/
 .claude/skills/
+skills-lock.json
