@@ -127,15 +127,16 @@ function Entry({ entry, onOpen, onClaim, className }: EntryProps) {
             @{entry.handle}
           </a>
           {claimable ? (
-            // Ghost, not link: this is an action, and link styling
-            // promises navigation. Low emphasis because an entry is a
-            // line of information — the control sits in it, not on it.
+            // Outline: the lightest variant that still reads as a control.
+            // Ghost gave it no edges, so on a row of text it looked like more
+            // text; link styling would promise navigation instead of an action.
             <Button
               type="button"
-              variant="ghost"
-              size="xs"
+              variant="outline"
+              size="sm"
               onClick={() => onClaim?.(entry)}
-              className="shrink-0 text-muted-foreground"
+              aria-label={`Claim the entry for @${entry.handle}`}
+              className="shrink-0"
             >
               Claim
             </Button>
