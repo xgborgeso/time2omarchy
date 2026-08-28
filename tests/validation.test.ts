@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { isValidHandle, normalizeHandle } from "../src/lib/handle"
 import { shouldReplace } from "../src/lib/ranking"
-import { handleSchema, metadataSchema, timeSchema } from "../src/lib/validation"
+import { handleSchema, metadataSchema, timeError, timeSchema } from "../src/lib/validation"
 
 describe("handles", () => {
   it("normalizes @ and case", () => {
@@ -52,5 +52,27 @@ describe("upsert rule", () => {
     expect(shouldReplace(51, 43)).toBe(true)
     expect(shouldReplace(43, 43)).toBe(true)
     expect(shouldReplace(43, 50)).toBe(false)
+  })
+})
+
+describe("timeError", () => {
+  it("names the missing time rather than the schema that caught it", () => {
+    // The form used to render the whole zod issue array at the user.
+    expect(timeError("")).toBe("Add a time")
+    expect(timeError("   ")).toBe("Add a time")
+  })
+
+  it("says what a time should look like when it cannot be parsed", () => {
+    expect(timeError("soon")).toMatch(/43s or 1:12/)
+  })
+
+  it("gives the range when the time is outside it", () => {
+    expect(timeError("2s")).toMatch(/15s and 15:00/)
+    expect(timeError("30:00")).toMatch(/15s and 15:00/)
+  })
+
+  it("returns nothing for a time that would be accepted", () => {
+    expect(timeError("43s")).toBeNull()
+    expect(timeError("1:12")).toBeNull()
   })
 })

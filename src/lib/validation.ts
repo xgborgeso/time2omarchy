@@ -41,6 +41,18 @@ export const timeSchema = z
     return seconds
   })
 
+/**
+ * The one thing wrong with a typed time, or null if nothing is.
+ *
+ * The form checks before uploading — a missing time should not cost a round
+ * trip — and reuses the schema rather than restating its rules, so the two can
+ * never drift apart.
+ */
+export function timeError(input: string): string | null {
+  const result = timeSchema.safeParse(input)
+  return result.success ? null : (result.error.issues[0]?.message ?? "Add a time")
+}
+
 export const metadataSchema = z.object({
   handle: handleSchema,
   time: timeSchema,

@@ -199,6 +199,43 @@ describe("RankForm", () => {
     expect(uploadFn).toHaveBeenCalledWith("ada", expect.any(File))
   })
 
+  it("names the missing time instead of showing the schema that caught it", async () => {
+    // This rendered the raw zod issue array at the user:
+    // [ { "origin": "string", "code": "too_small", "path": [ "time" ], … } ]
+    const user = userEvent.setup()
+    render(<RankForm onSuccess={() => {}} />, { wrapper })
+    await user.type(screen.getByLabelText(/handle/i), "ada")
+    await user.upload(
+      document.querySelector("input[type=file]") as HTMLInputElement,
+      bootScreen(),
+    )
+    await user.click(screen.getByRole("button", { name: /fill specs/i }))
+    await user.click(screen.getByRole("button", { name: /rank it/i }))
+
+    const alert = await screen.findByRole("alert")
+    expect(alert).toHaveTextContent("Add a time")
+    expect(alert).not.toHaveTextContent(/too_small|origin|\[/)
+    // A missing time should not have cost an upload.
+    expect(uploadFn).not.toHaveBeenCalled()
+    expect(rankFn).not.toHaveBeenCalled()
+  })
+
+  it("reads a rejected time back as a sentence", async () => {
+    const user = userEvent.setup()
+    render(<RankForm onSuccess={() => {}} />, { wrapper })
+    await user.type(screen.getByLabelText(/handle/i), "ada")
+    await user.type(screen.getByLabelText(/^time$/i), "soon")
+    await user.upload(
+      document.querySelector("input[type=file]") as HTMLInputElement,
+      bootScreen(),
+    )
+    await user.click(screen.getByRole("button", { name: /fill specs/i }))
+    await user.click(screen.getByRole("button", { name: /rank it/i }))
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/43s or 1:12/)
+    expect(uploadFn).not.toHaveBeenCalled()
+  })
+
   it("refuses to submit without a boot screen", async () => {
     const user = userEvent.setup()
     render(<RankForm onSuccess={() => {}} />, { wrapper })

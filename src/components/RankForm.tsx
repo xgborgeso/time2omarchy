@@ -14,12 +14,14 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { signIn, signOut, useSession } from "@/lib/auth-client"
+import { errorText } from "@/lib/error-text"
 import type { Specs, StorageId } from "@/lib/specs"
 import { formatTime, isTimeInRange, parseTime } from "@/lib/time"
 import { useTRPC } from "@/lib/trpc"
 import type { RankSuccess } from "@/lib/types"
 import { uploadBootScreen } from "@/lib/upload"
 import { cn } from "@/lib/utils"
+import { timeError } from "@/lib/validation"
 import { ShareButton } from "./ShareButton"
 
 type Props = {
@@ -99,6 +101,13 @@ export function RankForm({ onSuccess }: Props) {
       setError("Add a boot screen")
       return
     }
+    // Checked here for the same reason as the specs below: the server would
+    // reject it anyway, but only after an upload has been paid for.
+    const badTime = timeError(time)
+    if (badTime) {
+      setError(badTime)
+      return
+    }
     if (!specs.cpuId || !specs.ramGb || !specs.storage) {
       // Checked before uploading: a missing spec should not cost a round trip.
       setError("Pick your CPU, memory and drive — every entry needs them.")
@@ -149,7 +158,7 @@ export function RankForm({ onSuccess }: Props) {
       onSuccess(result)
     } catch (err) {
       // Only transport failures reach here; domain outcomes come back as data.
-      setError(err instanceof Error ? err.message : "Ranking failed")
+      setError(errorText(err, "Ranking failed"))
     } finally {
       setBusy(false)
     }
