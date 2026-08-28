@@ -1,4 +1,5 @@
 import { BadgeCheck } from "lucide-react"
+import type * as React from "react"
 import { Skeleton } from "@/components/ui/skeleton"
 import { xUrl } from "@/lib/handle"
 import { formatSpecsShort } from "@/lib/specs"
@@ -12,12 +13,14 @@ type Props = {
   onOpen: (entry: BoardEntry) => void
   onClaim?: (entry: BoardEntry) => void
   /**
-   * An entry found by lookup, shown above the board.
+   * Entries matched by a search, shown above the board.
    *
-   * The board is capped at 100; past that this is the only way someone sees
-   * their own entry, and the only way they can claim it.
+   * Fifty to a page; past that this is the only way someone sees their own
+   * entry, and the only way they can claim it.
    */
-  found?: BoardEntry | null
+  found?: BoardEntry[]
+  /** A control belonging to the board, drawn inside its own frame. */
+  toolbar?: React.ReactNode
 }
 
 // minmax(0,1fr) rather than 1fr: a grid item defaults to min-width:auto,
@@ -32,7 +35,7 @@ const ROW =
  * five entries and a rule drawn after the tenth can land mid-tie. Only the
  * leader is marked, because that one is unambiguous.
  */
-export function Board({ entries, loading, onOpen, onClaim, found = null }: Props) {
+export function Board({ entries, loading, onOpen, onClaim, found = [], toolbar }: Props) {
   if (loading && entries.length === 0) {
     return (
       <div className="mt-6 flex flex-col gap-px">
@@ -44,10 +47,18 @@ export function Board({ entries, loading, onOpen, onClaim, found = null }: Props
     )
   }
 
-  if (entries.length === 0) return null
+  if (entries.length === 0 && found.length === 0) return null
 
   return (
     <section className="mt-12 flex flex-col border-t border-border sm:mt-16">
+      {/* Inside the frame, sharing the entries' own inset, so it lines up with
+          every column rather than floating above the board. */}
+      {toolbar ? (
+        <div className="flex justify-end border-b border-card px-3 py-3 sm:px-5">
+          {toolbar}
+        </div>
+      ) : null}
+
       <div
         className={`${ROW} border-b border-card px-3 py-2.5 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground sm:px-5`}
       >
@@ -57,14 +68,17 @@ export function Board({ entries, loading, onOpen, onClaim, found = null }: Props
         <span className="text-right">boot</span>
       </div>
 
-      {found ? (
+      {found.length > 0 ? (
         <div data-testid="found-entry">
-          <Entry
-            entry={found}
-            onOpen={onOpen}
-            onClaim={onClaim}
-            className="border-primary/40 bg-muted/30"
-          />
+          {found.map((entry) => (
+            <Entry
+              key={entry.handle}
+              entry={entry}
+              onOpen={onOpen}
+              onClaim={onClaim}
+              className="bg-muted/30"
+            />
+          ))}
         </div>
       ) : null}
 

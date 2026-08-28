@@ -2,7 +2,7 @@ import { z } from "zod"
 import { searchCpus } from "../../lib/cpus"
 import { specsSchema } from "../../lib/specs"
 import { handleSchema, timeSchema } from "../../lib/validation"
-import { findEntryByHandle, loadBoard, loadStats } from "../board"
+import { loadBoard, loadStats, searchEntries } from "../board"
 import { identityFrom } from "../identity"
 import { claimEntry, submitRank } from "../rank"
 import { Limiter } from "../ratelimit"
@@ -63,15 +63,17 @@ export const appRouter = router({
     .query(({ input }) => searchCpus(input.query)),
 
   /**
-   * One entry by handle, whatever its rank.
+   * Entries matching part of a handle, whatever page they are on.
    *
-   * The board is capped at 100. Past that, someone's own entry is invisible to
-   * them — and so is every way to claim it.
+   * Fifty to a page. Past that someone's own entry is invisible to them, and
+   * so is every way to claim it. Not `handleSchema`: a half-typed handle is
+   * not a valid one, and refusing it would break the search on every keystroke
+   * but the last.
    */
-  entry: publicProcedure
+  search: publicProcedure
     .use(throttled(readLimit, "Too many requests."))
-    .input(z.object({ handle: handleSchema }))
-    .query(({ input }) => findEntryByHandle(input.handle)),
+    .input(z.object({ query: z.string().max(32) }))
+    .query(({ input }) => searchEntries(input.query)),
 
   /** Records that someone is here. The write half of what board used to do. */
   visit: publicProcedure

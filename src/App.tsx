@@ -37,15 +37,20 @@ export function App() {
   )
   const claim = useMutation(trpc.claim.mutationOptions())
   const [open, setOpen] = useState<BoardEntry | null>(null)
-  /** A handle looked up because the board's top hundred does not contain it. */
+  /** A handle searched for, because this page may not be the one holding it. */
   const [lookup, setLookup] = useState("")
-  const searched = useDebounced(lookup.trim().replace(/^@+/, "").toLowerCase(), 300)
-  const shown = new Set((data?.entries ?? []).map((e) => e.handle))
-  const { data: found } = useQuery({
-    ...trpc.entry.queryOptions({ handle: searched }),
-    // Only worth asking for what the board is not already showing.
-    enabled: searched.length > 0 && !shown.has(searched),
+  // Debounced so a typed handle costs one query, not one per keystroke.
+  const searched = useDebounced(lookup.trim(), 300)
+  const { data: matches } = useQuery({
+    ...trpc.search.queryOptions({ query: searched }),
+    // The server ignores anything shorter; no reason to ask it twice.
+    enabled: searched.replace(/^@+/, "").length >= 2,
   })
+
+  const shown = new Set((data?.entries ?? []).map((e) => e.handle))
+  // Only what this page is not already showing: repeating an entry directly
+  // above itself reads as a duplicate rather than as a result.
+  const found = (matches ?? []).filter((entry) => !shown.has(entry.handle))
 
   const [view, setView] = useState<View>("board")
 
@@ -150,24 +155,21 @@ export function App() {
             <Hero counters={data?.counters} />
             <RankDialog onSuccess={onSuccess} />
 
-            {/* Fifty to a page. Past that, this is the only way someone
-                reaches their own entry — or claims it. Padded to match an
-                entry's own inset, so it lines up with the board's right edge. */}
-            <div className="mt-12 flex justify-end px-3 sm:mt-16 sm:px-5">
-              <Input
-                value={lookup}
-                onChange={(e) => setLookup(e.target.value)}
-                placeholder="Find a handle"
-                aria-label="Find an entry by handle"
-                className="h-9 w-full max-w-[14rem] text-sm"
-              />
-            </div>
             <Board
               entries={entries}
               loading={isLoading}
               onOpen={setOpen}
               onClaim={onClaim}
-              found={searched && !shown.has(searched) ? found : null}
+              found={found}
+              toolbar={
+                <Input
+                  value={lookup}
+                  onChange={(e) => setLookup(e.target.value)}
+                  placeholder="Find a handle"
+                  aria-label="Find an entry by handle"
+                  className="h-9 w-full max-w-[15rem] text-sm"
+                />
+              }
             />
             <BoardPager
               page={data?.page ?? 1}

@@ -14,7 +14,7 @@ const opened = openDatabase().then((o) => o.db)
 vi.mock("../src/server/db", () => ({ getDb: () => opened }))
 
 const { submitRank, claimEntry } = await import("../src/server/rank")
-const { findEntryByHandle, loadBoard } = await import("../src/server/board")
+const { findEntryByHandle, loadBoard, searchEntries } = await import("../src/server/board")
 
 const ADA = { key: "x:1665012345678901234", handle: "ada" }
 
@@ -294,5 +294,47 @@ describe("the number the hero puts on the homepage", () => {
     const board = await loadBoard(1)
 
     expect(board.counters.leaderCount).toBe(1)
+  })
+})
+
+describe("searching for a handle", () => {
+  it("matches part of a handle, not only the whole of it", async () => {
+    // Typed a character at a time, an exact-match lookup shows nothing until
+    // the very last keystroke — which reads exactly like a broken search.
+    await submitRank(input({ handle: "voidnomad", timeSeconds: 40 }))
+    await submitRank(input({ handle: "voidsmith", timeSeconds: 50 }))
+    await submitRank(input({ handle: "hyprfan", timeSeconds: 60 }))
+
+    const found = await searchEntries("void")
+
+    expect(found.map((e) => e.handle)).toEqual(["voidnomad", "voidsmith"])
+    expect(found[0]?.rank).toBe(1)
+  })
+
+  it("ignores case and a leading at sign, as people type them", async () => {
+    await submitRank(input({ handle: "voidnomad" }))
+    expect((await searchEntries("@VoidNo")).map((e) => e.handle)).toEqual(["voidnomad"])
+  })
+
+  it("treats wildcards as characters, not as pattern syntax", async () => {
+    // `%` and `_` are LIKE wildcards. Unescaped, "%" alone would return the
+    // whole board, and "_" would match any single character.
+    await submitRank(input({ handle: "voidnomad" }))
+
+    expect(await searchEntries("%")).toEqual([])
+    expect(await searchEntries("_oidnomad")).toEqual([])
+  })
+
+  it("asks for nothing on a query too short to narrow anything", async () => {
+    await submitRank(input({ handle: "voidnomad" }))
+    expect(await searchEntries("v")).toEqual([])
+    expect(await searchEntries("")).toEqual([])
+  })
+
+  it("caps what it returns, so a common fragment cannot pull the board", async () => {
+    for (let i = 0; i < 12; i++) {
+      await submitRank(input({ handle: `voidone${i}`, timeSeconds: 30 + i }))
+    }
+    expect((await searchEntries("void")).length).toBeLessThanOrEqual(5)
   })
 })

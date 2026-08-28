@@ -153,7 +153,7 @@ describe("an entry the board is not showing", () => {
         entries={TIED}
         loading={false}
         onOpen={() => {}}
-        found={entry({ handle: "faraway", rank: 4207, timeSeconds: 300 })}
+        found={[entry({ handle: "faraway", rank: 4207, timeSeconds: 300 })]}
       />,
     )
     const found = screen.getByTestId("found-entry")
@@ -175,7 +175,7 @@ describe("an entry the board is not showing", () => {
         loading={false}
         onOpen={() => {}}
         onClaim={onClaim}
-        found={entry({ handle: "faraway", rank: 4207 })}
+        found={[entry({ handle: "faraway", rank: 4207 })]}
       />,
     )
     await user.click(

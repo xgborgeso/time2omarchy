@@ -12,7 +12,7 @@ const MAX_AGE: Record<string, number> = {
   // A leaderboard ten seconds stale is indistinguishable from a live one, and
   // the client polls at exactly this interval anyway.
   board: 10,
-  entry: 10,
+  search: 10,
   stats: 30,
   // The catalogue is a constant in the source; it changes when we deploy.
   cpus: 3600,

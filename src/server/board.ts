@@ -236,3 +236,56 @@ export async function findEntryByHandle(handle: string): Promise<BoardEntry | nu
     updatedAt: toIso(row.updatedAt),
   }
 }
+
+/** Below this a fragment matches most of the board and narrows nothing. */
+const MIN_QUERY = 2
+
+/** Enough to recognise yours among them, few enough to sit above the board. */
+const MAX_MATCHES = 5
+
+/**
+ * Entries whose handle contains what was typed.
+ *
+ * A search, not a lookup: typed a character at a time, exact matching shows
+ * nothing until the final keystroke, which is indistinguishable from broken.
+ *
+ * `%` and `_` are LIKE wildcards, so they are escaped rather than passed
+ * through — unescaped, a single `%` would return the entire board.
+ */
+export async function searchEntries(query: string): Promise<BoardEntry[]> {
+  const needle = query.trim().replace(/^@+/, "").toLowerCase()
+  if (needle.length < MIN_QUERY) return []
+
+  const escaped = needle.replace(/[\\%_]/g, (char) => `\\${char}`)
+  const db = await getDb()
+  const rows = await db
+    .select()
+    .from(entries)
+    .where(sql`${entries.handle} LIKE ${`%${escaped}%`} ESCAPE '\\'`)
+    .orderBy(asc(entries.timeSeconds), desc(entries.verified), asc(entries.createdAt))
+    .limit(MAX_MATCHES)
+
+  // Ranked one at a time against the whole board: these rows are a filtered
+  // set, so their position among each other says nothing about their rank.
+  return Promise.all(
+    rows.map(async (row) => {
+      const faster = await db
+        .select({ n: sql<number>`count(distinct ${entries.timeSeconds})` })
+        .from(entries)
+        .where(lt(entries.timeSeconds, row.timeSeconds))
+
+      return {
+        rank: Number(faster[0]?.n ?? 0) + 1,
+        handle: row.handle,
+        timeSeconds: row.timeSeconds,
+        bootScreenUrl: row.bootScreenUrl,
+        verified: row.verified,
+        cpuId: row.cpuId,
+        ramGb: row.ramGb,
+        storage: row.storage,
+        createdAt: toIso(row.createdAt),
+        updatedAt: toIso(row.updatedAt),
+      }
+    }),
+  )
+}
