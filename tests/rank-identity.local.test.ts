@@ -166,7 +166,7 @@ describe("claiming an entry that is not yours", () => {
     // Explains itself without naming either account: the person knows which
     // entry they clicked, and the entry's owner is not theirs to be told.
     if (!result.ok) {
-      expect(result.error).toMatch(/different X account/i)
+      expect(result.error).toMatch(/doesn't belong to you/i)
       expect(result.error).not.toContain("@")
     }
     const ada = await entryFor("ada")

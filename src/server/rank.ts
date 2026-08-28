@@ -189,14 +189,15 @@ export async function claimEntry(
   /** The entry the person asked for. A request, never authority. */
   requested: string,
 ): Promise<{ ok: true; entry: BoardEntry } | RankFailure> {
-  // Checked before anything is looked up, so the answer names both sides
-  // rather than leaving someone staring at a button that did nothing.
+  // Checked before anything is looked up, so a refusal says something rather
+  // than leaving someone staring at a button that did nothing.
   if (identity.handle !== requested) {
     return {
       ok: false,
-      // Named accounts told each side who the other was for no benefit; the
-      // person already knows which entry they clicked.
-      error: "That entry belongs to a different X account.",
+      // Second person, and no accounts named: naming them told each side who
+      // the other was for no benefit, and the person already knows which
+      // entry they clicked.
+      error: "That entry doesn't belong to you.",
       field: "handle",
     }
   }
