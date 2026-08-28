@@ -49,72 +49,107 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  /* Omarchy's Tokyo Night, from /usr/share/omarchy/themes/tokyo-night/colors.toml.
+     Only shadcn's own token values change — no bespoke utilities, so every
+     component keeps using bg-background, text-primary, border-border. */
+  --background: #1a1b26;
+  --foreground: #c0caf5;
+  --card: #24283b;
+  --card-foreground: #c0caf5;
+  --popover: #13141c;
+  --popover-foreground: #c0caf5;
+
+  /* Omarchy's green is the site's emphasis colour: the times, the marks,
+     the primary action. The theme's own `accent` blue becomes the focus ring. */
+  --primary: #9ece6a;
+  --primary-foreground: #1a1b26;
+  --secondary: #24283b;
+  --secondary-foreground: #c0caf5;
+  --muted: #24283b;
+
+  /* The theme's dark_foreground (#565f89) is only 2.76:1 on this background,
+     which fails WCAG AA. Its regular foreground reaches 8.10:1. */
+  --muted-foreground: #a9b1d6;
+
+  /* accent is a hover surface in shadcn, not an emphasis colour — so it maps
+     to the theme's selection colour, which is exactly that. */
+  --accent: #292e42;
+  --accent-foreground: #c0caf5;
+  --destructive: #f7768e;
+
+  --border: #414868;
+  --input: #414868;
+  --ring: #7aa2f7;
+
+  --chart-1: #9ece6a;
+  --chart-2: #7aa2f7;
+  --chart-3: #ad8ee6;
+  --chart-4: #e0af68;
+  --chart-5: #449dab;
+
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+
+  --sidebar: #24283b;
+  --sidebar-foreground: #c0caf5;
+  --sidebar-primary: #9ece6a;
+  --sidebar-primary-foreground: #1a1b26;
+  --sidebar-accent: #292e42;
+  --sidebar-accent-foreground: #c0caf5;
+  --sidebar-border: #414868;
+  --sidebar-ring: #7aa2f7;
 }
 
+/* Dark-only product: identical to :root so shadcn's dark: variants
+   resolve correctly whether or not the class is present. */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* Omarchy's Tokyo Night, from /usr/share/omarchy/themes/tokyo-night/colors.toml.
+     Only shadcn's own token values change — no bespoke utilities, so every
+     component keeps using bg-background, text-primary, border-border. */
+  --background: #1a1b26;
+  --foreground: #c0caf5;
+  --card: #24283b;
+  --card-foreground: #c0caf5;
+  --popover: #13141c;
+  --popover-foreground: #c0caf5;
+
+  /* Omarchy's green is the site's emphasis colour: the times, the marks,
+     the primary action. The theme's own `accent` blue becomes the focus ring. */
+  --primary: #9ece6a;
+  --primary-foreground: #1a1b26;
+  --secondary: #24283b;
+  --secondary-foreground: #c0caf5;
+  --muted: #24283b;
+
+  /* The theme's dark_foreground (#565f89) is only 2.76:1 on this background,
+     which fails WCAG AA. Its regular foreground reaches 8.10:1. */
+  --muted-foreground: #a9b1d6;
+
+  /* accent is a hover surface in shadcn, not an emphasis colour — so it maps
+     to the theme's selection colour, which is exactly that. */
+  --accent: #292e42;
+  --accent-foreground: #c0caf5;
+  --destructive: #f7768e;
+
+  --border: #414868;
+  --input: #414868;
+  --ring: #7aa2f7;
+
+  --chart-1: #9ece6a;
+  --chart-2: #7aa2f7;
+  --chart-3: #ad8ee6;
+  --chart-4: #e0af68;
+  --chart-5: #449dab;
+
+  --radius: 0.625rem;
+
+  --sidebar: #24283b;
+  --sidebar-foreground: #c0caf5;
+  --sidebar-primary: #9ece6a;
+  --sidebar-primary-foreground: #1a1b26;
+  --sidebar-accent: #292e42;
+  --sidebar-accent-foreground: #c0caf5;
+  --sidebar-border: #414868;
+  --sidebar-ring: #7aa2f7;
 }
 
 @layer base {

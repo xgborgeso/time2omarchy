@@ -45,7 +45,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={cn("font-sans", inter.variable)}>
+    <html lang="en" className={cn("dark", "font-sans", inter.variable)}>
       <body>
         <Providers>{children}</Providers>
       </body>
