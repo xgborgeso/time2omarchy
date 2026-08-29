@@ -134,7 +134,7 @@ export function App() {
           <RulesPage />
         ) : (
           <>
-            <Hero counters={data?.counters} onStats={() => navigate("stats")} />
+            <Hero counters={data?.counters} onAnalytics={() => navigate("analytics")} />
             <RankDialog onSuccess={onSuccess} />
 
             {/* Flush with the board's own frame, not with an entry's inner

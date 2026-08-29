@@ -29,18 +29,18 @@ describe("LiveBadge", () => {
     expect(screen.queryByText(/13985/)).toBeNull()
   })
 
-  it("carries the board's own count beside the traffic", () => {
-    // The one place the two subjects are summarised together. The pages
-    // behind it keep them apart; a glance at the top wants the whole size.
+  it("says nothing about the board, which is a different subject", () => {
+    // The ranked count sat here once. It made the pill the one place the two
+    // were mixed, and the Stats page already carries it.
     render(<LiveBadge counters={counters} onNavigate={() => {}} />)
-    expect(screen.getByText(/120 ranked/)).toBeVisible()
+    expect(screen.queryByText(/ranked/i)).toBeNull()
   })
 
   it("goes where it says when pressed", async () => {
     const onNavigate = vi.fn()
     const user = userEvent.setup()
     render(<LiveBadge counters={counters} onNavigate={onNavigate} />)
-    await user.click(screen.getByRole("button", { name: /see stats/i }))
+    await user.click(screen.getByRole("button", { name: /see analytics/i }))
     expect(onNavigate).toHaveBeenCalled()
   })
 

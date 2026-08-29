@@ -5,16 +5,16 @@ import type { Counters } from "@/lib/types"
 
 type Props = {
   counters: Counters | undefined
-  onStats: () => void
+  onAnalytics: () => void
 }
 
-export function Hero({ counters, onStats }: Props) {
+export function Hero({ counters, onAnalytics }: Props) {
   const fastest = counters?.fastestSeconds ?? null
 
   return (
     <section>
       <div className="flex justify-center">
-        <LiveBadge counters={counters} onNavigate={onStats} />
+        <LiveBadge counters={counters} onNavigate={onAnalytics} />
       </div>
 
       <div className="mt-14 flex flex-col items-center gap-4 text-center sm:mt-16 sm:gap-5">

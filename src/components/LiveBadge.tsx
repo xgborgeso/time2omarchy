@@ -18,14 +18,13 @@ type Props = {
  * The dot pulses because the number is live; everything else here is cumulative
  * and still.
  *
- * This one line is the exception to keeping the board's own figures apart from
- * third-party traffic: it is a summary, and a reader glancing at it wants the
- * size of the thing, not the provenance of each number. The pages behind it
- * keep the two subjects separate.
+ * Traffic only. The ranked count sat here once and made the pill the single
+ * place the board's own figures were mixed with visitor numbers — which is the
+ * distinction the two pages exist to keep.
  */
 export function LiveBadge({ counters, onNavigate, className }: Props) {
   if (!counters) return null
-  const { online, visitors, entries } = counters
+  const { online, visitors } = counters
 
   return (
     <Badge
@@ -46,12 +45,6 @@ export function LiveBadge({ counters, onNavigate, className }: Props) {
         ·
       </span>
       <span className="text-muted-foreground tabular-nums">
-        {entries.toLocaleString("en-US")} ranked
-      </span>
-      <span aria-hidden="true" className="text-muted-foreground/50">
-        ·
-      </span>
-      <span className="text-muted-foreground tabular-nums">
         {visitors.toLocaleString("en-US")} {visitors === 1 ? "visitor" : "visitors"}
       </span>
       <span aria-hidden="true" className="text-muted-foreground/50">
@@ -64,7 +57,7 @@ export function LiveBadge({ counters, onNavigate, className }: Props) {
         onClick={onNavigate}
         className="font-medium text-foreground underline-offset-4 hover:underline"
       >
-        see stats →
+        see analytics →
       </button>
     </Badge>
   )
