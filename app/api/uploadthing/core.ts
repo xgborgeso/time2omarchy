@@ -7,7 +7,7 @@
  * who is allowed to upload at all.
  */
 import { createUploadthing, type FileRouter } from "uploadthing/next"
-import { UploadThingError } from "uploadthing/server"
+import { UploadThingError, UTFiles } from "uploadthing/server"
 import { MAX_BOOT_SCREEN_BYTES } from "@/lib/validation"
 import { identityFrom } from "@/server/identity"
 
@@ -26,11 +26,31 @@ export const fileRouter = {
      * Without it the storage bucket is an open drop box: uploading would cost
      * an anonymous caller nothing, and the bill would be ours.
      */
-    .middleware(async ({ req }) => {
+    .middleware(async ({ req, files }) => {
       const identity = await identityFrom(req.headers)
       if (!identity) throw new UploadThingError("Connect X before uploading.")
-      // Returned to onUploadComplete, and nowhere near the client.
-      return { identityKey: identity.key, handle: identity.handle }
+
+      return {
+        // Returned to onUploadComplete, and nowhere near the client.
+        identityKey: identity.key,
+        handle: identity.handle,
+        /**
+         * Renaming here rather than in the browser, which is where the name
+         * would otherwise be decided — and a name the client chooses is a
+         * name the client can lie about.
+         *
+         * Worth doing at all because the storage key is an opaque 48
+         * characters: without this every file in the dashboard is called
+         * `boot-screen.webp`, which is unreviewable the first time something
+         * is reported. The client re-encodes to WebP, so the extension is
+         * accurate — and UploadThing checks, refusing any file whose declared
+         * type disagrees with its bytes.
+         */
+        [UTFiles]: files.map((file) => ({
+          ...file,
+          name: `${identity.handle}.webp`,
+        })),
+      }
     })
     .onUploadComplete(({ metadata, file }) => {
       // The key is what deletes the file later, and UploadThing offers no way
