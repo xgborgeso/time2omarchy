@@ -16,19 +16,15 @@ export const NEW_CPU_ISSUE_URL = `${REPO_URL}/issues/new?template=add-cpu.yml&ti
 /**
  * The hosted analytics dashboard, when there is one.
  *
- * Empty until a provider is chosen — Datafast and Himetrica both publish a
- * public share url, which is all this needs. Read at build time, so it is a
- * plain string rather than a runtime lookup, and the Analytics page simply
- * shows nothing where the link would be until it is set.
+ * Empty in production until it is configured, so nothing links to a page that
+ * does not exist. In development it falls back to Datafast's own site: the
+ * dashboard has no url yet, and hiding the link until it does would mean the
+ * pill and the two nav entries could not be looked at at all while building
+ * them. Read at build time, so it is a plain string rather than a lookup.
  */
-export const ANALYTICS_URL = process.env.NEXT_PUBLIC_ANALYTICS_URL ?? ""
+const CONFIGURED = process.env.NEXT_PUBLIC_ANALYTICS_URL?.trim()
+export const ANALYTICS_URL =
+  CONFIGURED || (process.env.NODE_ENV === "development" ? "https://datafa.st" : "")
 
-/**
- * Datafast's site id, and the domain it reports under.
- *
- * Not a secret: it ships in the page for every visitor to read, so it is a
- * constant rather than an environment variable — one less thing a deploy can
- * be missing. The cookieless script is deliberate; see the note in `layout`.
- */
 export const DATAFAST_SITE_ID = "dfid_okBBZAhFhLC2mtjtSAfWo"
 export const DATAFAST_DOMAIN = "time2omarchy.com"

@@ -1,5 +1,5 @@
 import { xUrl } from "@/lib/handle"
-import { AUTHOR_HANDLE, OMARCHY_URL, REPO_URL } from "@/lib/links"
+import { ANALYTICS_URL, AUTHOR_HANDLE, OMARCHY_URL, REPO_URL } from "@/lib/links"
 import type { View } from "@/lib/view"
 
 type Props = {
@@ -29,6 +29,18 @@ export function Footer({ onNavigate }: Props) {
       >
         Stats
       </button>
+      {/* Beside the other two views it sits with, even though it leaves the
+          site. Absent until there is a dashboard to open. */}
+      {ANALYTICS_URL ? (
+        <a
+          href={ANALYTICS_URL}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex min-h-11 items-center hover:text-foreground"
+        >
+          Analytics ↗
+        </a>
+      ) : null}
       <button
         type="button"
         onClick={() => onNavigate("rules")}

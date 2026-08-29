@@ -9,11 +9,22 @@ type Props = {
   onNavigate: (view: View) => void
 }
 
-const NAV: Array<{ view: View; label: string }> = [
+/**
+ * The nav, in order.
+ *
+ * Analytics is a `href` rather than a `view` because the dashboard is hosted
+ * elsewhere — and it sits in this list rather than after it so its position
+ * beside Stats is data, not a render-order accident. Dropped entirely when
+ * there is no dashboard to open.
+ */
+const NAV: Array<{ view?: View; href?: string; label: string }> = [
   { view: "board", label: "Board" },
   { view: "stats", label: "Stats" },
+  ...(ANALYTICS_URL ? [{ href: ANALYTICS_URL, label: "Analytics" }] : []),
   { view: "rules", label: "Rules" },
 ]
+
+const ITEM = "inline-flex min-h-11 items-center hover:text-foreground"
 
 export function SiteHeader({ active, onNavigate }: Props) {
   return (
@@ -52,33 +63,27 @@ export function SiteHeader({ active, onNavigate }: Props) {
           <span className="text-lg font-bold tracking-tight sm:text-xl">time2</span>
           <OmarchyLogo width={64} className="text-primary" fill="currentColor" />
         </button>
-        <nav className="flex items-center gap-4 text-xs font-medium uppercase text-muted-foreground sm:gap-5">
-          {NAV.map(({ view, label }) => (
-            <button
-              key={view}
-              type="button"
-              onClick={() => onNavigate(view)}
-              className={cn(
-                "inline-flex min-h-11 items-center hover:text-foreground",
-                active === view && "text-foreground",
-              )}
-              aria-current={active === view ? "page" : undefined}
-            >
-              {label}
-            </button>
-          ))}
-          {/* Hosted elsewhere, so a link rather than a view — and absent
-              entirely until there is a dashboard to open. */}
-          {ANALYTICS_URL ? (
-            <a
-              href={ANALYTICS_URL}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex min-h-11 items-center hover:text-foreground"
-            >
-              Analytics ↗
-            </a>
-          ) : null}
+        {/* No `uppercase` here, though there was for a long time: Tailwind's
+            preflight resets text-transform on `button`, so it never reached
+            any of these and only shouted at the one item that is a link. */}
+        <nav className="flex items-center gap-4 font-medium text-muted-foreground text-xs sm:gap-5">
+          {NAV.map(({ view, href, label }) =>
+            href ? (
+              <a key={label} href={href} target="_blank" rel="noreferrer" className={ITEM}>
+                {label} ↗
+              </a>
+            ) : (
+              <button
+                key={label}
+                type="button"
+                onClick={() => view && onNavigate(view)}
+                className={cn(ITEM, active === view && "text-foreground")}
+                aria-current={active === view ? "page" : undefined}
+              >
+                {label}
+              </button>
+            ),
+          )}
         </nav>
       </div>
     </div>

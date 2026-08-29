@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react"
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 import { LiveBadge } from "@/components/LiveBadge"
 import type { Counters } from "@/lib/types"
 
@@ -49,5 +49,19 @@ describe("LiveBadge", () => {
   it("renders nothing before the counters have loaded", () => {
     const { container } = render(<LiveBadge counters={undefined} />)
     expect(container).toBeEmptyDOMElement()
+  })
+})
+
+describe("LiveBadge with a dashboard configured", () => {
+  it("links out to it, rather than to a page of our own", async () => {
+    vi.resetModules()
+    vi.doMock("@/lib/links", () => ({ ANALYTICS_URL: "https://datafa.st/share/x" }))
+    const { LiveBadge: Configured } = await import("@/components/LiveBadge")
+
+    render(<Configured counters={counters} />)
+    const link = screen.getByRole("link", { name: /see analytics/i })
+    expect(link).toHaveAttribute("href", "https://datafa.st/share/x")
+    // A new tab: the dashboard is somebody else's site, not a view of this one.
+    expect(link).toHaveAttribute("target", "_blank")
   })
 })
