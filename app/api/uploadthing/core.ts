@@ -18,7 +18,8 @@ const MAX_SIZE = `${MAX_BOOT_SCREEN_BYTES / (1024 * 1024)}MB` as const
 
 export const fileRouter = {
   bootScreen: f({
-    image: { maxFileSize: MAX_SIZE, maxFileCount: 1 },
+    // Two: the full boot screen and the thumbnail the board draws.
+    image: { maxFileSize: MAX_SIZE, maxFileCount: 2 },
   })
     /**
      * The same gate the rank mutation uses, applied before a byte is accepted.
@@ -48,15 +49,24 @@ export const fileRouter = {
          */
         [UTFiles]: files.map((file) => ({
           ...file,
-          name: `${identity.handle}.webp`,
+          // Distinct, or the pair is indistinguishable in the dashboard and in
+          // the upload result.
+          name: file.name.includes("thumb")
+            ? `${identity.handle}-thumb.webp`
+            : `${identity.handle}.webp`,
         })),
       }
     })
     .onUploadComplete(({ metadata, file }) => {
       // The key is what deletes the file later, and UploadThing offers no way
       // to derive one from a url — so it goes back to the client and is stored
-      // on the entry alongside the url.
-      return { key: file.key, url: file.ufsUrl, handle: metadata.handle }
+      // on the entry alongside the url. `thumb` says which of the pair this is.
+      return {
+        key: file.key,
+        url: file.ufsUrl,
+        thumb: file.name.includes("-thumb"),
+        handle: metadata.handle,
+      }
     }),
 } satisfies FileRouter
 

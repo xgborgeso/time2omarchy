@@ -135,6 +135,8 @@ export const appRouter = router({
           bootScreenUrl: z.string().min(1),
           // Flat, and short: it names one stored file and nothing else.
           bootScreenKey: z.string().min(1).max(256),
+          bootScreenThumbUrl: z.string().min(1),
+          bootScreenThumbKey: z.string().min(1).max(256),
         })
         .extend(specsSchema.shape),
     )
@@ -156,6 +158,8 @@ export const appRouter = router({
           timeSeconds: input.time,
           bootScreenUrl: input.bootScreenUrl,
           bootScreenKey: input.bootScreenKey,
+          bootScreenThumbUrl: input.bootScreenThumbUrl,
+          bootScreenThumbKey: input.bootScreenThumbKey,
           cpuId: input.cpuId,
           ramGb: input.ramGb,
           storage: input.storage,

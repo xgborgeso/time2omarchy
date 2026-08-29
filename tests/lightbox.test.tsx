@@ -9,6 +9,7 @@ const entry: BoardEntry = {
   handle: "ada",
   timeSeconds: 64,
   bootScreenUrl: "/uploads/ada.png",
+  bootScreenThumbUrl: null,
   cpuId: "intel-core-i7-13700k",
   ramGb: 32,
   storage: "nvme",

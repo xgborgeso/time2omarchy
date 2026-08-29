@@ -6,6 +6,8 @@ export type BoardEntry = {
   handle: string
   timeSeconds: number
   bootScreenUrl: string
+  /** The small copy the board draws. Null on rows that predate it. */
+  bootScreenThumbUrl: string | null
   /** Proven to belong to its handle, not merely typed. */
   /** Required hardware — every entry carries a machine. */
   cpuId: string

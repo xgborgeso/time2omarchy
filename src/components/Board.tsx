@@ -131,7 +131,10 @@ function Entry({ entry, onOpen, className }: EntryProps) {
       >
         {/* biome-ignore lint/performance/noImgElement: boot screens are remote user uploads; next/image needs images.remotePatterns for the host, and the upload pipeline moves to UploadThing next */}
         <img
-          src={entry.bootScreenUrl}
+          // The thumbnail, not the boot screen: fifty of these are on screen
+          // at once, and at 72×52 the full image is ~96% wasted bytes. Falls
+          // back for rows that predate it — the seeded ones.
+          src={entry.bootScreenThumbUrl ?? entry.bootScreenUrl}
           alt=""
           loading="lazy"
           width={72}

@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm"
+import { eq, or } from "drizzle-orm"
 import type { Identity } from "../lib/identity"
 import { decideEntry } from "../lib/ranking"
 import { keyMatchesUrl } from "../lib/storage-key"
@@ -14,6 +14,9 @@ export type RankInput = {
   bootScreenUrl: string
   /** The storage key behind it, which is what deletes it later. */
   bootScreenKey: string
+  /** The small copy the board draws, and its key. */
+  bootScreenThumbUrl: string
+  bootScreenThumbKey: string
   /** Required hardware, validated against the catalogue by the router. */
   cpuId: string
   ramGb: number
@@ -40,14 +43,16 @@ export type RankInput = {
  * to delete one an entry still points at means a submitted key can only ever
  * remove a file that nothing is using.
  */
-async function discardUnusedUpload(db: Db, key: string): Promise<void> {
-  const used = await db
-    .select({ id: entries.id })
-    .from(entries)
-    .where(eq(entries.bootScreenKey, key))
-    .limit(1)
-  if (used[0]) return
-  await deleteBootScreen(key)
+async function discardUnusedUpload(db: Db, ...keys: string[]): Promise<void> {
+  for (const key of keys) {
+    const used = await db
+      .select({ id: entries.id })
+      .from(entries)
+      .where(or(eq(entries.bootScreenKey, key), eq(entries.bootScreenThumbKey, key)))
+      .limit(1)
+    if (used[0]) continue
+    await deleteBootScreen(key)
+  }
 }
 
 /**
@@ -66,7 +71,14 @@ async function findEntry(db: Db, identityKey: string) {
 }
 
 export async function submitRank(input: RankInput): Promise<RankSuccess | RankFailure> {
-  const { timeSeconds, bootScreenUrl, bootScreenKey, identity } = input
+  const {
+    timeSeconds,
+    bootScreenUrl,
+    bootScreenKey,
+    bootScreenThumbUrl,
+    bootScreenThumbKey,
+    identity,
+  } = input
   const handle = identity.handle
   const specs = {
     cpuId: input.cpuId,
@@ -78,7 +90,11 @@ export async function submitRank(input: RankInput): Promise<RankSuccess | RankFa
   // host we upload to — otherwise the board would point every visitor at any
   // remote image someone cared to name — and the key must be the one inside
   // it, or a mismatch could later delete a file belonging to someone else.
-  if (!keyMatchesUrl(bootScreenKey, bootScreenUrl, publicUploadBase())) {
+  const base = publicUploadBase()
+  if (
+    !keyMatchesUrl(bootScreenKey, bootScreenUrl, base) ||
+    !keyMatchesUrl(bootScreenThumbKey, bootScreenThumbUrl, base)
+  ) {
     return { ok: false, error: "Upload the boot screen again.", field: "bootScreen" }
   }
 
@@ -94,7 +110,7 @@ export async function submitRank(input: RankInput): Promise<RankSuccess | RankFa
       .where(eq(entries.handle, handle))
       .limit(1)
     if (holder[0] && holder[0].id !== current?.id) {
-      await discardUnusedUpload(db, bootScreenKey)
+      await discardUnusedUpload(db, bootScreenKey, bootScreenThumbKey)
       return {
         ok: false,
         error: `@${handle} is already held by another entry.`,
@@ -110,7 +126,7 @@ export async function submitRank(input: RankInput): Promise<RankSuccess | RankFa
   if (decision === "keep" && current) {
     // The board keeps the faster time, so the screen just uploaded for this
     // one belongs to nothing.
-    await discardUnusedUpload(db, bootScreenKey)
+    await discardUnusedUpload(db, bootScreenKey, bootScreenThumbKey)
     const board = await loadBoard()
     const entry = board.entries.find((e) => e.handle === handle)
     return {
@@ -135,6 +151,8 @@ export async function submitRank(input: RankInput): Promise<RankSuccess | RankFa
         timeSeconds,
         bootScreenUrl,
         bootScreenKey,
+        bootScreenThumbUrl,
+        bootScreenThumbKey,
         identityKey: identity.key,
         ...specs,
         createdAt: now,
@@ -164,6 +182,8 @@ export async function submitRank(input: RankInput): Promise<RankSuccess | RankFa
       timeSeconds,
       bootScreenUrl,
       bootScreenKey,
+      bootScreenThumbUrl,
+      bootScreenThumbKey,
       ...specs,
       updatedAt: now,
     })
@@ -171,8 +191,12 @@ export async function submitRank(input: RankInput): Promise<RankSuccess | RankFa
     .returning()
   const row = updated[0]!
   // The previous object is now unreferenced, so drop it rather than leaking it.
+  // Both halves of the pair, or the thumbnail outlives the screen it shrinks.
   if (current.bootScreenKey && current.bootScreenKey !== bootScreenKey) {
     await deleteBootScreen(current.bootScreenKey)
+  }
+  if (current.bootScreenThumbKey && current.bootScreenThumbKey !== bootScreenThumbKey) {
+    await deleteBootScreen(current.bootScreenThumbKey)
   }
   const board = await loadBoard()
   const entry = board.entries.find((e) => e.handle === handle) ?? toEntry(row, board)
@@ -196,6 +220,7 @@ function toEntry(
     handle: row.handle,
     timeSeconds: row.timeSeconds,
     bootScreenUrl: row.bootScreenUrl,
+    bootScreenThumbUrl: row.bootScreenThumbUrl,
     cpuId: row.cpuId,
     ramGb: row.ramGb,
     storage: row.storage,

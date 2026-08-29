@@ -27,6 +27,15 @@ export const entries = pgTable(
      */
     bootScreenKey: text("boot_screen_key"),
     /**
+     * The small copy the board draws, and its key.
+     *
+     * Nullable: the seeded rows predate it, and the board falls back to the
+     * full image when it is missing. Everything ranked through the form has
+     * both.
+     */
+    bootScreenThumbUrl: text("boot_screen_thumb_url"),
+    bootScreenThumbKey: text("boot_screen_thumb_key"),
+    /**
      * Stable "source:id" identity, e.g. "x:123456".
      *
      * Not nullable: ranking goes through X, so every row has an account behind

@@ -80,6 +80,24 @@ function build(db: Awaited<ReturnType<typeof getDb>>) {
     baseURL: process.env.BETTER_AUTH_URL,
     // Nothing here signs in with a password; X is the only door.
     emailAndPassword: { enabled: false },
+    /**
+     * Ninety days, up from Better Auth's seven.
+     *
+     * Every expiry costs a metered `/2/users/me` call at a cent apiece — the
+     * only thing X charges this app for — so the session length is a bill, not
+     * just a convenience. Someone who ranks in January and comes back in March
+     * to beat their own time should not cost another authentication.
+     *
+     * The trade is a longer window on a borrowed machine. There is no signed-in
+     * state to see or sign out of, so the exposure is that the next person at
+     * that browser could rank as them; the entry itself cannot be taken.
+     */
+    session: {
+      expiresIn: 60 * 60 * 24 * 90,
+      // Refreshed a day at a time rather than on every request, so an active
+      // person's session keeps sliding without a write per page view.
+      updateAge: 60 * 60 * 24,
+    },
     user: { additionalFields: USER_FIELDS },
     databaseHooks: {
       user: { update: { before: refuseHandleChange } },

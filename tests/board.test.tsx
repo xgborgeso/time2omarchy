@@ -10,6 +10,7 @@ function entry(
   return {
     timeSeconds: 43,
     bootScreenUrl: "/uploads/x.png",
+    bootScreenThumbUrl: null,
     cpuId: "other",
     ramGb: 16,
     storage: "ssd",

@@ -150,9 +150,11 @@ export function RankForm({ onSuccess, className, onDone }: Props) {
         return
       }
 
-      const uploaded = await startUpload([clean.file])
-      const stored = uploaded?.[0]?.serverData
-      if (!stored) {
+      // Both at once, so one round trip carries the pair.
+      const uploaded = await startUpload([clean.files.full, clean.files.thumb])
+      const stored = uploaded?.find((f) => !f.serverData.thumb)?.serverData
+      const thumb = uploaded?.find((f) => f.serverData.thumb)?.serverData
+      if (!stored || !thumb) {
         setError({ message: "Could not upload that boot screen.", field: "bootScreen" })
         return
       }
@@ -161,6 +163,8 @@ export function RankForm({ onSuccess, className, onDone }: Props) {
         time,
         bootScreenUrl: stored.url,
         bootScreenKey: stored.key,
+        bootScreenThumbUrl: thumb.url,
+        bootScreenThumbKey: thumb.key,
         cpuId: specs.cpuId,
         ramGb: specs.ramGb,
         // The guard above proved these are set, and the select can only ever

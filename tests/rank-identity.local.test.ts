@@ -47,6 +47,8 @@ function input({ handle, bootScreenKey, ...over }: Over = {}) {
     timeSeconds: 43,
     bootScreenUrl: `/uploads/${key}`,
     bootScreenKey: key,
+    bootScreenThumbUrl: `/uploads/thumb-${key}`,
+    bootScreenThumbKey: `thumb-${key}`,
     cpuId: "amd-ryzen-7-9800x3d",
     ramGb: 32,
     storage: "nvme",
@@ -107,7 +109,8 @@ describe("ranking through X", () => {
     await submitRank(input({ identity: ADA, timeSeconds: 43, bootScreenKey: "kept" }))
     await submitRank(input({ identity: ADA, timeSeconds: 90, bootScreenKey: "slower" }))
 
-    expect(discarded).toEqual(["slower"])
+    // Both halves of the rejected pair, or the thumbnail outlives its screen.
+    expect(discarded).toEqual(["slower", "thumb-slower"])
     expect((await entryFor("ada"))?.bootScreenKey).toBe("kept")
   })
 

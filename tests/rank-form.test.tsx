@@ -74,11 +74,22 @@ beforeEach(() => {
   toastError.mockReset()
   rankFn.mockReset()
   uploadFn.mockReset()
+  // Two files now: the boot screen and the thumbnail the board draws.
   uploadFn.mockResolvedValue([
-    { serverData: { url: "https://app.ufs.sh/f/x-1.webp", key: "x-1.webp" } },
+    { serverData: { url: "https://app.ufs.sh/f/x-1.webp", key: "x-1.webp", thumb: false } },
+    {
+      serverData: {
+        url: "https://app.ufs.sh/f/x-1-thumb.webp",
+        key: "x-1-thumb.webp",
+        thumb: true,
+      },
+    },
   ])
   reencodeFn.mockReset()
-  reencodeFn.mockImplementation(async (file: File) => ({ ok: true, file }))
+  reencodeFn.mockImplementation(async (file: File) => ({
+    ok: true,
+    files: { full: file, thumb: file },
+  }))
 })
 
 describe("RankForm", () => {
@@ -130,12 +141,16 @@ describe("RankForm", () => {
     await waitFor(() => expect(rankFn).toHaveBeenCalled())
     // No handle in either call: the upload endpoint and the rank mutation
     // both take the name from the session rather than from this form.
-    expect(uploadFn).toHaveBeenCalledWith([expect.any(File)])
+    // The pair goes up in one call.
+    expect(uploadFn).toHaveBeenCalledWith([expect.any(File), expect.any(File)])
     expect(rankFn.mock.calls[0]?.[0]).toMatchObject({
       time: "43",
       bootScreenUrl: "https://app.ufs.sh/f/x-1.webp",
       // Stored beside the url, because UploadThing cannot derive one from it.
       bootScreenKey: "x-1.webp",
+      // The board draws this one; the lightbox opens the full image.
+      bootScreenThumbUrl: "https://app.ufs.sh/f/x-1-thumb.webp",
+      bootScreenThumbKey: "x-1-thumb.webp",
     })
     expect(rankFn.mock.calls[0]?.[0]).not.toHaveProperty("handle")
   })
