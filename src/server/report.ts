@@ -1,52 +1,46 @@
-import { BETTERSTACK_HOST, BETTERSTACK_TOKEN, IS_PRODUCTION } from "./env"
+import { IS_PRODUCTION } from "./env"
 
 /**
  * Where server-side errors go.
  *
- * Better Stack when it is configured, the console otherwise — which is what
- * development wants and what a deployment falls back to if the token is
- * missing. Every call site already awaits this, so the reporter is a change to
- * this file alone; that was the point of leaving it a stub.
+ * The platform log, and nothing else. On a deployment stderr *is* the logging
+ * interface — there is no other channel without an agent — so this is not a
+ * stray `console.error` but the one place the app speaks to it.
  *
- * Server-side only, deliberately. Every error worth waking up for lives here:
- * the metered X call refusing, the database unreachable, an upload failing.
- * A browser SDK would put weight in the bundle for errors nobody acts on.
+ * Every call site already awaits this, so a reporting service later is a
+ * change to this file alone. That is why it is a function at all rather than a
+ * `console.error` scattered through the codebase.
  */
 
-/** Never let reporting an error become an error. */
-async function send(body: Record<string, unknown>): Promise<void> {
-  if (!BETTERSTACK_TOKEN || !BETTERSTACK_HOST) return
-  try {
-    await fetch(`https://${BETTERSTACK_HOST}`, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        authorization: `Bearer ${BETTERSTACK_TOKEN}`,
-      },
-      body: JSON.stringify(body),
-      // A hung reporter must not hold a request open. Losing the report is
-      // the cheaper failure.
-      signal: AbortSignal.timeout(3000),
-    })
-  } catch {
-    // Deliberately silent: this is already the error path.
-  }
+/**
+ * Deliberately three fields.
+ *
+ * Passing the error object straight to the console prints everything it
+ * happens to carry, and a `DrizzleQueryError` carries `query` and `params` —
+ * the values somebody just submitted, written to a log that is awkward to
+ * redact after the fact. Naming the fields means adding one is a decision.
+ */
+type Report = {
+  level: "error"
+  name: string
+  message: string
+  stack?: string
 }
 
 export async function captureError(err: unknown): Promise<void> {
   const error = err instanceof Error ? err : new Error(String(err))
-
-  // Kept in production too. The platform log is the one place that still has
-  // it when the network to Better Stack is the thing that is broken.
-  console.error(error)
-
-  await send({
-    dt: new Date().toISOString(),
+  const report: Report = {
     level: "error",
+    name: error.name,
     message: error.message,
     stack: error.stack,
-    // Alert rules match on this rather than on free text.
-    app: "time2omarchy",
-    env: IS_PRODUCTION ? "production" : "development",
-  })
+  }
+
+  // One JSON line where something might parse it, and a readable stack where a
+  // person is watching. Same fields either way.
+  if (IS_PRODUCTION) {
+    console.error(JSON.stringify(report))
+    return
+  }
+  console.error(`[${report.name}] ${report.message}\n${report.stack ?? ""}`)
 }

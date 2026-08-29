@@ -91,19 +91,6 @@ const checks: Check[] = [
           "on Vercel, or cf-connecting-ip behind Cloudflare.",
   },
   {
-    label: "Better Stack",
-    // Not fatal: the app runs and logs to the platform. It just means nobody
-    // is told, and the failure this exists for is a silent one.
-    fatal: false,
-    problem: () =>
-      value("BETTERSTACK_SOURCE_TOKEN") && value("BETTERSTACK_INGEST_HOST")
-        ? null
-        : "Unset, so server errors reach the platform log and nothing else. " +
-          "The X account running out of credits stops every rank and is " +
-          "invisible without this. Needs BETTERSTACK_SOURCE_TOKEN and " +
-          "BETTERSTACK_INGEST_HOST.",
-  },
-  {
     label: "NEXT_PUBLIC_ANALYTICS_URL",
     fatal: false,
     problem: () =>
