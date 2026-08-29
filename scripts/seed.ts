@@ -155,6 +155,26 @@ function filler(): Entry[] {
 
 const ENTRIES: Entry[] = [...SAMPLE, ...filler()]
 
+/**
+ * Seeding is for a local board, and only a local board.
+ *
+ * A hundred and twenty invented handles in production is not a mistake that
+ * can be quietly undone: the entries carry uploads, the counters move, and the
+ * hero starts quoting a time nobody ran. `neon link` writes DATABASE_URL into
+ * `.env`, so this became one command away rather than something you had to
+ * mean.
+ */
+const remote = process.env.DATABASE_URL?.trim()
+if (remote && !/^postgres(ql)?:\/\/[^@]*@?(localhost|127\.0\.0\.1)/.test(remote)) {
+  const host = remote.replace(/^.*@/, "").replace(/\/.*$/, "")
+  console.error(
+    `\n✗ DATABASE_URL points at ${host}, which is not a local database.\n` +
+      "  Seeding invents 120 entries; that is not something to do to a real\n" +
+      "  board. Unset DATABASE_URL to seed the local PGlite file instead.\n",
+  )
+  process.exit(1)
+}
+
 const UPLOADS = path.resolve("public/uploads")
 
 const MONO = "/usr/share/fonts/TTF/JetBrainsMonoNerdFont-Regular.ttf"

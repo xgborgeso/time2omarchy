@@ -14,7 +14,9 @@
  */
 import { spawnSync } from "node:child_process"
 
-const url = process.env.DATABASE_URL?.trim()
+// Either is enough to prove this is aimed at a real database; drizzle.config
+// picks the unpooled one when it exists.
+const url = process.env.DATABASE_URL_UNPOOLED?.trim() || process.env.DATABASE_URL?.trim()
 
 if (!url) {
   console.error(
