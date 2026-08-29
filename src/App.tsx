@@ -14,6 +14,7 @@ import { RankDialog } from "@/components/RankDialog"
 import { RulesPage } from "@/components/RulesPage"
 import { SiteHeader } from "@/components/SiteHeader"
 import { StatsPage } from "@/components/stats/StatsPage"
+import { authErrorFrom } from "@/lib/auth-error"
 import { useTRPC } from "@/lib/trpc"
 import type { BoardEntry, RankSuccess } from "@/lib/types"
 import { useDebounced } from "@/lib/use-debounced"
@@ -59,6 +60,28 @@ export function App() {
   const searching = searched.replace(/^@+/, "").length >= 2
 
   const [view, setView] = useState<View>("board")
+
+  /**
+   * Says why the trip to X came back empty.
+   *
+   * Runs once, before anything else can navigate: the reason arrives as a
+   * query parameter and is dropped from the url straight after, so a reload
+   * does not repeat it.
+   */
+  useEffect(() => {
+    const failure = authErrorFrom(window.location.search)
+    if (!failure) return
+    const params = new URLSearchParams(window.location.search)
+    params.delete("error")
+    params.delete("error_description")
+    const query = params.toString()
+    window.history.replaceState(
+      null,
+      "",
+      window.location.pathname + (query ? `?${query}` : "") + window.location.hash,
+    )
+    toast.error(failure.message)
+  }, [])
 
   const applyHash = useCallback(() => {
     setView(viewFromHash(window.location.hash))
