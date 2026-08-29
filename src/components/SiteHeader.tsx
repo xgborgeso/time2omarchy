@@ -13,15 +13,14 @@ type Props = {
  * The nav, in order.
  *
  * Analytics is a `href` rather than a `view` because the dashboard is hosted
- * elsewhere — and it sits in this list rather than after it so its position
- * beside Stats is data, not a render-order accident. Dropped entirely when
- * there is no dashboard to open.
+ * elsewhere, and it comes last because it is the only entry that leaves the
+ * site. Dropped entirely when there is no dashboard to open.
  */
 const NAV: Array<{ view?: View; href?: string; label: string }> = [
   { view: "board", label: "Board" },
   { view: "stats", label: "Stats" },
-  ...(ANALYTICS_URL ? [{ href: ANALYTICS_URL, label: "Analytics" }] : []),
   { view: "rules", label: "Rules" },
+  ...(ANALYTICS_URL ? [{ href: ANALYTICS_URL, label: "Analytics" }] : []),
 ]
 
 const ITEM = "inline-flex min-h-11 items-center hover:text-foreground"

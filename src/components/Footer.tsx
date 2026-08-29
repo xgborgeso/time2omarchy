@@ -29,8 +29,15 @@ export function Footer({ onNavigate }: Props) {
       >
         Stats
       </button>
-      {/* Beside the other two views it sits with, even though it leaves the
-          site. Absent until there is a dashboard to open. */}
+      <button
+        type="button"
+        onClick={() => onNavigate("rules")}
+        className="inline-flex min-h-11 items-center hover:text-foreground"
+      >
+        Rules
+      </button>
+      {/* After Rules, matching the header. Absent until there is a dashboard
+          to open. */}
       {ANALYTICS_URL ? (
         <a
           href={ANALYTICS_URL}
@@ -41,13 +48,6 @@ export function Footer({ onNavigate }: Props) {
           Analytics ↗
         </a>
       ) : null}
-      <button
-        type="button"
-        onClick={() => onNavigate("rules")}
-        className="inline-flex min-h-11 items-center hover:text-foreground"
-      >
-        Rules
-      </button>
       <a
         href={REPO_URL}
         target="_blank"
