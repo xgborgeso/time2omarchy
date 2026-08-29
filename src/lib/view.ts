@@ -1,5 +1,5 @@
-/** The three top-level containers. Each is a hash away, so each is shareable. */
-const VIEWS = ["board", "stats", "rules"] as const
+/** The top-level containers. Each is a hash away, so each is shareable. */
+const VIEWS = ["board", "stats", "analytics", "rules"] as const
 
 export type View = (typeof VIEWS)[number]
 

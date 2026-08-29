@@ -5,7 +5,7 @@ import { bucketTimes, dailySeries } from "../lib/stats"
 import type { BoardEntry, BoardResponse, StatsResponse } from "../lib/types"
 import { getDb } from "./db"
 import { entries } from "./schema"
-import { rankedToday, readCounters, utcDay } from "./stats"
+import { rankedToday, readCounters, readTotals, utcDay } from "./stats"
 
 /** Days shown in the ranked trend. */
 const DAILY_DAYS = 14
@@ -32,7 +32,7 @@ export async function loadBoard(page = 1): Promise<BoardResponse> {
   const current = Math.max(1, Math.trunc(page) || 1)
   const offset = (current - 1) * PER_PAGE
 
-  const [rows, activityRows, total, counters, leader] = await Promise.all([
+  const [rows, activityRows, total, counters, totals, leader] = await Promise.all([
     db
       .select()
       .from(entries)
@@ -53,6 +53,7 @@ export async function loadBoard(page = 1): Promise<BoardResponse> {
       .limit(8),
     db.select({ n: count() }).from(entries).where(visible),
     readCounters(),
+    readTotals(),
     /**
      * The leader the hero quotes, over the whole board rather than this page.
      *
@@ -118,6 +119,8 @@ export async function loadBoard(page = 1): Promise<BoardResponse> {
       entries: total[0]?.n ?? ranked.length,
       visitorsToday: counters.visitorsToday,
       online: counters.online,
+      visitors: totals.visitors,
+      pageviews: totals.pageviews,
     },
   }
 }

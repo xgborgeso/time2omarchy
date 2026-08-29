@@ -98,6 +98,32 @@ export async function readCounters(): Promise<{
   }
 }
 
+/**
+ * Everything counted since the site opened, rather than today.
+ *
+ * A live figure alone is bad social proof: on a quiet hour "2 online" says the
+ * room is empty. Paired with a total that only ever climbs, the same number
+ * reads as activity instead.
+ *
+ * Distinct visitors, not rows: `visitor_days` holds one row per visitor per
+ * day, so counting rows would count a regular once a day forever.
+ */
+export async function readTotals(): Promise<{ visitors: number; pageviews: number }> {
+  const db = await getDb()
+  const [visitors, views] = await Promise.all([
+    db
+      .select({ n: sql<number>`count(distinct ${visitorDays.visitorId})` })
+      .from(visitorDays),
+    db.select({ n: sql<number>`coalesce(sum(${dailyStats.views}), 0)` }).from(dailyStats),
+  ])
+
+  return {
+    visitors: Number(visitors[0]?.n ?? 0),
+    // The batch still in memory, so the number does not lag its own page view.
+    pageviews: Number(views[0]?.n ?? 0) + pendingViews,
+  }
+}
+
 export async function rankedToday(): Promise<number> {
   const db = await getDb()
   const start = new Date(`${utcDay()}T00:00:00.000Z`)

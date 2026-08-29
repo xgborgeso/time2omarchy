@@ -29,6 +29,9 @@ export type Counters = {
   entries: number
   visitorsToday: number
   online: number
+  /** Since the site opened, not today. The badge pairs these with `online`. */
+  visitors: number
+  pageviews: number
 }
 
 export type BoardResponse = {

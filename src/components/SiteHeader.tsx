@@ -12,6 +12,7 @@ type Props = {
 const NAV: Array<{ view: View; label: string }> = [
   { view: "board", label: "Board" },
   { view: "stats", label: "Stats" },
+  { view: "analytics", label: "Analytics" },
   { view: "rules", label: "Rules" },
 ]
 
