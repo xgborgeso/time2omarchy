@@ -6,12 +6,12 @@ project, not affiliated with Omarchy or DHH.
 ## Getting started
 
 ```bash
-cp .env.example .env.local   # then fill it in
-pnpm bootstrap               # install dependencies, build the database, seed it
-pnpm dev                     # http://127.0.0.1:3000
+cp .env.example .env   # then fill it in
+pnpm bootstrap         # install dependencies, build the database, seed it
+pnpm dev               # http://127.0.0.1:3000
 ```
 
-`.env.example` is the only template, and `.env.local` the only file you edit.
+`.env.example` is the only template, and `.env` the only file you edit.
 The seeded board renders with nothing configured, but ranking needs X and
 UploadThing credentials — both go through third parties, in development too.
 
