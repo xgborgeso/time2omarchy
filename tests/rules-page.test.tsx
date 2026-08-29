@@ -7,7 +7,7 @@ describe("RulesPage", () => {
     // These were hand-rolled spans once and drifted out of alignment.
     render(<RulesPage />)
     expect(screen.getByRole("list")).toBeInTheDocument()
-    expect(screen.getAllByRole("listitem")).toHaveLength(7)
+    expect(screen.getAllByRole("listitem")).toHaveLength(6)
   })
 
   it("states the two rules the ranking code actually enforces", () => {

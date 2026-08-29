@@ -19,7 +19,7 @@ function entry(
   }
 }
 
-/** Mirrors what the server produces for a tie: shared rank, verified first. */
+/** Mirrors what the server produces for a tie: shared rank, oldest first. */
 const TIED: BoardEntry[] = [
   entry({ handle: "ada", rank: 1 }),
   entry({ handle: "grace", rank: 1 }),

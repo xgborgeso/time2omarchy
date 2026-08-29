@@ -23,15 +23,14 @@ export function RulesPage() {
             Ranking goes through X. Every entry has an account behind it, so a handle here
             is never just a name someone typed.
           </li>
-          <li className="pl-2">One entry per X account.</li>
-          <li className="pl-2">A boot screen is required, shown publicly as proof.</li>
           <li className="pl-2">
-            Times are self-reported. The boot screen is the only proof, and anyone can
-            report one that does not look right.
+            One entry per account. Only you can change your entry — beat your own time and
+            it replaces the old one.
           </li>
+          <li className="pl-2">A boot screen is required, and shown publicly.</li>
           <li className="pl-2">
-            Beat your own time whenever you like: only you can change your entry, and your
-            boot screen is replaced along with it.
+            Times are self-reported. The boot screen is the only check on that, and anyone
+            can report one that does not look right.
           </li>
         </ol>
       </section>

@@ -14,13 +14,15 @@ const run = promisify(execFile)
 
 /**
  * Deliberately contains ties, since second-granularity times collide often.
- * 43s and 64s are shared, so the board exercises competition ranking and the
- * verified-listed-first order rather than only the happy path.
+ * 43s and 64s are shared, so the board exercises dense ranking and the
+ * oldest-first tie-break rather than only the happy path.
  */
 type Specs = [cpuId: string, ramGb: number, storage: string]
 
 const SAMPLE: Array<
-  [handle: string, seconds: number, daysAgo: number, verified: boolean, specs: Specs]
+  // The fourth element is left over from when entries could be unverified;
+  // ranking goes through X now, so every seeded row gets an identity.
+  [handle: string, seconds: number, daysAgo: number, unused: boolean, specs: Specs]
 > = [
   ["ada", 43, 3, true, ["amd-ryzen-9-9950x", 64, "nvme"]],
   ["kernelpanic", 43, 0.2, false, ["intel-core-i9-14900k", 32, "nvme"]],

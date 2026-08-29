@@ -292,7 +292,7 @@ export function RankForm({ onSuccess, className }: Props) {
       </Button>
 
       <p className="mt-3 text-center text-xs text-muted-foreground">
-        Anyone can rank. Only a verified handle can post a faster time later.
+        Beat your own time whenever you like. Only you can change this entry.
       </p>
 
       {notice ? (
