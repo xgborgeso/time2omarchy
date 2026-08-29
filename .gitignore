@@ -22,8 +22,3 @@ public/uploads/*
 .agents/
 .claude/skills/
 skills-lock.json
-
-# Written by `next dev` only when an agent is driving it, never by a
-# normal `pnpm dev`. Ignored so a regenerated copy cannot dirty the tree.
-AGENTS.md
-CLAUDE.md
