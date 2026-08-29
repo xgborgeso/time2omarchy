@@ -16,6 +16,7 @@
     "dev": "next dev",
     "lint": "biome check",
     "lint:fix": "biome check --write",
+    "preflight": "tsx scripts/preflight.ts",
     "reports": "tsx scripts/reports.ts",
     "start": "next start",
     "takedown": "tsx scripts/takedown.ts",

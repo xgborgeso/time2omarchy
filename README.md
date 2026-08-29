@@ -47,6 +47,21 @@ the catalog, and the table comes back unreadable even to `SELECT`. There is no
 live holder first and refuses, so this is caught rather than suffered, but the
 rule is worth knowing.
 
+### Deploying
+
+```bash
+pnpm preflight   # against the environment you are about to deploy with
+```
+
+Checks every variable the app needs, and refuses the ones it would otherwise
+accept quietly — a `BETTER_AUTH_URL` still pointing at `127.0.0.1`, or object
+storage configured half way, which is treated the same as not at all. It also
+prints the three things it cannot verify from a laptop: the production callback
+registered on the X app, credits on the X developer account, and `db:migrate`
+run at deploy time rather than on boot.
+
+Ranking goes through X, so an X account without credits means nobody can rank.
+
 ### Moderation
 
 | | |
