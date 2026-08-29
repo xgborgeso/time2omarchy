@@ -48,4 +48,13 @@ describe("Footer order", () => {
     expect(positions).toEqual([...positions].sort((a, b) => a - b))
     expect(positions.every((p) => p >= 0)).toBe(true)
   })
+
+  it("says who built it, first, and links the handle to X", () => {
+    // The only line in the footer that names anyone answerable for the site,
+    // so it leads rather than trails the navigation.
+    render(<Footer onNavigate={() => {}} />)
+    const link = screen.getByRole("link", { name: "@xgborgeso" })
+    expect(link).toHaveAttribute("href", "https://x.com/xgborgeso")
+    expect(screen.getByText(/built by/i)).toBeVisible()
+  })
 })

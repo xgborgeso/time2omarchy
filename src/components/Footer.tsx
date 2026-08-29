@@ -9,6 +9,19 @@ type Props = {
 export function Footer({ onNavigate }: Props) {
   return (
     <footer className="mt-11 flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-card pt-5 pb-10 text-xs text-muted-foreground">
+      {/* First, because it is the only line here that says who is answerable
+          for the thing. Everything after it is navigation or disclaimer. */}
+      <span className="text-muted-foreground">
+        Built by{" "}
+        <a
+          href={xUrl(AUTHOR_HANDLE)}
+          target="_blank"
+          rel="noreferrer"
+          className="underline underline-offset-2 hover:text-foreground"
+        >
+          @{AUTHOR_HANDLE}
+        </a>
+      </span>
       <button
         type="button"
         onClick={() => onNavigate("stats")}
@@ -53,19 +66,6 @@ export function Footer({ onNavigate }: Props) {
           DHH
         </a>
         . This is a fan leaderboard.
-      </span>
-      {/* Last, and after the disclaimer: whose project this is matters less
-          than whose it is not. */}
-      <span className="text-muted-foreground">
-        Made by{" "}
-        <a
-          href={xUrl(AUTHOR_HANDLE)}
-          target="_blank"
-          rel="noreferrer"
-          className="underline underline-offset-2 hover:text-foreground"
-        >
-          @{AUTHOR_HANDLE}
-        </a>
       </span>
     </footer>
   )
