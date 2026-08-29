@@ -17,6 +17,15 @@ import { entries } from "../src/server/schema"
 const opened = openDatabase().then((o) => o.db)
 vi.mock("../src/server/db", () => ({ getDb: () => opened }))
 
+/** Keys handed to storage for deletion, so the leak is testable. */
+const discarded: string[] = []
+vi.mock("../src/server/storage", () => ({
+  publicUploadBase: () => null,
+  deleteBootScreen: async (key: string | null) => {
+    if (key) discarded.push(key)
+  },
+}))
+
 const { submitRank } = await import("../src/server/rank")
 const { findEntryByHandle, loadBoard, searchEntries } = await import("../src/server/board")
 
@@ -24,13 +33,20 @@ const ADA: Identity = { key: "x:1665012345678901234", handle: "ada" }
 
 type Over = Partial<Parameters<typeof submitRank>[0]> & { handle?: string }
 
-/** One account per handle unless a test says otherwise. */
-function input({ handle, ...over }: Over = {}) {
+/**
+ * One account per handle unless a test says otherwise.
+ *
+ * The url is derived from the key rather than set beside it: the server
+ * refuses a pair that disagrees, so hand-writing both is a way to write a test
+ * that fails for the wrong reason.
+ */
+function input({ handle, bootScreenKey, ...over }: Over = {}) {
   const who = handle ?? "ada"
+  const key = bootScreenKey ?? "ada-1.png"
   return {
     timeSeconds: 43,
-    bootScreenUrl: "/uploads/ada-1.png",
-    bootScreenKey: "ada-1.png",
+    bootScreenUrl: `/uploads/${key}`,
+    bootScreenKey: key,
     cpuId: "amd-ryzen-7-9800x3d",
     ramGb: 32,
     storage: "nvme",
@@ -41,6 +57,7 @@ function input({ handle, ...over }: Over = {}) {
 
 beforeEach(async () => {
   await (await opened).delete(entries)
+  discarded.length = 0
 })
 
 async function entryFor(handle: string) {
@@ -81,6 +98,32 @@ describe("ranking through X", () => {
 
     expect(result.ok).toBe(true)
     expect((await entryFor("ada"))?.timeSeconds).toBe(43)
+  })
+
+  it("throws away a boot screen the board did not take", async () => {
+    // Every rank uploads before it knows whether the time will stand, so a
+    // slower attempt leaves a file nothing points at. Two of those is two
+    // orphans on a storage tier measured in gigabytes.
+    await submitRank(input({ identity: ADA, timeSeconds: 43, bootScreenKey: "kept" }))
+    await submitRank(input({ identity: ADA, timeSeconds: 90, bootScreenKey: "slower" }))
+
+    expect(discarded).toEqual(["slower"])
+    expect((await entryFor("ada"))?.bootScreenKey).toBe("kept")
+  })
+
+  it("never deletes a key an entry still points at", async () => {
+    // Keys are public: every boot screen url on the board ends in one. A
+    // submitted key must not be able to remove somebody else's file.
+    await submitRank(input({ identity: ADA, timeSeconds: 43, bootScreenKey: "mine" }))
+    await submitRank(
+      input({
+        identity: { key: "x:bob", handle: "bob" },
+        timeSeconds: 99,
+        bootScreenKey: "mine",
+      }),
+    )
+
+    expect(discarded).not.toContain("mine")
   })
 
   it("follows a renamed account to its existing entry", async () => {

@@ -28,6 +28,29 @@ export type RankInput = {
 }
 
 /**
+ * Drops an upload that no entry ended up pointing at.
+ *
+ * Every rank uploads before it knows whether the board will take it — the file
+ * has to exist for its url to be submitted at all — so the paths that keep an
+ * existing entry leave a file behind that nothing references. Two slower
+ * attempts is two orphans, and the storage tier is measured in gigabytes.
+ *
+ * Guarded by a lookup rather than deleted outright: the key arrives from the
+ * client, and every key on the board is public in a boot screen url. Refusing
+ * to delete one an entry still points at means a submitted key can only ever
+ * remove a file that nothing is using.
+ */
+async function discardUnusedUpload(db: Db, key: string): Promise<void> {
+  const used = await db
+    .select({ id: entries.id })
+    .from(entries)
+    .where(eq(entries.bootScreenKey, key))
+    .limit(1)
+  if (used[0]) return
+  await deleteBootScreen(key)
+}
+
+/**
  * The entry this submission belongs to.
  *
  * By account id, not by name: an X handle can be changed, and the entry has to
@@ -71,6 +94,7 @@ export async function submitRank(input: RankInput): Promise<RankSuccess | RankFa
       .where(eq(entries.handle, handle))
       .limit(1)
     if (holder[0] && holder[0].id !== current?.id) {
+      await discardUnusedUpload(db, bootScreenKey)
       return {
         ok: false,
         error: `@${handle} is already held by another entry.`,
@@ -84,6 +108,9 @@ export async function submitRank(input: RankInput): Promise<RankSuccess | RankFa
   })
 
   if (decision === "keep" && current) {
+    // The board keeps the faster time, so the screen just uploaded for this
+    // one belongs to nothing.
+    await discardUnusedUpload(db, bootScreenKey)
     const board = await loadBoard()
     const entry = board.entries.find((e) => e.handle === handle)
     return {
