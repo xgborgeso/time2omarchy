@@ -21,7 +21,7 @@ import type { RankFailure, RankSuccess } from "@/lib/types"
 import { uploadBootScreen } from "@/lib/upload"
 import { cn } from "@/lib/utils"
 import { timeError } from "@/lib/validation"
-import { ShareButton } from "./ShareButton"
+import { RankResult } from "./RankResult"
 
 /**
  * A complaint and the field it is about.
@@ -53,9 +53,11 @@ type Props = {
   onSuccess: (result: RankSuccess) => void
   /** Replaces the card chrome, for when the form already sits inside one. */
   className?: string
+  /** Closes whatever is holding the form, once there is nothing left to do. */
+  onDone?: () => void
 }
 
-export function RankForm({ onSuccess, className }: Props) {
+export function RankForm({ onSuccess, className, onDone }: Props) {
   const trpc = useTRPC()
   const rank = useMutation(trpc.rank.mutationOptions())
   const timeId = useId()
@@ -68,7 +70,6 @@ export function RankForm({ onSuccess, className }: Props) {
   const [dragging, setDragging] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<FieldError | null>(null)
-  const [notice, setNotice] = useState<string | null>(null)
   const [placed, setPlaced] = useState<RankSuccess | null>(null)
   const [specs, setSpecs] = useState<Specs>({ cpuId: null, ramGb: null, storage: null })
 
@@ -106,7 +107,6 @@ export function RankForm({ onSuccess, className }: Props) {
   function takeFile(next: File | null) {
     setFile(next)
     setError(null)
-    setNotice(null)
   }
 
   function onDrop(e: DragEvent) {
@@ -136,7 +136,6 @@ export function RankForm({ onSuccess, className }: Props) {
     }
     setBusy(true)
     setError(null)
-    setNotice(null)
     setPlaced(null)
     try {
       // Storage first: ranking takes a url, not a file.
@@ -161,17 +160,6 @@ export function RankForm({ onSuccess, className }: Props) {
         return
       }
 
-      if (result.keptBest) {
-        setNotice(
-          `Your best is still ${formatTime(result.bestTimeSeconds)}. Beat it to replace.`,
-        )
-      } else if (result.created) {
-        setNotice(`You're on the board — ${formatTime(result.bestTimeSeconds)}`)
-      } else if (result.improved) {
-        setNotice(`New best — ${formatTime(result.bestTimeSeconds)}`)
-      } else {
-        setNotice(`Updated boot screen — ${formatTime(result.bestTimeSeconds)}`)
-      }
       setPlaced(result)
       setTime("")
       setFile(null)
@@ -182,6 +170,23 @@ export function RankForm({ onSuccess, className }: Props) {
     } finally {
       setBusy(false)
     }
+  }
+
+  if (placed) {
+    return (
+      <div
+        className={
+          className ??
+          "mx-auto mt-10 w-full max-w-[792px] rounded-lg border border-border bg-card p-4"
+        }
+      >
+        <RankResult
+          placed={placed}
+          onAgain={() => setPlaced(null)}
+          onClose={() => onDone?.()}
+        />
+      </div>
+    )
   }
 
   return (
@@ -294,25 +299,6 @@ export function RankForm({ onSuccess, className }: Props) {
       <p className="mt-3 text-center text-xs text-muted-foreground">
         Beat your own time whenever you like. Only you can change this entry.
       </p>
-
-      {notice ? (
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-          <p role="status" className="text-xs text-primary">
-            {notice}
-          </p>
-          {/* Always offered now: the entry was created through X, so the
-              account that posts the brag is the account the row names. */}
-          {placed ? (
-            <ShareButton
-              position={{
-                rank: placed.entry.rank,
-                timeSeconds: placed.entry.timeSeconds,
-                total: placed.board.counters.entries,
-              }}
-            />
-          ) : null}
-        </div>
-      ) : null}
     </form>
   )
 }

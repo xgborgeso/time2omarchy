@@ -38,6 +38,8 @@ export function RankDialog({ onSuccess }: Props) {
   const trpc = useTRPC()
   const [open, setOpen] = useState(false)
   const [going, setGoing] = useState(false)
+  /** Whether the form has been replaced by its result, which retitles this. */
+  const [placed, setPlaced] = useState(false)
   const { data: me, isLoading } = useQuery(trpc.me.queryOptions())
 
   /**
@@ -89,11 +91,23 @@ export function RankDialog({ onSuccess }: Props) {
         {going ? "Opening X…" : "Rank your install"}
       </Button>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog
+        open={open}
+        onOpenChange={(next) => {
+          setOpen(next)
+          // Reopening should offer the form again, not the last result.
+          if (!next) setPlaced(false)
+        }}
+      >
         <DialogContent className="sm:max-w-[720px]">
           <DialogHeader>
-            <DialogTitle>
-              Rank your install{me?.handle ? ` as @${me.handle}` : ""}
+            {/* Hidden once the result is showing: the card announces what
+                happened itself, and a heading still telling you to rank is
+                describing a form that is no longer there. */}
+            <DialogTitle className={placed ? "sr-only" : undefined}>
+              {placed
+                ? "Ranked"
+                : `Rank your install${me?.handle ? ` as @${me.handle}` : ""}`}
             </DialogTitle>
             {/* The form says the one thing worth saying, under its own button.
                 Repeating it here was the same sentence twice on one screen. */}
@@ -101,7 +115,14 @@ export function RankDialog({ onSuccess }: Props) {
               Your time, the machine it ran on, and the boot screen.
             </DialogDescription>
           </DialogHeader>
-          <RankForm onSuccess={onSuccess} className="w-full" />
+          <RankForm
+            className="w-full"
+            onSuccess={(result) => {
+              setPlaced(true)
+              onSuccess(result)
+            }}
+            onDone={() => setOpen(false)}
+          />
         </DialogContent>
       </Dialog>
     </div>

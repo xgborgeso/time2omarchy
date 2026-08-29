@@ -149,6 +149,81 @@ describe("RankForm", () => {
     expect(screen.queryByRole("button", { name: /verify @/i })).toBeNull()
   })
 
+  it("replaces the form with the result, so it cannot be submitted twice", async () => {
+    // The fields cleared themselves on success and the form stayed, which
+    // showed a finished action on top of an empty invalid one: press Rank it
+    // again out of reflex and "Add a time" appeared under "You're on the board".
+    rankFn.mockResolvedValue({
+      ok: true,
+      created: true,
+      improved: true,
+      keptBest: false,
+      bestTimeSeconds: 43,
+      entry: { rank: 12, timeSeconds: 43 },
+      board: { entries: [], counters: { entries: 121 } },
+    })
+    render(<RankForm onSuccess={() => {}} />, { wrapper })
+    await submit("43")
+
+    expect(await screen.findByText("You're on the board")).toBeVisible()
+    expect(screen.queryByLabelText(/^time$/i)).toBeNull()
+    expect(screen.queryByRole("button", { name: /rank it/i })).toBeNull()
+  })
+
+  it("names where the entry landed, not only how fast it was", async () => {
+    rankFn.mockResolvedValue({
+      ok: true,
+      created: true,
+      improved: true,
+      keptBest: false,
+      bestTimeSeconds: 43,
+      entry: { rank: 12, timeSeconds: 43 },
+      board: { entries: [], counters: { entries: 1210 } },
+    })
+    render(<RankForm onSuccess={() => {}} />, { wrapper })
+    await submit("43")
+
+    // Grouped, because the size of the field is the point of quoting it.
+    expect(await screen.findByText("#12 of 1,210")).toBeVisible()
+  })
+
+  it("brings the form back when someone wants another go", async () => {
+    rankFn.mockResolvedValue({
+      ok: true,
+      created: true,
+      improved: true,
+      keptBest: false,
+      bestTimeSeconds: 43,
+      entry: { rank: 12, timeSeconds: 43 },
+      board: { entries: [], counters: { entries: 121 } },
+    })
+    render(<RankForm onSuccess={() => {}} />, { wrapper })
+    const user = await submit("43")
+
+    await user.click(await screen.findByRole("button", { name: /beat it again/i }))
+
+    // Empty, not carrying the last attempt: this is a new run.
+    expect(screen.getByLabelText(/^time$/i)).toHaveValue("")
+  })
+
+  it("closes what is holding it when there is nothing left to do", async () => {
+    const onDone = vi.fn()
+    rankFn.mockResolvedValue({
+      ok: true,
+      created: true,
+      improved: true,
+      keptBest: false,
+      bestTimeSeconds: 43,
+      entry: { rank: 12, timeSeconds: 43 },
+      board: { entries: [], counters: { entries: 121 } },
+    })
+    render(<RankForm onSuccess={() => {}} onDone={onDone} />, { wrapper })
+    const user = await submit("43")
+
+    await user.click(await screen.findByRole("button", { name: /see the board/i }))
+    expect(onDone).toHaveBeenCalled()
+  })
+
   it("offers the share on the entry it just put on the board", async () => {
     // Every entry went through X, so the account that posts the brag is the
     // account the row names. There is nothing left to prove first.
