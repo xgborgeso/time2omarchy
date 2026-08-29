@@ -11,9 +11,10 @@ pnpm bootstrap         # install dependencies, build the database, seed it
 pnpm dev               # http://127.0.0.1:3000
 ```
 
-`.env.example` is the only template, and `.env` the only file you edit.
-The seeded board renders with nothing configured, but ranking needs X and
-UploadThing credentials — both go through third parties, in development too.
+`.env.example` holds exactly what local development needs and nothing else, so
+a filled-in copy runs. The seeded board renders without any of it; ranking does
+not, because X and UploadThing are both third parties in development too.
+Production variables live only in the deployment — `pnpm preflight` names them.
 
 Use `127.0.0.1`, not `localhost`. X refuses to register a `localhost` OAuth
 callback, so the auth origin is the loopback address and signing in from
