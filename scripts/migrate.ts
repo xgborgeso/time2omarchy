@@ -21,12 +21,12 @@ if (!url) {
     "Refusing to migrate: DATABASE_URL is not set, so this would open the\n" +
       "local PGlite directory as a second writer and corrupt it.\n\n" +
       "Locally, migrations apply themselves when the dev server starts:\n" +
-      "  npm run db:generate   # write the migration\n" +
-      "  restart `npm run dev` # applies it\n\n" +
+      "  pnpm db:generate   # write the migration\n" +
+      "  restart `pnpm dev` # applies it\n\n" +
       "For a real database, set DATABASE_URL and run this again.",
   )
   process.exit(1)
 }
 
-const result = spawnSync("drizzle-kit", ["migrate"], { stdio: "inherit", shell: true })
+const result = spawnSync("drizzle-kit", ["migrate"], { stdio: "inherit" })
 process.exit(result.status ?? 1)

@@ -9,6 +9,7 @@ import path from "node:path"
 import { PGlite } from "@electric-sql/pglite"
 import { drizzle, type PgliteDatabase } from "drizzle-orm/pglite"
 import { migrate } from "drizzle-orm/pglite/migrator"
+import { assertDatabaseFree, releaseLock, takeLock } from "./db-lock"
 import * as schema from "./schema"
 
 const MIGRATIONS_DIR = path.resolve("drizzle")
@@ -25,13 +26,19 @@ export type Opened = {
  * what tests want: no file, no lock, nothing to clean up.
  */
 export async function openDatabase(dataDir?: string): Promise<Opened> {
+  // Checked before the directory is touched: opening it second is what does
+  // the damage, and by the time PGlite reports anything it is already done.
+  if (dataDir) assertDatabaseFree(dataDir, "opening it again")
   const client = dataDir ? new PGlite(dataDir) : new PGlite()
   await client.waitReady
 
   const db = drizzle(client, { schema })
   await migrate(db, { migrationsFolder: MIGRATIONS_DIR })
 
-  if (dataDir) closeOnShutdown(client)
+  if (dataDir) {
+    takeLock(dataDir)
+    closeOnShutdown(client, dataDir)
+  }
 
   return { client, db }
 }
@@ -48,13 +55,14 @@ export async function openDatabase(dataDir?: string): Promise<Opened> {
  * In-memory databases are exempt: tests have nothing to persist, and adding a
  * listener per test file would leak them.
  */
-function closeOnShutdown(client: PGlite): void {
+function closeOnShutdown(client: PGlite, dataDir: string): void {
   let closing = false
   const close = async (signal: NodeJS.Signals) => {
     if (closing) return
     closing = true
     // Best effort: if the runtime kills us first, the next open pays for it.
     await client.close().catch(() => {})
+    releaseLock(dataDir)
     process.kill(process.pid, signal)
   }
 
