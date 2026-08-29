@@ -17,16 +17,23 @@ type Props = {
  *
  * The dot pulses because the number is live; everything else here is cumulative
  * and still.
+ *
+ * This one line is the exception to keeping the board's own figures apart from
+ * third-party traffic: it is a summary, and a reader glancing at it wants the
+ * size of the thing, not the provenance of each number. The pages behind it
+ * keep the two subjects separate.
  */
 export function LiveBadge({ counters, onNavigate, className }: Props) {
   if (!counters) return null
-  const { online, visitors } = counters
+  const { online, visitors, entries } = counters
 
   return (
     <Badge
       variant="outline"
       className={cn(
-        "gap-2 rounded-full border-border bg-card px-3 py-1.5 font-normal text-[11px] sm:text-xs",
+        // Wraps rather than truncates: on a narrow phone this is two lines,
+        // and dropping a number would be worse than using the space.
+        "flex-wrap justify-center gap-x-2 gap-y-1 rounded-full border-border bg-card px-3 py-1.5 font-normal text-[11px] sm:text-xs",
         className,
       )}
     >
@@ -35,6 +42,12 @@ export function LiveBadge({ counters, onNavigate, className }: Props) {
         <span className="relative inline-flex size-1.5 rounded-full bg-primary" />
       </span>
       <span className="font-medium text-primary tabular-nums">{online} online</span>
+      <span aria-hidden="true" className="text-muted-foreground/50">
+        ·
+      </span>
+      <span className="text-muted-foreground tabular-nums">
+        {entries.toLocaleString("en-US")} ranked
+      </span>
       <span aria-hidden="true" className="text-muted-foreground/50">
         ·
       </span>
@@ -51,7 +64,7 @@ export function LiveBadge({ counters, onNavigate, className }: Props) {
         onClick={onNavigate}
         className="font-medium text-foreground underline-offset-4 hover:underline"
       >
-        see analytics →
+        see stats →
       </button>
     </Badge>
   )

@@ -81,7 +81,10 @@ export function StatsPage() {
         </div>
       ) : null}
 
-      <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      {/* Three, not four: the Online tile counted visitors, which is traffic
+          rather than the board. That lives on Analytics, and showing it in
+          both places made two tabs look like one subject. */}
+      <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-3">
         <StatTile
           label="Ranked"
           value={data.entries.toLocaleString()}
@@ -98,16 +101,6 @@ export function StatsPage() {
           note={
             data.meanSeconds != null ? `mean ${formatTime(data.meanSeconds)}` : undefined
           }
-        />
-        <StatTile
-          label="Online"
-          value={
-            <span className="inline-flex items-center gap-2.5">
-              <span className="size-2 rounded-full bg-primary" />
-              {data.online}
-            </span>
-          }
-          note={`${data.visitorsToday} ${data.visitorsToday === 1 ? "visitor" : "visitors"} today`}
         />
       </div>
 

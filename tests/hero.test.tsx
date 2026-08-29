@@ -11,13 +11,15 @@ function counters(over: Partial<Counters> = {}): Counters {
     entries: 8,
     visitorsToday: 3,
     online: 2,
+    visitors: 1_200,
+    pageviews: 3_400,
     ...over,
   }
 }
 
 describe("Hero", () => {
   it("leads with the time to beat", () => {
-    render(<Hero counters={counters()} />)
+    render(<Hero counters={counters()} onStats={() => {}} />)
     expect(screen.getByText("BEAT")).toBeInTheDocument()
     expect(screen.getByText("43s")).toBeInTheDocument()
   })
@@ -48,7 +50,7 @@ describe("Hero", () => {
   })
 
   it("survives having no counters at all, as on first paint", () => {
-    render(<Hero counters={undefined} />)
+    render(<Hero counters={undefined} onStats={() => {}} />)
     expect(screen.getByText("BE")).toBeInTheDocument()
   })
 })

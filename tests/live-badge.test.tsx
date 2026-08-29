@@ -29,18 +29,18 @@ describe("LiveBadge", () => {
     expect(screen.queryByText(/13985/)).toBeNull()
   })
 
-  it("says analytics, not stats, because this site has both", () => {
-    // The wording is borrowed from sites with one stats page. Here it would
-    // name the wrong tab.
+  it("carries the board's own count beside the traffic", () => {
+    // The one place the two subjects are summarised together. The pages
+    // behind it keep them apart; a glance at the top wants the whole size.
     render(<LiveBadge counters={counters} onNavigate={() => {}} />)
-    expect(screen.getByRole("button", { name: /see analytics/i })).toBeVisible()
+    expect(screen.getByText(/120 ranked/)).toBeVisible()
   })
 
-  it("goes to analytics when pressed", async () => {
+  it("goes where it says when pressed", async () => {
     const onNavigate = vi.fn()
     const user = userEvent.setup()
     render(<LiveBadge counters={counters} onNavigate={onNavigate} />)
-    await user.click(screen.getByRole("button", { name: /see analytics/i }))
+    await user.click(screen.getByRole("button", { name: /see stats/i }))
     expect(onNavigate).toHaveBeenCalled()
   })
 

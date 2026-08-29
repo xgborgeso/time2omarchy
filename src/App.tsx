@@ -11,7 +11,6 @@ import { BoardSearch } from "@/components/BoardSearch"
 import { Footer } from "@/components/Footer"
 import { Hero } from "@/components/Hero"
 import { Lightbox } from "@/components/Lightbox"
-import { LiveBadge } from "@/components/LiveBadge"
 import { RankDialog } from "@/components/RankDialog"
 import { RulesPage } from "@/components/RulesPage"
 import { SiteHeader } from "@/components/SiteHeader"
@@ -135,7 +134,7 @@ export function App() {
           <RulesPage />
         ) : (
           <>
-            <Hero counters={data?.counters} />
+            <Hero counters={data?.counters} onStats={() => navigate("stats")} />
             <RankDialog onSuccess={onSuccess} />
 
             {/* Flush with the board's own frame, not with an entry's inner
@@ -182,13 +181,6 @@ export function App() {
           </>
         )}
       </main>
-
-      {/* Bottom rather than top: the hero already carries a pill, and two
-          stacked read as chrome. Every view shows it, because the point of a
-          number that only climbs is that it is always there. */}
-      <div className="mt-12 flex justify-center">
-        <LiveBadge counters={data?.counters} onNavigate={() => navigate("analytics")} />
-      </div>
 
       <Footer onNavigate={navigate} />
 

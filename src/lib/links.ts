@@ -1,6 +1,9 @@
 /** Omarchy's official site. Linked wherever the project is named. */
 export const OMARCHY_URL = "https://omarchy.org"
 
+/** Whose project this is. Named in the footer, and nowhere else. */
+export const AUTHOR_HANDLE = "xgborgeso"
+
 /** This project's source. One constant, so a rename cannot half-apply. */
 export const REPO_URL = "https://github.com/xgborgeso/time2omarchy"
 

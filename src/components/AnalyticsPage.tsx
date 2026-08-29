@@ -50,7 +50,9 @@ export function AnalyticsPage() {
         </p>
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      {/* Traffic only. The ranked count belongs to the board, and repeating
+          it here is what made these two pages read as one. */}
+      <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-3">
         <StatTile
           label="Visitors"
           value={counters.visitors.toLocaleString("en-US")}
@@ -67,7 +69,6 @@ export function AnalyticsPage() {
           }
           accent
         />
-        <StatTile label="Ranked" value={counters.entries.toLocaleString("en-US")} />
       </div>
 
       {/* Only once there is somewhere to send people. An empty "coming soon"

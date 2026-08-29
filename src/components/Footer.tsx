@@ -1,5 +1,5 @@
 import { xUrl } from "@/lib/handle"
-import { OMARCHY_URL, REPO_URL } from "@/lib/links"
+import { AUTHOR_HANDLE, OMARCHY_URL, REPO_URL } from "@/lib/links"
 import type { View } from "@/lib/view"
 
 type Props = {
@@ -53,6 +53,19 @@ export function Footer({ onNavigate }: Props) {
           DHH
         </a>
         . This is a fan leaderboard.
+      </span>
+      {/* Last, and after the disclaimer: whose project this is matters less
+          than whose it is not. */}
+      <span className="text-muted-foreground">
+        Made by{" "}
+        <a
+          href={xUrl(AUTHOR_HANDLE)}
+          target="_blank"
+          rel="noreferrer"
+          className="underline underline-offset-2 hover:text-foreground"
+        >
+          @{AUTHOR_HANDLE}
+        </a>
       </span>
     </footer>
   )
