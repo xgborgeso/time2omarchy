@@ -1,5 +1,4 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "pnpm db:migrate && pnpm build",
-  "regions": ["iad1"]
+  "buildCommand": "pnpm db:migrate && pnpm build"
 }
