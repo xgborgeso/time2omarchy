@@ -2,6 +2,7 @@ import { fetchRequestHandler } from "@trpc/server/adapters/fetch"
 import { cacheHeaders } from "@/lib/cache-control"
 import { clientKeyFrom } from "@/lib/ratelimit"
 import { TRUSTED_IP_HEADER } from "@/server/env"
+import { captureError } from "@/server/report"
 import type { Context } from "@/server/trpc/init"
 import { appRouter } from "@/server/trpc/router"
 
@@ -19,6 +20,12 @@ function handler(req: Request): Promise<Response> {
       resHeaders,
       secure: new URL(req.url).protocol === "https:",
     }),
+    // The browser is told only that something went wrong — see `formatError`.
+    // The cause still has to reach the platform log, or a failure nobody can
+    // see is also a failure nobody can fix.
+    onError: ({ error }) => {
+      void captureError(error)
+    },
     // The reads are the same for everyone, and every open tab asks for the
     // board every ten seconds. Without this the origin answers all of them.
     responseMeta: ({ paths, type, errors }) => ({

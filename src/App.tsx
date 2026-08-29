@@ -14,7 +14,7 @@ import { RankDialog } from "@/components/RankDialog"
 import { RulesPage } from "@/components/RulesPage"
 import { SiteHeader } from "@/components/SiteHeader"
 import { StatsPage } from "@/components/stats/StatsPage"
-import { authErrorFrom } from "@/lib/auth-error"
+import { consumeAuthError } from "@/lib/auth-error"
 import { useTRPC } from "@/lib/trpc"
 import type { BoardEntry, RankSuccess } from "@/lib/types"
 import { useDebounced } from "@/lib/use-debounced"
@@ -69,20 +69,8 @@ export function App() {
    * does not repeat it.
    */
   useEffect(() => {
-    const failure = authErrorFrom(window.location.search)
-    if (!failure) return
-    const params = new URLSearchParams(window.location.search)
-    params.delete("error")
-    params.delete("error_description")
-    const query = params.toString()
-    window.history.replaceState(
-      null,
-      "",
-      window.location.pathname + (query ? `?${query}` : "") + window.location.hash,
-    )
-    // The code is for whoever has to fix it; the sentence is for the person.
-    console.error(`[auth] sign-in failed: ${failure.code}`)
-    toast.error(failure.message)
+    const failure = consumeAuthError()
+    if (failure) toast.error(failure)
   }, [])
 
   const applyHash = useCallback(() => {
