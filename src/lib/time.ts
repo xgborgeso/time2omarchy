@@ -1,5 +1,23 @@
-export const MIN_SECONDS = 15
-export const MAX_SECONDS = 900
+/**
+ * A floor against nonsense, not against being fast.
+ *
+ * The hero quotes the fastest time on the board, so a 0s or 1s entry becomes
+ * the headline the moment it lands and the whole site reads as broken until
+ * someone reports it. Below five seconds nothing has installed — that is a
+ * typo or a joke, and it is the one case worth refusing outright.
+ */
+export const MIN_SECONDS = 5
+
+/**
+ * A sanity bound, not a rule.
+ *
+ * This was fifteen minutes, which excluded real installs: a spinning disk on
+ * slow wifi genuinely runs longer, and those are exactly the entries the
+ * hardware benchmark needs — refusing them biased every median toward fast
+ * machines and made "by drive" look better than it is. A day is far past
+ * anything real and still catches a mistyped 999999.
+ */
+export const MAX_SECONDS = 24 * 60 * 60
 
 /**
  * Parse flexible install-time strings into integer seconds.

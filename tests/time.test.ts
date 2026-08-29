@@ -61,11 +61,19 @@ describe("formatTime", () => {
 })
 
 describe("range", () => {
-  it("accepts the spec window", () => {
+  it("accepts anything that could have been an install", () => {
     expect(isTimeInRange(MIN_SECONDS)).toBe(true)
     expect(isTimeInRange(MAX_SECONDS)).toBe(true)
-    expect(isTimeInRange(14)).toBe(false)
-    expect(isTimeInRange(901)).toBe(false)
+    // A slow install is still an install: twenty minutes on a spinning disk
+    // is exactly the entry the hardware benchmark exists to show.
+    expect(isTimeInRange(20 * 60)).toBe(true)
+    expect(isTimeInRange(90 * 60)).toBe(true)
+  })
+
+  it("refuses only what cannot have been one", () => {
+    expect(isTimeInRange(4)).toBe(false)
+    expect(isTimeInRange(MAX_SECONDS + 1)).toBe(false)
+    expect(isTimeInRange(43.5)).toBe(false)
   })
 })
 

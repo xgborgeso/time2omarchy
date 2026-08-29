@@ -1,6 +1,6 @@
 import { z } from "zod"
 import { isValidHandle, normalizeHandle } from "./handle"
-import { isTimeInRange, parseTime } from "./time"
+import { MAX_SECONDS, MIN_SECONDS, parseTime } from "./time"
 
 export const MAX_BOOT_SCREEN_BYTES = 4 * 1024 * 1024
 const ALLOWED_IMAGE_TYPES = [
@@ -31,11 +31,24 @@ export const timeSchema = z
       })
       return z.NEVER
     }
-    if (!isTimeInRange(seconds)) {
+    // Named separately, because the two ends mean different things: one is
+    // "that cannot have been an install", the other is "you mistyped".
+    if (seconds < MIN_SECONDS) {
       ctx.addIssue({
         code: "custom",
-        message: "Time must be between 15s and 15:00",
+        message: "That is faster than a boot. Check the time.",
       })
+      return z.NEVER
+    }
+    if (seconds > MAX_SECONDS) {
+      ctx.addIssue({
+        code: "custom",
+        message: "That is longer than a day. Check the time.",
+      })
+      return z.NEVER
+    }
+    if (!Number.isInteger(seconds)) {
+      ctx.addIssue({ code: "custom", message: "Whole seconds only." })
       return z.NEVER
     }
     return seconds

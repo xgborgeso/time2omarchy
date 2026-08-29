@@ -30,10 +30,12 @@ describe("time schema", () => {
     expect(timeSchema.parse("43s")).toBe(43)
   })
 
-  it("rejects out of range and unparseable", () => {
-    expect(timeSchema.safeParse("5s").success).toBe(false)
-    expect(timeSchema.safeParse("20:00").success).toBe(false)
+  it("rejects only what cannot have been an install", () => {
+    expect(timeSchema.safeParse("2s").success).toBe(false)
     expect(timeSchema.safeParse("nope").success).toBe(false)
+    // Slow is allowed. The board wants the tail as much as the head.
+    expect(timeSchema.safeParse("20:00").success).toBe(true)
+    expect(timeSchema.safeParse("1:30:00").success).toBe(true)
   })
 })
 
@@ -67,8 +69,14 @@ describe("timeError", () => {
   })
 
   it("gives the range when the time is outside it", () => {
-    expect(timeError("2s")).toMatch(/15s and 15:00/)
-    expect(timeError("30:00")).toMatch(/15s and 15:00/)
+    // The floor exists because the hero quotes the fastest time: a 1s entry
+    // would hold the headline until somebody reported it.
+    expect(timeError("2s")).toMatch(/faster than a boot/i)
+    // ...but a slow install is a real install. Twenty minutes on a spinning
+    // disk is the kind of entry the hardware benchmark exists to show.
+    expect(timeError("20:00")).toBeNull()
+    expect(timeError("1:30:00")).toBeNull()
+    expect(timeError("48:00:00")).toMatch(/longer than a day/i)
   })
 
   it("returns nothing for a time that would be accepted", () => {

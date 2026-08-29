@@ -100,7 +100,7 @@ describe("YourRank", () => {
 
   it("ignores a time outside the accepted range", async () => {
     render(<YourRank stats={stats()} />)
-    await userEvent.type(screen.getByLabelText(/your time/i), "9999")
+    await userEvent.type(screen.getByLabelText(/your time/i), "999999")
     expect(screen.queryByText(/faster than/i)).toBeNull()
   })
 })
