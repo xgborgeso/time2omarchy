@@ -9,6 +9,7 @@
   "scripts": {
     "bootstrap": "tsx scripts/bootstrap.ts",
     "build": "next build",
+    "db:dump": "tsx scripts/db-dump.ts",
     "db:fresh": "pnpm db:reset && pnpm db:seed",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/migrate.ts",
