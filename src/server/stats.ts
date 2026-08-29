@@ -108,20 +108,15 @@ export async function readCounters(): Promise<{
  * Distinct visitors, not rows: `visitor_days` holds one row per visitor per
  * day, so counting rows would count a regular once a day forever.
  */
-export async function readTotals(): Promise<{ visitors: number; pageviews: number }> {
+export async function readTotals(): Promise<{ visitors: number }> {
   const db = await getDb()
-  const [visitors, views] = await Promise.all([
+  const [visitors] = await Promise.all([
     db
       .select({ n: sql<number>`count(distinct ${visitorDays.visitorId})` })
       .from(visitorDays),
-    db.select({ n: sql<number>`coalesce(sum(${dailyStats.views}), 0)` }).from(dailyStats),
   ])
 
-  return {
-    visitors: Number(visitors[0]?.n ?? 0),
-    // The batch still in memory, so the number does not lag its own page view.
-    pageviews: Number(views[0]?.n ?? 0) + pendingViews,
-  }
+  return { visitors: Number(visitors[0]?.n ?? 0) }
 }
 
 export async function rankedToday(): Promise<number> {

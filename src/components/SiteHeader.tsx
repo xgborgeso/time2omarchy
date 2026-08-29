@@ -1,5 +1,5 @@
 import { xUrl } from "@/lib/handle"
-import { OMARCHY_URL } from "@/lib/links"
+import { ANALYTICS_URL, OMARCHY_URL } from "@/lib/links"
 import { cn } from "@/lib/utils"
 import type { View } from "@/lib/view"
 import { OmarchyLogo } from "./OmarchyLogo"
@@ -12,7 +12,6 @@ type Props = {
 const NAV: Array<{ view: View; label: string }> = [
   { view: "board", label: "Board" },
   { view: "stats", label: "Stats" },
-  { view: "analytics", label: "Analytics" },
   { view: "rules", label: "Rules" },
 ]
 
@@ -68,6 +67,18 @@ export function SiteHeader({ active, onNavigate }: Props) {
               {label}
             </button>
           ))}
+          {/* Hosted elsewhere, so a link rather than a view — and absent
+              entirely until there is a dashboard to open. */}
+          {ANALYTICS_URL ? (
+            <a
+              href={ANALYTICS_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex min-h-11 items-center hover:text-foreground"
+            >
+              Analytics ↗
+            </a>
+          ) : null}
         </nav>
       </div>
     </div>

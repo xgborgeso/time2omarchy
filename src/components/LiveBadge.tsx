@@ -1,10 +1,10 @@
 import { Badge } from "@/components/ui/badge"
+import { ANALYTICS_URL } from "@/lib/links"
 import type { Counters } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
 type Props = {
   counters: Counters | undefined
-  onNavigate: () => void
   className?: string
 }
 
@@ -22,7 +22,7 @@ type Props = {
  * place the board's own figures were mixed with visitor numbers — which is the
  * distinction the two pages exist to keep.
  */
-export function LiveBadge({ counters, onNavigate, className }: Props) {
+export function LiveBadge({ counters, className }: Props) {
   if (!counters) return null
   const { online, visitors } = counters
 
@@ -47,18 +47,24 @@ export function LiveBadge({ counters, onNavigate, className }: Props) {
       <span className="text-muted-foreground tabular-nums">
         {visitors.toLocaleString("en-US")} {visitors === 1 ? "visitor" : "visitors"}
       </span>
-      <span aria-hidden="true" className="text-muted-foreground/50">
-        ·
-      </span>
-      {/* A button, not a link: the views are hash-routed in one page, and an
-          anchor here would be a second way to navigate that behaves differently. */}
-      <button
-        type="button"
-        onClick={onNavigate}
-        className="font-medium text-foreground underline-offset-4 hover:underline"
-      >
-        see analytics →
-      </button>
+      {/* Only once there is somewhere to go. The dashboard is hosted, so this
+          is a link out rather than a route — there is no analytics page here,
+          and an empty one would be worse than none. */}
+      {ANALYTICS_URL ? (
+        <>
+          <span aria-hidden="true" className="text-muted-foreground/50">
+            ·
+          </span>
+          <a
+            href={ANALYTICS_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="font-medium text-foreground underline-offset-4 hover:underline"
+          >
+            see analytics ↗
+          </a>
+        </>
+      ) : null}
     </Badge>
   )
 }

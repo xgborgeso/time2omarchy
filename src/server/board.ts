@@ -120,7 +120,6 @@ export async function loadBoard(page = 1): Promise<BoardResponse> {
       visitorsToday: counters.visitorsToday,
       online: counters.online,
       visitors: totals.visitors,
-      pageviews: totals.pageviews,
     },
   }
 }

@@ -3,18 +3,13 @@ import { heroSubline } from "@/lib/hero"
 import { formatTime } from "@/lib/time"
 import type { Counters } from "@/lib/types"
 
-type Props = {
-  counters: Counters | undefined
-  onAnalytics: () => void
-}
-
-export function Hero({ counters, onAnalytics }: Props) {
+export function Hero({ counters }: { counters: Counters | undefined }) {
   const fastest = counters?.fastestSeconds ?? null
 
   return (
     <section>
       <div className="flex justify-center">
-        <LiveBadge counters={counters} onNavigate={onAnalytics} />
+        <LiveBadge counters={counters} />
       </div>
 
       <div className="mt-14 flex flex-col items-center gap-4 text-center sm:mt-16 sm:gap-5">

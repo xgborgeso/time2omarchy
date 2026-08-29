@@ -4,7 +4,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 import { Activity } from "@/components/Activity"
-import { AnalyticsPage } from "@/components/AnalyticsPage"
 import { Board } from "@/components/Board"
 import { BoardPager } from "@/components/BoardPager"
 import { BoardSearch } from "@/components/BoardSearch"
@@ -126,15 +125,13 @@ export function App() {
       <SiteHeader active={view} onNavigate={navigate} />
 
       <main className="flex-1">
-        {view === "analytics" ? (
-          <AnalyticsPage />
-        ) : view === "stats" ? (
+        {view === "stats" ? (
           <StatsPage />
         ) : view === "rules" ? (
           <RulesPage />
         ) : (
           <>
-            <Hero counters={data?.counters} onAnalytics={() => navigate("analytics")} />
+            <Hero counters={data?.counters} />
             <RankDialog onSuccess={onSuccess} />
 
             {/* Flush with the board's own frame, not with an entry's inner
