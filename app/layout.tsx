@@ -67,11 +67,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
           `afterInteractive` rather than `beforeInteractive`: nothing on the
           page waits for this, and an analytics script that blocks first paint
-          is measuring a page it made slower.
+          is measuring a page it made slower. No `defer` alongside it — the
+          element is injected after load, and defer does nothing on a script
+          added that way.
         */}
         {TRACKING ? (
           <Script
-            defer
             strategy="afterInteractive"
             src="https://datafa.st/js/script.cookieless.js"
             data-website-id={DATAFAST_SITE_ID}
