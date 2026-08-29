@@ -22,3 +22,13 @@ export const NEW_CPU_ISSUE_URL = `${REPO_URL}/issues/new?template=add-cpu.yml&ti
  * shows nothing where the link would be until it is set.
  */
 export const ANALYTICS_URL = process.env.NEXT_PUBLIC_ANALYTICS_URL ?? ""
+
+/**
+ * Datafast's site id, and the domain it reports under.
+ *
+ * Not a secret: it ships in the page for every visitor to read, so it is a
+ * constant rather than an environment variable — one less thing a deploy can
+ * be missing. The cookieless script is deliberate; see the note in `layout`.
+ */
+export const DATAFAST_SITE_ID = "dfid_okBBZAhFhLC2mtjtSAfWo"
+export const DATAFAST_DOMAIN = "time2omarchy.com"

@@ -1,8 +1,20 @@
 import type { Metadata, Viewport } from "next"
 import "@/index.css"
 import { Inter } from "next/font/google"
+import Script from "next/script"
+import { DATAFAST_DOMAIN, DATAFAST_SITE_ID } from "@/lib/links"
 import { cn } from "@/lib/utils"
 import { Providers } from "./providers"
+
+/**
+ * Development traffic is not traffic.
+ *
+ * A dev server hitting the same site id would put every hot reload in the
+ * dashboard. Note this is also true of a local `next start`, which sets
+ * NODE_ENV to production — deliberate, since that build is what gets deployed
+ * and gating on anything more specific means a flag that can be wrong.
+ */
+const TRACKING = process.env.NODE_ENV === "production"
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
 
@@ -48,6 +60,24 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" className={cn("dark", "font-sans", inter.variable)}>
       <body>
         <Providers>{children}</Providers>
+        {/*
+          The cookieless build, on purpose. It costs multi-day journeys and
+          returning-visitor breakdowns, which this site has no use for, and in
+          exchange no consent banner is needed to run it.
+
+          `afterInteractive` rather than `beforeInteractive`: nothing on the
+          page waits for this, and an analytics script that blocks first paint
+          is measuring a page it made slower.
+        */}
+        {TRACKING ? (
+          <Script
+            defer
+            strategy="afterInteractive"
+            src="https://datafa.st/js/script.cookieless.js"
+            data-website-id={DATAFAST_SITE_ID}
+            data-domain={DATAFAST_DOMAIN}
+          />
+        ) : null}
       </body>
     </html>
   )
