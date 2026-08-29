@@ -55,6 +55,11 @@ rule is worth knowing.
 
 ### Deploying
 
+Vercel, with `vercel.json` setting the build command so migrations run before
+the build — a failed migration fails the deploy rather than shipping a schema
+the code does not match. `engines.node` pins the runtime to 24.x, the newest
+Vercel offers.
+
 ```bash
 pnpm preflight   # against the environment you are about to deploy with
 ```

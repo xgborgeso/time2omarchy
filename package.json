@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Fastest verified Omarchy installs leaderboard",
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "bootstrap": "tsx scripts/bootstrap.ts",
     "build": "next build",
@@ -66,5 +68,6 @@
     "typescript": "^7.0.2",
     "vitest": "^3.2.4"
   },
+  "description": "Fastest verified Omarchy installs leaderboard",
   "packageManager": "pnpm@12.0.0"
 }
