@@ -80,6 +80,8 @@ export function App() {
       "",
       window.location.pathname + (query ? `?${query}` : "") + window.location.hash,
     )
+    // The code is for whoever has to fix it; the sentence is for the person.
+    console.error(`[auth] sign-in failed: ${failure.code}`)
     toast.error(failure.message)
   }, [])
 

@@ -6,31 +6,26 @@
  * approved on X, landed back on the board, and saw nothing at all — which
  * reads as a broken button rather than a failure with a cause.
  *
- * Its own module so the wording is testable without a browser.
+ * One sentence, whatever the cause. The codes are real and distinguishable —
+ * `unable_to_get_user_info` when X refuses the profile lookup, the `state_*`
+ * family when a sign-in sat too long, `access_denied` when it was declined —
+ * but each phrasing is a guess about what someone was doing, and a wrong guess
+ * is worse than a plain sentence. Any of them mean the same thing to the
+ * person: it did not work, and nothing was ranked.
+ *
+ * The specific code still reaches the server logs through `captureError`, so
+ * nothing is lost for whoever has to fix it.
  */
 
-/** Codes worth translating. Anything else falls back to a plain sentence. */
-const KNOWN: Record<string, string> = {
-  access_denied: "You cancelled that on X. Nothing was ranked.",
-  invalid_origin: "The sign-in came back to an address X does not trust.",
-}
+const MESSAGE = "Could not finish signing in with X. Try again in a moment."
 
-export type AuthError = { message: string } | null
+export type AuthError = { message: string; code: string } | null
 
 export function authErrorFrom(search: string): AuthError {
   const params = new URLSearchParams(search)
   const code = params.get("error")
   if (!code) return null
 
-  const known = KNOWN[code]
-  if (known) return { message: known }
-
-  // The description is X's or Better Auth's own words. Preferred over the
-  // code, which is written for logs rather than for people.
-  const described = params.get("error_description")?.trim()
-  return {
-    message: described
-      ? `Could not finish signing in with X: ${described}`
-      : "Could not finish signing in with X. Try again in a moment.",
-  }
+  // Carried for the caller to log, never for the toast.
+  return { message: MESSAGE, code }
 }

@@ -7,28 +7,33 @@ describe("authErrorFrom", () => {
     expect(authErrorFrom("")).toBeNull()
   })
 
-  it("prefers the provider's own words to its error code", () => {
-    // The code is written for logs. The description is written for people.
+  it("says the same sentence whatever went wrong", () => {
+    // Every one of these is a real Better Auth or X code. Each phrasing would
+    // be a guess about what somebody was doing, and they all mean the same
+    // thing to them: it did not work, and nothing was ranked.
+    const codes = [
+      "unable_to_get_user_info",
+      "state_mismatch",
+      "access_denied",
+      "signup_disabled",
+      "MISSING_FIELD",
+    ]
+    const said = new Set(codes.map((c) => authErrorFrom(`?error=${c}`)?.message))
+    expect(said.size).toBe(1)
+    expect([...said][0]).toMatch(/could not finish signing in with x/i)
+  })
+
+  it("keeps the code for whoever has to fix it", () => {
+    // The one the credits case produces: getUserInfo returns null when the
+    // profile lookup is refused, and this is what Better Auth redirects with.
+    expect(authErrorFrom("?error=unable_to_get_user_info")?.code).toBe(
+      "unable_to_get_user_info",
+    )
+  })
+
+  it("never puts a provider's wording in front of anyone", () => {
+    // "handle is required" is written for a developer reading a stack trace.
     const error = authErrorFrom("?error=MISSING_FIELD&error_description=handle+is+required")
-    expect(error?.message).toMatch(/handle is required/)
-    expect(error?.message).not.toMatch(/MISSING_FIELD/)
-  })
-
-  it("still explains itself when there is no description", () => {
-    expect(authErrorFrom("?error=server_error")?.message).toMatch(/could not finish/i)
-  })
-
-  it("does not call a cancellation an error", () => {
-    // Backing out on X is a decision, not a fault, and saying "failed" to
-    // someone who chose to stop reads as a bug.
-    expect(authErrorFrom("?error=access_denied")?.message).toMatch(/cancelled/i)
-  })
-
-  it("never leaves someone guessing what happened", () => {
-    // The case this exists for: credits exhausted, so the callback fails at
-    // the last step. Whatever the code says, something has to be said.
-    for (const q of ["?error=402", "?error=unknown_thing", "?error=x"]) {
-      expect(authErrorFrom(q)?.message).toBeTruthy()
-    }
+    expect(error?.message).not.toMatch(/handle is required/)
   })
 })
