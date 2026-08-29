@@ -9,8 +9,8 @@ import { betterAuth } from "better-auth"
 import { drizzleAdapter } from "better-auth/adapters/drizzle"
 import { userFromXProfile, type XProfile } from "../lib/identity"
 import { getDb } from "./db"
+import { captureError } from "./report"
 import * as schema from "./schema"
-import { captureError } from "./sentry"
 
 /**
  * Extra columns on Better Auth's own `user` table.

@@ -19,6 +19,16 @@ export const TRUSTED_IP_HEADER = process.env.TRUSTED_IP_HEADER?.trim() || null
 export const IS_PRODUCTION = process.env.NODE_ENV === "production"
 
 /**
+ * Where server errors are reported, and the host that takes them.
+ *
+ * Both come from one Better Stack source; unset, `captureError` writes to the
+ * console and nothing leaves the machine. The host is source-specific rather
+ * than a fixed endpoint, so it is configuration rather than a constant.
+ */
+export const BETTERSTACK_TOKEN = process.env.BETTERSTACK_SOURCE_TOKEN?.trim() || null
+export const BETTERSTACK_HOST = process.env.BETTERSTACK_INGEST_HOST?.trim() || null
+
+/**
  * Where boot screens are stored.
  *
  * Uploads go from the browser straight to UploadThing, so this app never holds
