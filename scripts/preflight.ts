@@ -29,14 +29,8 @@ function required(name: string, why: string): Check {
   }
 }
 
-/** The five that travel together: four of them is the same as none. */
-const OBJECT_STORE = [
-  "S3_ENDPOINT",
-  "S3_BUCKET",
-  "S3_ACCESS_KEY_ID",
-  "S3_SECRET_ACCESS_KEY",
-  "PUBLIC_UPLOAD_BASE",
-]
+/** Both, or neither: a token with no host cannot produce a usable url. */
+const OBJECT_STORE = ["UPLOADTHING_TOKEN", "PUBLIC_UPLOAD_BASE"]
 
 const checks: Check[] = [
   required(
@@ -70,16 +64,15 @@ const checks: Check[] = [
     },
   },
   {
-    label: "Object storage",
+    label: "Boot screen storage",
     fatal: true,
     problem: () => {
       const missing = OBJECT_STORE.filter((name) => !value(name))
       if (missing.length === 0) return null
       if (missing.length === OBJECT_STORE.length) {
         return (
-          "Not configured. Uploads would be written to public/uploads, which " +
-          "does not survive a deploy. All five are required: " +
-          OBJECT_STORE.join(", ")
+          "Not configured, so nobody can upload a boot screen and nobody can " +
+          `rank. Both are required: ${OBJECT_STORE.join(", ")}`
         )
       }
       return `Half-configured, which is refused the same as none. Missing: ${missing.join(", ")}`

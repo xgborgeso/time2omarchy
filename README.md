@@ -6,9 +6,14 @@ project, not affiliated with Omarchy or DHH.
 ## Getting started
 
 ```bash
-pnpm bootstrap   # install dependencies, build the database, seed it
-pnpm dev         # http://127.0.0.1:3000
+cp .env.example .env.local   # then fill it in
+pnpm bootstrap               # install dependencies, build the database, seed it
+pnpm dev                     # http://127.0.0.1:3000
 ```
+
+`.env.example` is the only template, and `.env.local` the only file you edit.
+The seeded board renders with nothing configured, but ranking needs X and
+UploadThing credentials — both go through third parties, in development too.
 
 Use `127.0.0.1`, not `localhost`. X refuses to register a `localhost` OAuth
 callback, so the auth origin is the loopback address and signing in from

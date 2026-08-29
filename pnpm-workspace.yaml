@@ -3,3 +3,7 @@
 # reach for it, so nothing tests or runs without this.
 allowBuilds:
   esbuild: true
+  # An optional native accelerator for msgpackr, reached through uploadthing.
+  # Left off: without it msgpackr uses its pure-JS path, which is slower at a
+  # scale nothing here operates at, and one fewer build script runs on install.
+  msgpackr-extract: false

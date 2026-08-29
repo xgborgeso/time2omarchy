@@ -133,6 +133,8 @@ export const appRouter = router({
           // Parsed here so "1:12" and "43s" keep working; the client sends text.
           time: timeSchema,
           bootScreenUrl: z.string().min(1),
+          // Flat, and short: it names one stored file and nothing else.
+          bootScreenKey: z.string().min(1).max(256),
         })
         .extend(specsSchema.shape),
     )
@@ -153,6 +155,7 @@ export const appRouter = router({
           identity,
           timeSeconds: input.time,
           bootScreenUrl: input.bootScreenUrl,
+          bootScreenKey: input.bootScreenKey,
           cpuId: input.cpuId,
           ramGb: input.ramGb,
           storage: input.storage,

@@ -19,6 +19,14 @@ export const entries = pgTable(
     timeSeconds: integer("time_seconds").notNull(),
     bootScreenUrl: text("boot_screen_url").notNull(),
     /**
+     * The storage key behind that url, for deleting a replaced screen.
+     *
+     * Nullable because the seeded rows are files on the local disk with no key
+     * at all, and because a url is not enough on its own — UploadThing offers
+     * no way to derive a key from one.
+     */
+    bootScreenKey: text("boot_screen_key"),
+    /**
      * Stable "source:id" identity, e.g. "x:123456".
      *
      * Not nullable: ranking goes through X, so every row has an account behind

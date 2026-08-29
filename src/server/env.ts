@@ -19,23 +19,20 @@ export const TRUSTED_IP_HEADER = process.env.TRUSTED_IP_HEADER?.trim() || null
 export const IS_PRODUCTION = process.env.NODE_ENV === "production"
 
 /**
- * Where boot screens are stored, and the public host they are served from.
+ * Where boot screens are stored.
  *
- * Unset, uploads go to `public/uploads` on the local disk — fine for
- * development and impossible in a deployment, where that disk is ephemeral and
- * unshared. `storage.ts` refuses to start a production upload without these
- * rather than writing a file that vanishes on the next request.
+ * Uploads go from the browser straight to UploadThing, so this app never holds
+ * the bytes — the token is only used to delete a file that has been replaced,
+ * and the base is only used to prove a submitted url is one we issued.
+ *
+ * Unset, the board still serves the seeded `/uploads/...` files on the local
+ * disk, which is how development works with nothing configured.
  */
-export const OBJECT_STORE = {
-  endpoint: process.env.S3_ENDPOINT?.trim() || null,
-  bucket: process.env.S3_BUCKET?.trim() || null,
-  accessKeyId: process.env.S3_ACCESS_KEY_ID?.trim() || null,
-  secretAccessKey: process.env.S3_SECRET_ACCESS_KEY?.trim() || null,
-  /** The origin boot screen urls are written with, e.g. a CDN in front. */
-  publicBase: process.env.PUBLIC_UPLOAD_BASE?.trim() || null,
-} as const
+export const UPLOADTHING_TOKEN = process.env.UPLOADTHING_TOKEN?.trim() || null
+
+/** The origin uploaded boot screens are served from, e.g. `https://x.ufs.sh`. */
+export const PUBLIC_UPLOAD_BASE = process.env.PUBLIC_UPLOAD_BASE?.trim() || null
 
 export function objectStoreConfigured(): boolean {
-  const { endpoint, bucket, accessKeyId, secretAccessKey, publicBase } = OBJECT_STORE
-  return Boolean(endpoint && bucket && accessKeyId && secretAccessKey && publicBase)
+  return Boolean(UPLOADTHING_TOKEN && PUBLIC_UPLOAD_BASE)
 }

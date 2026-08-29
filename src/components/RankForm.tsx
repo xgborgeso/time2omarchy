@@ -14,11 +14,12 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { errorText } from "@/lib/error-text"
+import { reencodeBootScreen } from "@/lib/reencode"
 import type { Specs, StorageId } from "@/lib/specs"
 import { formatTime, isTimeInRange, parseTime } from "@/lib/time"
 import { useTRPC } from "@/lib/trpc"
 import type { RankFailure, RankSuccess } from "@/lib/types"
-import { uploadBootScreen } from "@/lib/upload"
+import { useUploadThing } from "@/lib/uploadthing"
 import { cn } from "@/lib/utils"
 import { timeError } from "@/lib/validation"
 import { RankResult } from "./RankResult"
@@ -60,6 +61,7 @@ type Props = {
 export function RankForm({ onSuccess, className, onDone }: Props) {
   const trpc = useTRPC()
   const rank = useMutation(trpc.rank.mutationOptions())
+  const { startUpload } = useUploadThing("bootScreen")
   const timeId = useId()
   const errorId = useId()
   const inputRef = useRef<HTMLInputElement>(null)
@@ -138,16 +140,27 @@ export function RankForm({ onSuccess, className, onDone }: Props) {
     setError(null)
     setPlaced(null)
     try {
-      // Storage first: ranking takes a url, not a file.
-      const uploaded = await uploadBootScreen(file)
-      if (!uploaded.ok) {
-        setError({ message: uploaded.error, field: "bootScreen" })
+      // Redrawn before it leaves the browser: strips the EXIF a phone photo
+      // carries, proves the file decodes, and turns four megabytes into a few
+      // hundred kilobytes. Nothing downstream can do any of this — the bytes
+      // go straight to storage and never pass through this app.
+      const clean = await reencodeBootScreen(file)
+      if (!clean.ok) {
+        setError({ message: clean.error, field: "bootScreen" })
+        return
+      }
+
+      const uploaded = await startUpload([clean.file])
+      const stored = uploaded?.[0]?.serverData
+      if (!stored) {
+        setError({ message: "Could not upload that boot screen.", field: "bootScreen" })
         return
       }
 
       const result = await rank.mutateAsync({
         time,
-        bootScreenUrl: uploaded.url,
+        bootScreenUrl: stored.url,
+        bootScreenKey: stored.key,
         cpuId: specs.cpuId,
         ramGb: specs.ramGb,
         // The guard above proved these are set, and the select can only ever

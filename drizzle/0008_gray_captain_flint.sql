@@ -1,0 +1,1 @@
+ALTER TABLE "entries" ADD COLUMN "boot_screen_key" text;

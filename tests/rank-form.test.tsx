@@ -7,6 +7,7 @@ import { RankForm } from "@/components/RankForm"
 
 const rankFn = vi.fn()
 const uploadFn = vi.fn()
+const reencodeFn = vi.fn()
 const toastError = vi.fn()
 
 vi.mock("sonner", () => ({ toast: { error: (...a: unknown[]) => toastError(...a) } }))
@@ -17,8 +18,12 @@ vi.mock("@/lib/trpc", () => ({
   }),
 }))
 
-vi.mock("@/lib/upload", () => ({
-  uploadBootScreen: (...args: unknown[]) => uploadFn(...args),
+vi.mock("@/lib/uploadthing", () => ({
+  useUploadThing: () => ({ startUpload: (...args: unknown[]) => uploadFn(...args) }),
+}))
+
+vi.mock("@/lib/reencode", () => ({
+  reencodeBootScreen: (...args: unknown[]) => reencodeFn(...args),
 }))
 
 // Stubbed so these tests stay about upload and ranking rather than about
@@ -69,7 +74,11 @@ beforeEach(() => {
   toastError.mockReset()
   rankFn.mockReset()
   uploadFn.mockReset()
-  uploadFn.mockResolvedValue({ ok: true, url: "/uploads/x-1.png" })
+  uploadFn.mockResolvedValue([
+    { serverData: { url: "https://app.ufs.sh/f/x-1.webp", key: "x-1.webp" } },
+  ])
+  reencodeFn.mockReset()
+  reencodeFn.mockImplementation(async (file: File) => ({ ok: true, file }))
 })
 
 describe("RankForm", () => {
@@ -121,20 +130,34 @@ describe("RankForm", () => {
     await waitFor(() => expect(rankFn).toHaveBeenCalled())
     // No handle in either call: the upload endpoint and the rank mutation
     // both take the name from the session rather than from this form.
-    expect(uploadFn).toHaveBeenCalledWith(expect.any(File))
+    expect(uploadFn).toHaveBeenCalledWith([expect.any(File)])
     expect(rankFn.mock.calls[0]?.[0]).toMatchObject({
       time: "43",
-      bootScreenUrl: "/uploads/x-1.png",
+      bootScreenUrl: "https://app.ufs.sh/f/x-1.webp",
+      // Stored beside the url, because UploadThing cannot derive one from it.
+      bootScreenKey: "x-1.webp",
     })
     expect(rankFn.mock.calls[0]?.[0]).not.toHaveProperty("handle")
   })
 
   it("does not rank at all when the upload fails", async () => {
-    uploadFn.mockResolvedValue({ ok: false, error: "That boot screen is too large." })
+    uploadFn.mockResolvedValue(undefined)
     render(<RankForm onSuccess={() => {}} />, { wrapper })
     await submit("43")
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("too large")
+    expect(await screen.findByRole("alert")).toHaveTextContent(/could not upload/i)
+    expect(rankFn).not.toHaveBeenCalled()
+  })
+
+  it("never uploads a file it could not redraw", async () => {
+    // The redraw is what strips EXIF. Uploading the original because the
+    // canvas failed would publish the GPS coordinates it exists to remove.
+    reencodeFn.mockResolvedValue({ ok: false, error: "That file is not an image." })
+    render(<RankForm onSuccess={() => {}} />, { wrapper })
+    await submit("43")
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/not an image/i)
+    expect(uploadFn).not.toHaveBeenCalled()
     expect(rankFn).not.toHaveBeenCalled()
   })
 

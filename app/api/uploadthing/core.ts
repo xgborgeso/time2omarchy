@@ -1,0 +1,43 @@
+/**
+ * Where boot screens are uploaded.
+ *
+ * The bytes go from the browser straight to UploadThing and never touch this
+ * app, which is the point — a serverless function has no disk worth writing to
+ * and no reason to proxy four megabytes. What stays here is the decision about
+ * who is allowed to upload at all.
+ */
+import { createUploadthing, type FileRouter } from "uploadthing/next"
+import { UploadThingError } from "uploadthing/server"
+import { MAX_BOOT_SCREEN_BYTES } from "@/lib/validation"
+import { identityFrom } from "@/server/identity"
+
+const f = createUploadthing()
+
+/** UploadThing takes a size as a string; keep it derived from the one constant. */
+const MAX_SIZE = `${MAX_BOOT_SCREEN_BYTES / (1024 * 1024)}MB` as const
+
+export const fileRouter = {
+  bootScreen: f({
+    image: { maxFileSize: MAX_SIZE, maxFileCount: 1 },
+  })
+    /**
+     * The same gate the rank mutation uses, applied before a byte is accepted.
+     *
+     * Without it the storage bucket is an open drop box: uploading would cost
+     * an anonymous caller nothing, and the bill would be ours.
+     */
+    .middleware(async ({ req }) => {
+      const identity = await identityFrom(req.headers)
+      if (!identity) throw new UploadThingError("Connect X before uploading.")
+      // Returned to onUploadComplete, and nowhere near the client.
+      return { identityKey: identity.key, handle: identity.handle }
+    })
+    .onUploadComplete(({ metadata, file }) => {
+      // The key is what deletes the file later, and UploadThing offers no way
+      // to derive one from a url — so it goes back to the client and is stored
+      // on the entry alongside the url.
+      return { key: file.key, url: file.ufsUrl, handle: metadata.handle }
+    }),
+} satisfies FileRouter
+
+export type AppFileRouter = typeof fileRouter

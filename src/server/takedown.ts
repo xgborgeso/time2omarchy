@@ -22,7 +22,7 @@ export async function takedown(handle: string, purge = false): Promise<TakedownR
 
   await db.update(entries).set({ hiddenAt: new Date() }).where(eq(entries.id, row.id))
 
-  if (purge) await deleteBootScreen(row.bootScreenUrl)
+  if (purge) await deleteBootScreen(row.bootScreenKey)
   return { ok: true, handle: row.handle, purged: purge }
 }
 

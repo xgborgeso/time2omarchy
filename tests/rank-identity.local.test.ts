@@ -30,6 +30,7 @@ function input({ handle, ...over }: Over = {}) {
   return {
     timeSeconds: 43,
     bootScreenUrl: "/uploads/ada-1.png",
+    bootScreenKey: "ada-1.png",
     cpuId: "amd-ryzen-7-9800x3d",
     ramGb: 32,
     storage: "nvme",

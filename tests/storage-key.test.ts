@@ -54,9 +54,16 @@ describe("with a remote upload host", () => {
     ).toBe(false)
   })
 
-  it("still refuses traversal and nested paths", () => {
+  it("refuses any path that is not one of the two shapes we serve", () => {
+    // Traversal normalises away before this sees it — `/uploads/../secret.png`
+    // arrives as `/secret.png` — so the check is the shape, not the dots.
     expect(isStoredBootScreen(`${base}/uploads/../secret.png`, base)).toBe(false)
     expect(isStoredBootScreen(`${base}/uploads/a/b.png`, base)).toBe(false)
+    expect(isStoredBootScreen(`${base}/secret.png`, base)).toBe(false)
+  })
+
+  it("accepts the shape UploadThing serves", () => {
+    expect(isStoredBootScreen(`${base}/f/abc123.webp`, base)).toBe(true)
   })
 
   it("keeps accepting local urls when no host is configured", () => {
