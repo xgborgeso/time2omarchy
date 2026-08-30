@@ -73,6 +73,19 @@ run at deploy time rather than on boot.
 
 Ranking goes through X, so an X account without credits means nobody can rank.
 
+## Releases
+
+Every push to `main` deploys. A release is the separate act of naming a point
+worth coming back to:
+
+```bash
+git tag v1.0.1 && git push --tags
+```
+
+That runs the same checks `main` gets, then cuts a GitHub Release with notes
+generated from the commit subjects since the previous tag. Nothing is released
+that cannot build.
+
 ### Moderation
 
 | | |

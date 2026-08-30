@@ -1,0 +1,40 @@
+name: Release
+
+# Only on a tag you push deliberately. Every push to main already deploys;
+# a release is the separate act of naming a point you could come back to.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The whole history, so the notes can be generated against the
+          # previous tag rather than against a ten-commit shallow clone.
+          fetch-depth: 0
+
+      # The same gate main gets. A tag that cannot build is not a version
+      # anybody should be able to roll back to.
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm test
+      - run: pnpm typecheck
+      - run: pnpm build
+
+      # Notes come from the commit subjects between this tag and the last one.
+      # They read as sentences already, so there is nothing to rewrite.
+      - name: Cut the release
+        run: gh release create "$GITHUB_REF_NAME" --generate-notes --verify-tag
+        env:
+          GH_TOKEN: ${{ github.token }}
