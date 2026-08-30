@@ -5,11 +5,14 @@ import type { Counters } from "@/lib/types"
 
 const counters: Counters = {
   fastestSeconds: 26,
+  medianSeconds: 184,
   leaderHandle: "ada",
   leaderCount: 1,
   entries: 120,
   visitorsToday: 40,
-  online: 2,
+  // Above the threshold: below it the badge renders nothing at all, which
+  // every assertion here would otherwise trip over.
+  online: 4,
   visitors: 13985,
 }
 
@@ -18,7 +21,7 @@ describe("LiveBadge", () => {
     // "2 online" alone reads as an empty room. The cumulative figure is what
     // makes the same number read as activity, so it is not optional.
     render(<LiveBadge counters={counters} />)
-    expect(screen.getByText("2 online")).toBeVisible()
+    expect(screen.getByText("4 online")).toBeVisible()
     expect(screen.getByText(/13,985 visitors/)).toBeVisible()
   })
 
@@ -49,6 +52,22 @@ describe("LiveBadge", () => {
   it("renders nothing before the counters have loaded", () => {
     const { container } = render(<LiveBadge counters={undefined} />)
     expect(container).toBeEmptyDOMElement()
+  })
+
+  it("says nothing at all when the room is quiet", () => {
+    // A pulsing dot next to "1 online" in the most prominent spot on the page
+    // advertises that nobody is here. Silence beats discouraging.
+    for (const online of [0, 1, 2]) {
+      const { container } = render(<LiveBadge counters={{ ...counters, online }} />)
+      expect(container).toBeEmptyDOMElement()
+    }
+  })
+
+  it("comes back on its own once there is a crowd", () => {
+    // Hidden, not deleted: the writes behind it keep running, so a busy day
+    // restores the badge without anybody switching it on.
+    render(<LiveBadge counters={{ ...counters, online: 3 }} />)
+    expect(screen.getByText("3 online")).toBeVisible()
   })
 })
 

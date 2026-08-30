@@ -8,8 +8,14 @@ describe("heroSubline", () => {
     expect(heroSubline()).toContain("Omarchy")
   })
 
-  it("closes with something to do", () => {
-    expect(heroSubline().toLowerCase()).toContain("rank yours")
+  it("says what the board measures and stops", () => {
+    // It used to close with "Rank yours". The steps beneath it now say what
+    // ranking costs and the button says it in a place you can press, so the
+    // sentence was asking for something twice before the page had explained
+    // it once.
+    const said = heroSubline().toLowerCase()
+    expect(said).toContain("omarchy")
+    expect(said).not.toContain("rank yours")
   })
 
   it("says the same thing however the board stands", () => {

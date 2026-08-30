@@ -141,7 +141,18 @@ export function App() {
         {view === "stats" ? (
           <StatsPage />
         ) : view === "rules" ? (
-          <RulesPage />
+          <>
+            <RulesPage />
+            {/* Same component as the board's, so the sign-in, the form and the
+                result card are all one flow. Ranking from here lands you on
+                the board, because that is where the entry you just made is. */}
+            <RankDialog
+              onSuccess={(result) => {
+                onSuccess(result)
+                navigate("board")
+              }}
+            />
+          </>
         ) : (
           <>
             <Hero counters={data?.counters} />

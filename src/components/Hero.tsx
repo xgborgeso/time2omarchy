@@ -1,4 +1,6 @@
+import { HeroSteps } from "@/components/HeroSteps"
 import { LiveBadge } from "@/components/LiveBadge"
+import { StatStrip } from "@/components/StatStrip"
 import { heroSubline } from "@/lib/hero"
 import { formatTime } from "@/lib/time"
 import type { Counters } from "@/lib/types"
@@ -24,6 +26,8 @@ export function Hero({ counters }: { counters: Counters | undefined }) {
         <p className="max-w-[32rem] text-pretty text-[13px] font-light text-muted-foreground sm:text-[15px]">
           {heroSubline()}
         </p>
+        <HeroSteps />
+        <StatStrip counters={counters} />
       </div>
     </section>
   )

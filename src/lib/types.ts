@@ -25,6 +25,8 @@ export type ActivityItem = {
 
 export type Counters = {
   fastestSeconds: number | null
+  /** The middle time on the board. Null until anything is ranked. */
+  medianSeconds: number | null
   leaderHandle: string | null
   /** How many entries share rank 1; ties are common at second granularity. */
   leaderCount: number
