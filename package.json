@@ -70,5 +70,10 @@
     "vitest": "^3.2.4"
   },
   "description": "Fastest verified Omarchy installs leaderboard",
-  "packageManager": "pnpm@10.34.5"
+  "packageManager": "pnpm@10.34.5",
+  "pnpm": {
+    "overrides": {
+      "effect": "^3.20.0"
+    }
+  }
 }
