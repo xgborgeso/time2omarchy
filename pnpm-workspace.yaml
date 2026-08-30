@@ -1,9 +1,8 @@
 # esbuild fetches its native binary in a postinstall script, and pnpm blocks
 # lifecycle scripts unless the package is named here. Vitest and tsx both
 # reach for it, so nothing tests or runs without this.
-allowBuilds:
-  esbuild: true
-  # An optional native accelerator for msgpackr, reached through uploadthing.
-  # Left off: without it msgpackr uses its pure-JS path, which is slower at a
-  # scale nothing here operates at, and one fewer build script runs on install.
-  msgpackr-extract: false
+#
+# msgpackr-extract is deliberately absent: it is an optional native accelerator
+# reached through uploadthing, and without it msgpackr uses its pure-JS path.
+onlyBuiltDependencies:
+  - esbuild
