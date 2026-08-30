@@ -39,13 +39,10 @@ const file = path.join(dir, `time2omarchy-${stamp}.sql`)
  * tables that regenerate themselves: ownership lives in `entries.identity_key`,
  * so somebody signing in again recreates their row and still owns their entry.
  *
- * `presence` is skipped for the same reason from the other direction: it is
- * whoever is on the site right now, and it is meaningless an hour later.
- *
  * The schema is still dumped for all of them, so this restores into an empty
  * database on its own.
  */
-const DISPOSABLE = ["user", "account", "session", "verification", "presence"]
+const DISPOSABLE = ["user", "account", "session", "verification"]
 
 const result = spawnSync(
   "pg_dump",

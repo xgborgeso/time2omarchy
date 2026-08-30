@@ -18,13 +18,11 @@ import { consumeAuthError } from "@/lib/auth-error"
 import { useTRPC } from "@/lib/trpc"
 import type { BoardEntry, RankSuccess } from "@/lib/types"
 import { useDebounced } from "@/lib/use-debounced"
-import { usePresence } from "@/lib/use-presence"
 import { hashForView, type View, viewFromHash } from "@/lib/view"
 
 export function App() {
   const queryClient = useQueryClient()
   const trpc = useTRPC()
-  usePresence()
   const [page, setPage] = useState(1)
   const { data, isLoading } = useQuery(
     trpc.board.queryOptions(

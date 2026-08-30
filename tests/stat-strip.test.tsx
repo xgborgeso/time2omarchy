@@ -10,9 +10,6 @@ const counters: Counters = {
   leaderHandle: "ada",
   leaderCount: 1,
   entries: 2,
-  visitorsToday: 40,
-  online: 1,
-  visitors: 900,
 }
 
 describe("StatStrip", () => {

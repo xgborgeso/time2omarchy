@@ -22,10 +22,7 @@ function stats(over: Partial<StatsResponse> = {}): StatsResponse {
     fastestSeconds: 43,
     medianSeconds: 64,
     meanSeconds: 70,
-    visitorsToday: 4,
-    viewsToday: 20,
     rankedToday: 1,
-    online: 2,
     ...over,
   }
 }

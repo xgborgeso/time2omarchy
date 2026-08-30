@@ -9,10 +9,6 @@ function counters(over: Partial<Counters> = {}): Counters {
     leaderHandle: "ada",
     leaderCount: 1,
     entries: 8,
-    visitorsToday: 3,
-    online: 2,
-    visitors: 1_200,
-    pageviews: 3_400,
     ...over,
   }
 }
