@@ -1,5 +1,7 @@
 # time2omarchy
 
+[![Check](https://github.com/xgborgeso/time2omarchy/actions/workflows/check.yml/badge.svg?branch=main)](https://github.com/xgborgeso/time2omarchy/actions/workflows/check.yml)
+
 A leaderboard for the fastest [Omarchy](https://omarchy.org) installs. Community
 project, not affiliated with Omarchy or DHH.
 
