@@ -3,6 +3,7 @@ import { benchmark, matchesSpec, median, type SpecFilter } from "../lib/benchmar
 import { rankEntries } from "../lib/ranking"
 import { bucketTimes, dailySeries } from "../lib/stats"
 import type { BoardEntry, BoardResponse, StatsResponse } from "../lib/types"
+import { readAudience } from "./analytics"
 import { getDb } from "./db"
 import { entries } from "./schema"
 import { rankedToday, utcDay } from "./stats"
@@ -32,7 +33,7 @@ export async function loadBoard(page = 1): Promise<BoardResponse> {
   const current = Math.max(1, Math.trunc(page) || 1)
   const offset = (current - 1) * PER_PAGE
 
-  const [rows, activityRows, total, middle, leader] = await Promise.all([
+  const [rows, activityRows, total, middle, audience, leader] = await Promise.all([
     db
       .select()
       .from(entries)
@@ -67,6 +68,7 @@ export async function loadBoard(page = 1): Promise<BoardResponse> {
       })
       .from(entries)
       .where(visible),
+    readAudience(),
     /**
      * The leader the hero quotes, over the whole board rather than this page.
      *
@@ -126,6 +128,7 @@ export async function loadBoard(page = 1): Promise<BoardResponse> {
       timeSeconds: row.timeSeconds,
       updatedAt: toIso(row.updatedAt),
     })),
+    audience,
     counters: {
       fastestSeconds: fastest,
       // percentile_cont interpolates, so a board with an even number of
