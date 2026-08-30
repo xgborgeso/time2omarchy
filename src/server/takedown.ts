@@ -1,7 +1,37 @@
-import { eq } from "drizzle-orm"
+import { and, eq, ne, or } from "drizzle-orm"
 import { getDb } from "./db"
 import { entries } from "./schema"
 import { deleteBootScreen } from "./storage"
+
+/**
+ * Deletes the files this entry held, unless another entry still points at one.
+ *
+ * The reference check matters because keys arrive from clients: an entry can
+ * end up holding a key it did not upload, and purging it would destroy a file
+ * somebody else's row is still using. Moderating one account must not damage
+ * another.
+ */
+async function purgeUnreferenced(
+  db: Awaited<ReturnType<typeof getDb>>,
+  entryId: string,
+  keys: (string | null)[],
+): Promise<void> {
+  for (const key of keys) {
+    if (!key) continue
+    const elsewhere = await db
+      .select({ id: entries.id })
+      .from(entries)
+      .where(
+        and(
+          or(eq(entries.bootScreenKey, key), eq(entries.bootScreenThumbKey, key)),
+          ne(entries.id, entryId),
+        ),
+      )
+      .limit(1)
+    if (elsewhere[0]) continue
+    await deleteBootScreen(key)
+  }
+}
 
 export type TakedownResult =
   | { ok: true; handle: string; purged: boolean }
@@ -22,10 +52,8 @@ export async function takedown(handle: string, purge = false): Promise<TakedownR
 
   await db.update(entries).set({ hiddenAt: new Date() }).where(eq(entries.id, row.id))
 
-  if (purge) {
-    await deleteBootScreen(row.bootScreenKey)
-    await deleteBootScreen(row.bootScreenThumbKey)
-  }
+  if (purge)
+    await purgeUnreferenced(db, row.id, [row.bootScreenKey, row.bootScreenThumbKey])
   return { ok: true, handle: row.handle, purged: purge }
 }
 

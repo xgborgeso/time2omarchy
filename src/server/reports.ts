@@ -8,11 +8,20 @@ export type ReportResult = { ok: true } | { ok: false; error: string }
 /**
  * The reporter, reduced to something that can only be compared.
  *
- * A raw address would let this table answer "what else did this person do",
- * which is a question a leaderboard has no business being able to answer.
+ * Keyed on the visitor id rather than the caller's address. The address is
+ * only known when a trusted proxy header is configured, and unset — the
+ * default — every caller shares the literal string "unknown". Hashing that
+ * produced one constant for everybody, so the unique index on
+ * `(entry_id, reporter_key)` silently capped each entry at a single report
+ * forever, and every report after the first was dropped by
+ * `onConflictDoNothing`.
+ *
+ * The visitor id is a server-minted uuid in a cookie, so it is unguessable and
+ * carries nothing about the person. Hashing it keeps the raw cookie value out
+ * of a table that has no use for it.
  */
-export function reporterKeyFor(caller: string): string {
-  return createHash("sha256").update(caller).digest("hex").slice(0, 32)
+export function reporterKeyFor(visitorId: string): string {
+  return createHash("sha256").update(visitorId).digest("hex").slice(0, 32)
 }
 
 /**
@@ -32,7 +41,10 @@ export async function notifyReport(handle: string, total: number): Promise<void>
  * Reporting the same entry twice is not an error worth showing: the person
  * pressed a button and the outcome they wanted is already true.
  */
-export async function reportEntry(handle: string, caller: string): Promise<ReportResult> {
+export async function reportEntry(
+  handle: string,
+  visitorId: string,
+): Promise<ReportResult> {
   const db = await getDb()
   const rows = await db
     .select({ id: entries.id })
@@ -47,7 +59,7 @@ export async function reportEntry(handle: string, caller: string): Promise<Repor
 
   await db
     .insert(reports)
-    .values({ entryId: entry.id, reporterKey: reporterKeyFor(caller) })
+    .values({ entryId: entry.id, reporterKey: reporterKeyFor(visitorId) })
     .onConflictDoNothing()
 
   const [tally] = await db

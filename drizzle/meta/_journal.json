@@ -71,6 +71,13 @@
       "when": 1788041907816,
       "tag": "0009_high_jackpot",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1788087709426,
+      "tag": "0010_silly_killraven",
+      "breakpoints": true
     }
   ]
 }

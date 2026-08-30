@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { Identity } from "../src/lib/identity"
 import { openDatabase } from "../src/server/pglite"
-import { entries } from "../src/server/schema"
+import { entries, uploads } from "../src/server/schema"
 
 /**
  * Ranking against real PGlite, with identity handed in the way the router
@@ -26,7 +26,8 @@ vi.mock("../src/server/storage", () => ({
   },
 }))
 
-const { submitRank } = await import("../src/server/rank")
+const { submitRank: rankDirectly } = await import("../src/server/rank")
+const { recordUpload } = await import("../src/server/uploads")
 const { findEntryByHandle, loadBoard, searchEntries } = await import("../src/server/board")
 
 const ADA: Identity = { key: "x:1665012345678901234", handle: "ada" }
@@ -42,7 +43,11 @@ type Over = Partial<Parameters<typeof submitRank>[0]> & { handle?: string }
  */
 function input({ handle, bootScreenKey, ...over }: Over = {}) {
   const who = handle ?? "ada"
-  const key = bootScreenKey ?? "ada-1.png"
+  const identity = over.identity ?? { key: `x:${who}`, handle: who }
+  // Derived from the account, not the handle: two identities sharing a default
+  // key would have the second refused for not owning the first one's upload,
+  // which is the rule working rather than the test failing.
+  const key = bootScreenKey ?? `${identity.key.replace(/[^a-z0-9]/gi, "")}-1.png`
   return {
     timeSeconds: 43,
     bootScreenUrl: `/uploads/${key}`,
@@ -52,15 +57,32 @@ function input({ handle, bootScreenKey, ...over }: Over = {}) {
     cpuId: "amd-ryzen-7-9800x3d",
     ramGb: 32,
     storage: "nvme",
-    identity: { key: `x:${who}`, handle: who },
+    identity,
     ...over,
   }
 }
 
 beforeEach(async () => {
-  await (await opened).delete(entries)
+  const db = await opened
+  await db.delete(entries)
+  await db.delete(uploads)
   discarded.length = 0
 })
+
+/**
+ * Ranks the way the app does: upload first, then submit.
+ *
+ * Ranking refuses a key its caller did not upload, so a test that submits
+ * without uploading is testing the refusal rather than what it meant to.
+ * Recording is `onConflictDoNothing`, which mirrors reality — a key already
+ * belonging to somebody else stays theirs, so the ownership tests below can
+ * call this and still be refused.
+ */
+async function submitRank(args: Parameters<typeof rankDirectly>[0]) {
+  await recordUpload(args.bootScreenKey, args.identity.key)
+  await recordUpload(args.bootScreenThumbKey, args.identity.key)
+  return rankDirectly(args)
+}
 
 async function entryFor(handle: string) {
   const db = await opened
@@ -305,5 +327,98 @@ describe("a taken-down entry", () => {
     expect(board.counters.leaderHandle).toBe("good")
     expect(await findEntryByHandle("bad")).toBeNull()
     expect(await searchEntries("bad")).toEqual([])
+  })
+})
+
+describe("a boot screen somebody else uploaded", () => {
+  it("cannot be attached to your own entry", async () => {
+    // Every key on the board is public — it is the last segment of the boot
+    // screen url the board hands out. Proving the url is on our host is not
+    // the same as proving the caller uploaded the file behind it.
+    await submitRank(input({ handle: "victim", bootScreenKey: "victim-shot" }))
+
+    const result = await submitRank(
+      input({
+        identity: { key: "x:attacker", handle: "attacker" },
+        bootScreenKey: "victim-shot",
+      }),
+    )
+
+    expect(result.ok).toBe(false)
+    // ...and the victim's row is untouched.
+    expect((await entryFor("victim"))?.bootScreenKey).toBe("victim-shot")
+  })
+
+  it("cannot be deleted by re-ranking over it", async () => {
+    // The attack that made this HIGH: claim a victim's key on one rank, then
+    // rank again so the replace path deletes "the previous object". The file
+    // is the only evidence behind a ranked time and deletion is permanent.
+    await submitRank(input({ handle: "victim", bootScreenKey: "victim-shot" }))
+
+    // Claim the victim's key first, so the attacker's row holds it...
+    await submitRank(
+      input({
+        identity: { key: "x:attacker", handle: "attacker" },
+        bootScreenKey: "victim-shot",
+      }),
+    )
+    discarded.length = 0
+
+    // ...then rank again, so the replace path deletes "the previous object".
+    await submitRank(
+      input({
+        identity: { key: "x:attacker", handle: "attacker" },
+        bootScreenKey: "attacker-own",
+      }),
+    )
+
+    expect(discarded).not.toContain("victim-shot")
+    expect(discarded).not.toContain("thumb-victim-shot")
+  })
+
+  it("still deletes your own replaced screen, which is the point", async () => {
+    await submitRank(input({ identity: ADA, bootScreenKey: "old", timeSeconds: 60 }))
+    discarded.length = 0
+
+    await submitRank(input({ identity: ADA, bootScreenKey: "new", timeSeconds: 40 }))
+
+    expect(discarded).toEqual(["old", "thumb-old"])
+    expect((await entryFor("ada"))?.bootScreenKey).toBe("new")
+  })
+})
+
+describe("moderating one entry", () => {
+  it("does not delete a file another entry still points at", async () => {
+    // An entry can hold a key it did not upload only if something went wrong,
+    // but purging is permanent — so the check is worth having either way.
+    await submitRank(input({ handle: "one", bootScreenKey: "shared" }))
+    const db = await opened
+    await db.insert(entries).values({
+      id: crypto.randomUUID(),
+      handle: "two",
+      timeSeconds: 99,
+      bootScreenUrl: "/uploads/shared",
+      bootScreenKey: "shared",
+      identityKey: "x:two",
+      cpuId: "other",
+      ramGb: 16,
+      storage: "ssd",
+    })
+    discarded.length = 0
+    const { takedown } = await import("../src/server/takedown")
+
+    await takedown("one", true)
+
+    expect(discarded).not.toContain("shared")
+  })
+
+  it("still purges a file nothing else is using", async () => {
+    await submitRank(input({ handle: "alone", bootScreenKey: "only-mine" }))
+    discarded.length = 0
+    const { takedown } = await import("../src/server/takedown")
+
+    await takedown("alone", true)
+
+    expect(discarded).toContain("only-mine")
   })
 })

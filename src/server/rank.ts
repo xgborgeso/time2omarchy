@@ -7,6 +7,7 @@ import { loadBoard } from "./board"
 import { type Db, getDb } from "./db"
 import { entries } from "./schema"
 import { deleteBootScreen, publicUploadBase } from "./storage"
+import { ownsUploads } from "./uploads"
 
 export type RankInput = {
   timeSeconds: number
@@ -95,6 +96,15 @@ export async function submitRank(input: RankInput): Promise<RankSuccess | RankFa
     !keyMatchesUrl(bootScreenKey, bootScreenUrl, base) ||
     !keyMatchesUrl(bootScreenThumbKey, bootScreenThumbUrl, base)
   ) {
+    return { ok: false, error: "Upload the boot screen again.", field: "bootScreen" }
+  }
+
+  // Shape is not ownership. The check above proves the url sits on our upload
+  // host; this proves the caller is the account that put the file there. Every
+  // key on the board is public — it is the last segment of a boot screen url —
+  // so without this a caller could submit somebody else's, have it rendered
+  // under their own handle, and delete it on their next rank.
+  if (!(await ownsUploads(identity.key, [bootScreenKey, bootScreenThumbKey]))) {
     return { ok: false, error: "Upload the boot screen again.", field: "bootScreen" }
   }
 
@@ -190,14 +200,17 @@ export async function submitRank(input: RankInput): Promise<RankSuccess | RankFa
     .where(eq(entries.id, current.id))
     .returning()
   const row = updated[0]!
-  // The previous object is now unreferenced, so drop it rather than leaking it.
-  // Both halves of the pair, or the thumbnail outlives the screen it shrinks.
-  if (current.bootScreenKey && current.bootScreenKey !== bootScreenKey) {
-    await deleteBootScreen(current.bootScreenKey)
-  }
-  if (current.bootScreenThumbKey && current.bootScreenThumbKey !== bootScreenThumbKey) {
-    await deleteBootScreen(current.bootScreenThumbKey)
-  }
+  // Both halves of the replaced pair, or the thumbnail outlives the screen it
+  // shrinks. Through the same reference check the other paths use rather than
+  // deleted outright: this runs after the update, so a key that some other
+  // entry still points at is found and left alone.
+  await discardUnusedUpload(
+    db,
+    ...[current.bootScreenKey, current.bootScreenThumbKey].filter(
+      (key): key is string =>
+        key != null && key !== bootScreenKey && key !== bootScreenThumbKey,
+    ),
+  )
   const board = await loadBoard()
   const entry = board.entries.find((e) => e.handle === handle) ?? toEntry(row, board)
   return {

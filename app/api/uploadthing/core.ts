@@ -10,6 +10,7 @@ import { createUploadthing, type FileRouter } from "uploadthing/next"
 import { UploadThingError, UTFiles } from "uploadthing/server"
 import { MAX_BOOT_SCREEN_BYTES } from "@/lib/validation"
 import { identityFrom } from "@/server/identity"
+import { recordUpload } from "@/server/uploads"
 
 const f = createUploadthing()
 
@@ -57,7 +58,12 @@ export const fileRouter = {
         })),
       }
     })
-    .onUploadComplete(({ metadata, file }) => {
+    .onUploadComplete(async ({ metadata, file }) => {
+      // Remembered before the client is told anything. A key is public the
+      // moment it reaches the board, so the only thing that distinguishes its
+      // owner from a passer-by is this row.
+      await recordUpload(file.key, metadata.identityKey)
+
       // The key is what deletes the file later, and UploadThing offers no way
       // to derive one from a url — so it goes back to the client and is stored
       // on the entry alongside the url. `thumb` says which of the pair this is.

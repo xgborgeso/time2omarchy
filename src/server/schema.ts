@@ -71,6 +71,26 @@ export const entries = pgTable(
 )
 
 /**
+ * Who uploaded which stored file.
+ *
+ * Written when UploadThing reports an upload finished, and read when a rank
+ * submits a key. Without it a key proves nothing about its owner: every key on
+ * the board is public — it is the last segment of a boot screen url — so a
+ * caller could submit somebody else's, have it rendered under their own handle,
+ * and get it deleted on their next rank.
+ */
+export const uploads = pgTable(
+  "uploads",
+  {
+    key: text("key").primaryKey(),
+    /** The account that uploaded it, as "x:<id>". Never a handle. */
+    identityKey: text("identity_key").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("uploads_identity_key_idx").on(t.identityKey)],
+)
+
+/**
  * Someone flagging a boot screen.
  *
  * No reason field: the only thing that can be reported is one image, and

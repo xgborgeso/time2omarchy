@@ -118,7 +118,11 @@ export const appRouter = router({
     .input(z.object({ handle: handleSchema }))
     .mutation(async ({ ctx, input }) => {
       try {
-        return await reportEntry(input.handle, ctx.clientKey)
+        // Per browser, not per address: `clientKey` is one shared constant
+        // unless a trusted proxy header is configured, which would let a
+        // single report per entry ever be recorded.
+        const visitorId = visitorIdFrom(ctx.headers, ctx.resHeaders, ctx.secure)
+        return await reportEntry(input.handle, visitorId)
       } catch (err) {
         await captureError(err)
         return { ok: false as const, error: "Could not send that report." }
