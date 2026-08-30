@@ -1,14 +1,23 @@
 import { HeroSteps } from "@/components/HeroSteps"
+import { LivePill } from "@/components/LivePill"
 import { StatStrip } from "@/components/StatStrip"
 import { heroSubline } from "@/lib/hero"
 import { formatTime } from "@/lib/time"
-import type { Counters } from "@/lib/types"
+import type { Audience, Counters } from "@/lib/types"
 
-export function Hero({ counters }: { counters: Counters | undefined }) {
+export function Hero({
+  counters,
+  audience,
+}: {
+  counters: Counters | undefined
+  audience: Audience | null | undefined
+}) {
   const fastest = counters?.fastestSeconds ?? null
 
   return (
     <section>
+      <LivePill audience={audience ?? null} />
+
       <div className="mt-14 flex flex-col items-center gap-4 text-center sm:mt-16 sm:gap-5">
         <div className="flex items-baseline gap-4 sm:gap-7">
           <span className="text-3xl font-light sm:text-[44px]">

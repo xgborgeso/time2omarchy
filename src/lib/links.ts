@@ -16,15 +16,16 @@ export const NEW_CPU_ISSUE_URL = `${REPO_URL}/issues/new?template=add-cpu.yml&ti
 /**
  * The hosted analytics dashboard, when there is one.
  *
- * Empty in production until it is configured, so nothing links to a page that
- * does not exist. In development it falls back to Datafast's own site: the
- * dashboard has no url yet, and hiding the link until it does would mean the
- * pill and the two nav entries could not be looked at at all while building
- * them. Read at build time, so it is a plain string rather than a lookup.
+ * Empty until a *public share* url is configured, and with no development
+ * fallback. It fell back to `https://datafa.st` once, which is worse than
+ * nothing: signed in, that lands on the owner's private dashboard, so the link
+ * looked like it worked while being a closed door to every visitor. The pill
+ * and the nav read fine without it, so the honest default is absent.
+ *
+ * Must be the share link (`datafa.st/share/...`), not the dashboard. Read at
+ * build time, so it is a plain string rather than a lookup.
  */
-const CONFIGURED = process.env.NEXT_PUBLIC_ANALYTICS_URL?.trim()
-export const ANALYTICS_URL =
-  CONFIGURED || (process.env.NODE_ENV === "development" ? "https://datafa.st" : "")
+export const ANALYTICS_URL = process.env.NEXT_PUBLIC_ANALYTICS_URL?.trim() || ""
 
 export const DATAFAST_SITE_ID = "dfid_okBBZAhFhLC2mtjtSAfWo"
 export const DATAFAST_DOMAIN = "time2omarchy.com"
