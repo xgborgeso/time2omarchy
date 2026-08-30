@@ -19,6 +19,7 @@ import type { Specs, StorageId } from "@/lib/specs"
 import { formatTime, isTimeInRange, parseTime } from "@/lib/time"
 import { useTRPC } from "@/lib/trpc"
 import type { RankFailure, RankSuccess } from "@/lib/types"
+import { uploadErrorFrom } from "@/lib/upload-error"
 import { useUploadThing } from "@/lib/uploadthing"
 import { cn } from "@/lib/utils"
 import { timeError } from "@/lib/validation"
@@ -61,7 +62,17 @@ type Props = {
 export function RankForm({ onSuccess, className, onDone }: Props) {
   const trpc = useTRPC()
   const rank = useMutation(trpc.rank.mutationOptions())
-  const { startUpload } = useUploadThing("bootScreen")
+  /**
+   * Why the last upload failed, kept because `startUpload` will not tell us
+   * twice. It hands the error here and then resolves `undefined`, so by the
+   * time the caller sees the missing result the cause is gone.
+   */
+  const uploadError = useRef<string | null>(null)
+  const { startUpload } = useUploadThing("bootScreen", {
+    onUploadError: (err) => {
+      uploadError.current = uploadErrorFrom(err)
+    },
+  })
   const timeId = useId()
   const errorId = useId()
   const inputRef = useRef<HTMLInputElement>(null)
@@ -151,11 +162,18 @@ export function RankForm({ onSuccess, className, onDone }: Props) {
       }
 
       // Both at once, so one round trip carries the pair.
+      uploadError.current = null
       const uploaded = await startUpload([clean.files.full, clean.files.thumb])
       const stored = uploaded?.find((f) => !f.serverData.thumb)?.serverData
       const thumb = uploaded?.find((f) => f.serverData.thumb)?.serverData
       if (!stored || !thumb) {
-        setError({ message: "Could not upload that boot screen.", field: "bootScreen" })
+        // `onUploadError` ran first when there was a cause worth naming; the
+        // fallback covers the pair coming back incomplete, which is not an
+        // error UploadThing reports.
+        setError({
+          message: uploadError.current ?? uploadErrorFrom(null),
+          field: "bootScreen",
+        })
         return
       }
 

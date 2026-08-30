@@ -30,7 +30,16 @@ export const fileRouter = {
      */
     .middleware(async ({ req, files }) => {
       const identity = await identityFrom(req.headers)
-      if (!identity) throw new UploadThingError("Connect X before uploading.")
+      // Given a code rather than a bare string: the string constructor stamps
+      // every error `INTERNAL_SERVER_ERROR`, which would make our own refusal
+      // indistinguishable from a crash inside UploadThing. The client reads
+      // the code, not the message — see `src/lib/upload-error.ts`.
+      if (!identity) {
+        throw new UploadThingError({
+          code: "FORBIDDEN",
+          message: "Connect X before uploading.",
+        })
+      }
 
       return {
         // Returned to onUploadComplete, and nowhere near the client.
