@@ -15,7 +15,10 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 26
+          # 24, matching engines.node in package.json and the newest major
+          # Vercel offers. Testing on a newer one than production ships on is a
+          # way to learn about the difference from a user rather than from CI.
+          node-version: 24
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
