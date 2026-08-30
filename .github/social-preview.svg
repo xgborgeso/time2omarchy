@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640">
+  <defs>
+    <linearGradient id="rule" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#9ece6a" stop-opacity="1"/>
+      <stop offset="1" stop-color="#9ece6a" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#9ece6a" stop-opacity="0.10"/>
+      <stop offset="1" stop-color="#9ece6a" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1280" height="640" fill="#1a1b26"/>
+  <rect width="1280" height="200" fill="url(#glow)"/>
+
+  <text x="80" y="150"
+        font-family="JetBrainsMono Nerd Font, JetBrains Mono, monospace"
+        font-size="68" font-weight="700" fill="#9ece6a" letter-spacing="-1">time2omarchy</text>
+
+  <text x="1200" y="150" text-anchor="end"
+        font-family="Liberation Sans, Helvetica, Arial, sans-serif"
+        font-size="26" fill="#a9b1d6">A leaderboard for the</text>
+  <text x="1200" y="182" text-anchor="end"
+        font-family="Liberation Sans, Helvetica, Arial, sans-serif"
+        font-size="26" fill="#a9b1d6">fastest Omarchy installs</text>
+
+  <rect x="80" y="222" width="1120" height="2" fill="url(#rule)"/>
+
+  <!-- the board, full width, so the picture says what it is -->
+  <g font-family="JetBrainsMono Nerd Font, JetBrains Mono, monospace">
+    <g font-size="17" fill="#565f89" letter-spacing="2">
+      <text x="106" y="266">RANK</text>
+      <text x="212" y="266">TIME</text>
+      <text x="360" y="266">HANDLE</text>
+      <text x="1174" y="266" text-anchor="end">MACHINE</text>
+    </g>
+
+    <rect x="80" y="284" width="1120" height="72" rx="10" fill="#24283b"/>
+    <text x="106" y="330" font-size="24" fill="#a9b1d6">#1</text>
+    <text x="212" y="330" font-size="30" font-weight="700" fill="#9ece6a">26s</text>
+    <text x="360" y="330" font-size="26" fill="#c0caf5">@fastscout33</text>
+    <text x="1174" y="330" font-size="20" fill="#565f89" text-anchor="end">Ryzen 9 9950X · 64GB · NVMe</text>
+
+    <rect x="80" y="366" width="1120" height="72" rx="10" fill="#24283b" fill-opacity="0.72"/>
+    <text x="106" y="412" font-size="24" fill="#a9b1d6">#2</text>
+    <text x="212" y="412" font-size="30" font-weight="700" fill="#9ece6a">41s</text>
+    <text x="360" y="412" font-size="26" fill="#c0caf5">@voidgoblin</text>
+    <text x="1174" y="412" font-size="20" fill="#565f89" text-anchor="end">Ryzen 7 9800X3D · 32GB · NVMe</text>
+
+    <rect x="80" y="448" width="1120" height="72" rx="10" fill="#24283b" fill-opacity="0.44"/>
+    <text x="106" y="494" font-size="24" fill="#a9b1d6">#3</text>
+    <text x="212" y="494" font-size="30" font-weight="700" fill="#9ece6a">1:19</text>
+    <text x="360" y="494" font-size="26" fill="#c0caf5">@wizaj</text>
+    <text x="1174" y="494" font-size="20" fill="#565f89" text-anchor="end">Core i7-13700K · 32GB · NVMe</text>
+  </g>
+
+  <text x="80" y="578"
+        font-family="JetBrainsMono Nerd Font, JetBrains Mono, monospace"
+        font-size="26" fill="#9ece6a">time2omarchy.com</text>
+  <text x="1200" y="578" text-anchor="end"
+        font-family="Liberation Sans, Helvetica, Arial, sans-serif"
+        font-size="19" fill="#565f89">Community project · not affiliated with Omarchy or DHH</text>
+</svg>
