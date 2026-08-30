@@ -70,6 +70,7 @@
     "vitest": "^3.2.4"
   },
   "description": "Fastest verified Omarchy installs leaderboard",
+  "license": "MIT",
   "packageManager": "pnpm@10.34.5",
   "pnpm": {
     "overrides": {
