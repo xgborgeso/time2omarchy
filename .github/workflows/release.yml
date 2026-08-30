@@ -13,27 +13,17 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           # The whole history, so the notes can be generated against the
           # previous tag rather than against a ten-commit shallow clone.
           fetch-depth: 0
 
-      # The same gate main gets. A tag that cannot build is not a version
-      # anybody should be able to roll back to.
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm lint
-      - run: pnpm test
-      - run: pnpm typecheck
-      - run: pnpm build
-
-      # Notes come from the commit subjects between this tag and the last one.
-      # They read as sentences already, so there is nothing to rewrite.
+      # No gate here. A tag names a commit that is already on main, which Check
+      # has answered for and Vercel has deployed — running the same four steps
+      # against the same tree would only tell us what we were told twice
+      # already. `--verify-tag` is the part that still matters: it refuses to
+      # publish a release for a tag that is not actually in the repository.
       - name: Cut the release
         run: gh release create "$GITHUB_REF_NAME" --generate-notes --verify-tag
         env:

@@ -5,15 +5,21 @@ on:
     branches: [main]
   pull_request:
 
+# A second push makes the first answer worthless. Cancel it rather than pay
+# for an answer about a commit nobody will look at again.
+concurrency:
+  group: check-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       # Must precede setup-node: the pnpm cache needs pnpm on PATH. The version
       # comes from the packageManager field in package.json.
       - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           # 24, matching engines.node in package.json and the newest major
           # Vercel offers. Testing on a newer one than production ships on is a
@@ -24,4 +30,9 @@ jobs:
       - run: pnpm lint
       - run: pnpm test
       - run: pnpm typecheck
-      - run: pnpm build
+
+      # No build step, deliberately. Vercel builds every push and every pull
+      # request, and a build that fails there already fails the deployment and
+      # leaves the previous one serving. Building here as well answers the same
+      # question twice and makes this job the slow half of a race it does not
+      # need to be in.
