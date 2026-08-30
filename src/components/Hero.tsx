@@ -1,5 +1,4 @@
 import { HeroSteps } from "@/components/HeroSteps"
-import { LiveBadge } from "@/components/LiveBadge"
 import { StatStrip } from "@/components/StatStrip"
 import { heroSubline } from "@/lib/hero"
 import { formatTime } from "@/lib/time"
@@ -10,10 +9,6 @@ export function Hero({ counters }: { counters: Counters | undefined }) {
 
   return (
     <section>
-      <div className="flex justify-center">
-        <LiveBadge counters={counters} />
-      </div>
-
       <div className="mt-14 flex flex-col items-center gap-4 text-center sm:mt-16 sm:gap-5">
         <div className="flex items-baseline gap-4 sm:gap-7">
           <span className="text-3xl font-light sm:text-[44px]">

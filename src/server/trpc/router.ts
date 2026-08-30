@@ -8,8 +8,6 @@ import { submitRank } from "../rank"
 import { Limiter } from "../ratelimit"
 import { captureError } from "../report"
 import { reportEntry } from "../reports"
-import { touchPresence } from "../stats"
-import { visitorIdFrom } from "../visitor"
 import { publicProcedure, router, throttled } from "./init"
 
 const MINUTE = 60 * 1000
@@ -30,10 +28,7 @@ const reportLimit = new Limiter({ windowMs: HOUR, max: 20 })
 export const appRouter = router({
   health: publicProcedure.query(() => ({ ok: true as const, name: "time2omarchy" })),
 
-  // Pure reads. They used to record presence too, but a query that writes
-  // cannot be prerendered: a static render happens once per revalidation with
-  // no visitor headers, so it would count one visit per rebuild rather than
-  // one per person, and could not set the visitor cookie at all.
+  // Pure reads, and nothing else: the site records nothing about who asks.
   board: publicProcedure
     .use(throttled(readLimit, "Too many requests."))
     .input(z.object({ page: z.number().int().min(1).max(10_000).default(1) }).optional())
@@ -96,16 +91,6 @@ export const appRouter = router({
       return { handle: identity?.handle ?? null }
     }),
 
-  /** Records that someone is here. The write half of what board used to do. */
-  visit: publicProcedure
-    .use(throttled(readLimit, "Too many requests."))
-    .input(z.object({ countView: z.boolean() }))
-    .mutation(async ({ ctx, input }) => {
-      const visitorId = visitorIdFrom(ctx.headers, ctx.resHeaders, ctx.secure)
-      await touchPresence(visitorId, input.countView)
-      return { ok: true as const }
-    }),
-
   /**
    * Flags a boot screen for review.
    *
@@ -118,11 +103,10 @@ export const appRouter = router({
     .input(z.object({ handle: handleSchema }))
     .mutation(async ({ ctx, input }) => {
       try {
-        // Per browser, not per address: `clientKey` is one shared constant
-        // unless a trusted proxy header is configured, which would let a
-        // single report per entry ever be recorded.
-        const visitorId = visitorIdFrom(ctx.headers, ctx.resHeaders, ctx.secure)
-        return await reportEntry(input.handle, visitorId)
+        // Per address. `clientKey` is the literal "unknown" without a
+        // trusted proxy header, and `reporterKeyFor` treats that as "cannot
+        // tell reporters apart" rather than as one shared identity.
+        return await reportEntry(input.handle, ctx.clientKey)
       } catch (err) {
         await captureError(err)
         return { ok: false as const, error: "Could not send that report." }

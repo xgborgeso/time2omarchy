@@ -31,10 +31,6 @@ export type Counters = {
   /** How many entries share rank 1; ties are common at second granularity. */
   leaderCount: number
   entries: number
-  visitorsToday: number
-  online: number
-  /** Since the site opened, not today. The badge pairs this with `online`. */
-  visitors: number
 }
 
 export type BoardResponse = {
@@ -56,10 +52,7 @@ export type StatsResponse = {
   fastestSeconds: number | null
   medianSeconds: number | null
   meanSeconds: number | null
-  visitorsToday: number
-  viewsToday: number
   rankedToday: number
-  online: number
 }
 
 export type RankSuccess = {

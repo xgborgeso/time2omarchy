@@ -5,7 +5,7 @@ import { bucketTimes, dailySeries } from "../lib/stats"
 import type { BoardEntry, BoardResponse, StatsResponse } from "../lib/types"
 import { getDb } from "./db"
 import { entries } from "./schema"
-import { rankedToday, readCounters, readTotals, utcDay } from "./stats"
+import { rankedToday, utcDay } from "./stats"
 
 /** Days shown in the ranked trend. */
 const DAILY_DAYS = 14
@@ -32,7 +32,7 @@ export async function loadBoard(page = 1): Promise<BoardResponse> {
   const current = Math.max(1, Math.trunc(page) || 1)
   const offset = (current - 1) * PER_PAGE
 
-  const [rows, activityRows, total, middle, counters, totals, leader] = await Promise.all([
+  const [rows, activityRows, total, middle, leader] = await Promise.all([
     db
       .select()
       .from(entries)
@@ -67,8 +67,6 @@ export async function loadBoard(page = 1): Promise<BoardResponse> {
       })
       .from(entries)
       .where(visible),
-    readCounters(),
-    readTotals(),
     /**
      * The leader the hero quotes, over the whole board rather than this page.
      *
@@ -137,9 +135,6 @@ export async function loadBoard(page = 1): Promise<BoardResponse> {
       leaderHandle: headline?.handle ?? null,
       leaderCount: Number(tied[0]?.n ?? 0),
       entries: total[0]?.n ?? ranked.length,
-      visitorsToday: counters.visitorsToday,
-      online: counters.online,
-      visitors: totals.visitors,
     },
   }
 }
@@ -156,7 +151,7 @@ export async function loadStats(filter?: SpecFilter): Promise<StatsResponse> {
   const db = await getDb()
   const since = new Date(Date.now() - DAILY_DAYS * 24 * 60 * 60 * 1000)
 
-  const [rows, counters, todayCount] = await Promise.all([
+  const [rows, todayCount] = await Promise.all([
     db
       .select({
         t: entries.timeSeconds,
@@ -168,7 +163,6 @@ export async function loadStats(filter?: SpecFilter): Promise<StatsResponse> {
       .from(entries)
       .where(visible)
       .orderBy(asc(entries.timeSeconds)),
-    readCounters(),
     rankedToday(),
   ])
 
@@ -213,10 +207,7 @@ export async function loadStats(filter?: SpecFilter): Promise<StatsResponse> {
     meanSeconds: mean,
     // Traffic, not hardware: these describe who is here, so a filter on the
     // machines people ranked with has nothing to say about them.
-    visitorsToday: counters.visitorsToday,
-    viewsToday: counters.viewsToday,
     rankedToday: todayCount,
-    online: counters.online,
   }
 }
 

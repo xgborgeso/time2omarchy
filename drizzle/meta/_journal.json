@@ -78,6 +78,13 @@
       "when": 1788087709426,
       "tag": "0010_silly_killraven",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1788113349369,
+      "tag": "0011_right_reaper",
+      "breakpoints": true
     }
   ]
 }

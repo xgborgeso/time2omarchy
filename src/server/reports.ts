@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto"
+import { createHash, randomUUID } from "node:crypto"
 import { and, count, desc, eq, isNull, sql } from "drizzle-orm"
 import { getDb } from "./db"
 import { entries, reports } from "./schema"
@@ -8,20 +8,21 @@ export type ReportResult = { ok: true } | { ok: false; error: string }
 /**
  * The reporter, reduced to something that can only be compared.
  *
- * Keyed on the visitor id rather than the caller's address. The address is
- * only known when a trusted proxy header is configured, and unset — the
- * default — every caller shares the literal string "unknown". Hashing that
- * produced one constant for everybody, so the unique index on
- * `(entry_id, reporter_key)` silently capped each entry at a single report
- * forever, and every report after the first was dropped by
- * `onConflictDoNothing`.
+ * The caller's address, hashed. There is no visitor cookie any more: the site
+ * sets none, so there is no per-browser identifier to key on and nothing about
+ * a reporter is stored beyond this.
  *
- * The visitor id is a server-minted uuid in a cookie, so it is unguessable and
- * carries nothing about the person. Hashing it keeps the raw cookie value out
- * of a table that has no use for it.
+ * A missing address gets a fresh random key instead of a shared constant.
+ * `clientKeyFrom` yields the literal "unknown" when no trusted proxy header is
+ * configured, and hashing that gives every caller the same key — which, with
+ * the unique index on `(entry_id, reporter_key)`, silently capped each entry
+ * at one report forever. Deduplication is best-effort, so its failure has to
+ * be an extra report, never a swallowed one.
  */
-export function reporterKeyFor(visitorId: string): string {
-  return createHash("sha256").update(visitorId).digest("hex").slice(0, 32)
+export function reporterKeyFor(address: string | null): string {
+  const direct = address?.trim()
+  if (!direct || direct === "unknown") return randomUUID()
+  return createHash("sha256").update(direct).digest("hex").slice(0, 32)
 }
 
 /**
@@ -43,7 +44,7 @@ export async function notifyReport(handle: string, total: number): Promise<void>
  */
 export async function reportEntry(
   handle: string,
-  visitorId: string,
+  address: string | null,
 ): Promise<ReportResult> {
   const db = await getDb()
   const rows = await db
@@ -59,7 +60,7 @@ export async function reportEntry(
 
   await db
     .insert(reports)
-    .values({ entryId: entry.id, reporterKey: reporterKeyFor(visitorId) })
+    .values({ entryId: entry.id, reporterKey: reporterKeyFor(address) })
     .onConflictDoNothing()
 
   const [tally] = await db
