@@ -22,9 +22,24 @@ type Props = {
  * place the board's own figures were mixed with visitor numbers — which is the
  * distinction the two pages exist to keep.
  */
+/**
+ * Below this, the pill is doing the opposite of its job.
+ *
+ * "1 online" in the most prominent spot on the page, with a pulsing dot
+ * pointing at it, tells every arrival that nobody is here. Social proof needs
+ * a number that flatters, and a quiet day is exactly when it does not have
+ * one — so it renders nothing rather than something discouraging.
+ *
+ * Hidden rather than deleted: the writes behind it are already throttled to
+ * once per visitor per thirty seconds, so keeping them running costs nothing
+ * and the pill reappears by itself on the day traffic makes it worth showing.
+ */
+const ENOUGH_ONLINE = 3
+
 export function LiveBadge({ counters, className }: Props) {
   if (!counters) return null
   const { online, visitors } = counters
+  if (online < ENOUGH_ONLINE) return null
 
   return (
     <Badge

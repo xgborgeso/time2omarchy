@@ -8,8 +8,10 @@
  * here only said it twice.
  *
  * With no label above the number this is the only place that says what the
- * board measures, so it names Omarchy and ends with something to do.
+ * board measures, so it names Omarchy. It used to end with "Rank yours" —
+ * dropped once the steps below it said what that costs, and the button said
+ * it again in a place you can press.
  */
 export function heroSubline(): string {
-  return "The fastest Omarchy install leaderboard. Rank yours."
+  return "The fastest Omarchy install leaderboard."
 }

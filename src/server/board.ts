@@ -32,7 +32,7 @@ export async function loadBoard(page = 1): Promise<BoardResponse> {
   const current = Math.max(1, Math.trunc(page) || 1)
   const offset = (current - 1) * PER_PAGE
 
-  const [rows, activityRows, total, counters, totals, leader] = await Promise.all([
+  const [rows, activityRows, total, middle, counters, totals, leader] = await Promise.all([
     db
       .select()
       .from(entries)
@@ -52,6 +52,21 @@ export async function loadBoard(page = 1): Promise<BoardResponse> {
       .orderBy(desc(entries.updatedAt))
       .limit(8),
     db.select({ n: count() }).from(entries).where(visible),
+    /**
+     * The middle time, as one aggregate rather than every row.
+     *
+     * `loadStats` reads all the times into memory because it also needs the
+     * distribution; the board only needs this number, and the board is the
+     * page everybody loads. Postgres does it in the index.
+     */
+    db
+      .select({
+        seconds: sql<
+          number | null
+        >`percentile_cont(0.5) within group (order by ${entries.timeSeconds})`,
+      })
+      .from(entries)
+      .where(visible),
     readCounters(),
     readTotals(),
     /**
@@ -115,6 +130,10 @@ export async function loadBoard(page = 1): Promise<BoardResponse> {
     })),
     counters: {
       fastestSeconds: fastest,
+      // percentile_cont interpolates, so a board with an even number of
+      // entries yields a fraction of a second that no entry ever held.
+      medianSeconds:
+        middle[0]?.seconds != null ? Math.round(Number(middle[0].seconds)) : null,
       leaderHandle: headline?.handle ?? null,
       leaderCount: Number(tied[0]?.n ?? 0),
       entries: total[0]?.n ?? ranked.length,

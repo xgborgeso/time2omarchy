@@ -34,6 +34,15 @@ export function RulesPage() {
           </li>
         </ol>
       </section>
+
+      {/* The page used to stop here, which made it a dead end: this is where
+          somebody goes to find out how to take part, and the answer was to
+          work out for themselves that they had to go back to the board. The
+          button itself is rendered by App, so there is one rank flow rather
+          than two. */}
+      <p className="mt-6 text-center text-[13px] font-light text-muted-foreground">
+        That&rsquo;s all of it. Boot screen ready?
+      </p>
     </div>
   )
 }
