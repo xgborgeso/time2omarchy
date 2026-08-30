@@ -10,9 +10,12 @@ public/uploads/*
 
 # Nothing sets these today, but they must be ignored before the first one
 # exists, not after.
-.env
-.env.local
-.env*.local
+# Everything env-shaped is ignored, and the template is the one exception.
+# Listing files individually left gaps: .env.production, .env.backup and
+# .env.save were all committable, and a leaked one is not un-leaked by a later
+# commit removing it.
+.env*
+!.env.example
 
 .DS_Store
 
