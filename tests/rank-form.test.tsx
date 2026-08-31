@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 import { RankForm } from "@/components/RankForm"
+import { RECOVER_COMMAND } from "@/lib/recover"
 
 const rankFn = vi.fn()
 const uploadFn = vi.fn()
@@ -380,5 +381,37 @@ describe("RankForm", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Add a boot screen")
     expect(uploadFn).not.toHaveBeenCalled()
+  })
+})
+
+describe("RankForm and the missed boot screen", () => {
+  it("offers the recovery path beside the field that needs it", async () => {
+    // Somebody who reached this form and has no photo is one field away from
+    // giving up. The hint sits on the boot screen field rather than in the
+    // rules, because that is where the question gets asked.
+    render(<RankForm onSuccess={() => {}} />, { wrapper })
+    expect(
+      screen.getByRole("button", { name: /recover it from your install log/i }),
+    ).toBeVisible()
+  })
+
+  it("keeps it closed, so it costs nothing to anyone who has their photo", async () => {
+    // The common case is still a boot screen. Expanding by default would push
+    // the specs fields down for everyone to help a minority.
+    render(<RankForm onSuccess={() => {}} />, { wrapper })
+    expect(screen.queryByText(RECOVER_COMMAND)).toBeNull()
+  })
+
+  it("still demands an image after recovering the number", async () => {
+    // The command gives back the time, not the screenshot. Someone who runs
+    // it and types the seconds has done half the job, and the form has to say
+    // so rather than accepting an entry with no evidence at all.
+    render(<RankForm onSuccess={() => {}} />, { wrapper })
+    const user = userEvent.setup()
+    await user.type(screen.getByLabelText(/^time$/i), "99s")
+    await user.click(screen.getByRole("button", { name: /rank it/i }))
+
+    expect(await screen.findByText(/add a boot screen/i)).toBeVisible()
+    expect(rankFn).not.toHaveBeenCalled()
   })
 })

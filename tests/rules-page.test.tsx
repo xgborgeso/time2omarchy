@@ -7,7 +7,7 @@ describe("RulesPage", () => {
     // These were hand-rolled spans once and drifted out of alignment.
     render(<RulesPage />)
     expect(screen.getByRole("list")).toBeInTheDocument()
-    expect(screen.getAllByRole("listitem")).toHaveLength(6)
+    expect(screen.getAllByRole("listitem")).toHaveLength(5)
   })
 
   it("states the two rules the ranking code actually enforces", () => {
@@ -41,6 +41,42 @@ describe("RulesPage", () => {
     render(<RulesPage />)
     const rules = screen.getAllByRole("listitem").map((li) => li.textContent ?? "")
     expect(rules.join(" ")).not.toMatch(/\bedit\b|\bchanged\b/i)
+  })
+
+  it("asks for a screenshot rather than a boot screen specifically", () => {
+    // A terminal shot of the install log is accepted, so a rule demanding a
+    // boot screen now describes something narrower than what the form takes.
+    render(<RulesPage />)
+    expect(screen.getByText(/a screenshot is required/i)).toBeInTheDocument()
+  })
+
+  it("names the log in the rule about what you upload", () => {
+    // Recovering a time answers "what do I upload?". It is one clause on the
+    // rule that asks for the screenshot, not a rule of its own.
+    render(<RulesPage />)
+    const upload = screen
+      .getAllByRole("listitem")
+      .map((li) => li.textContent ?? "")
+      .find((r) => /a screenshot is required/i.test(r))
+    expect(upload).toContain("/var/log/omarchy-install-timing.json")
+  })
+
+  it("ends on how to take part rather than on being reported", () => {
+    // The last rule was "anyone can report one that does not look right",
+    // which was the last thing read before the button — a warning where an
+    // invitation belongs. Reporting is still there; it lives on the lightbox,
+    // beside the entry it is about, which is the only place it can be used.
+    render(<RulesPage />)
+    const rules = screen.getAllByRole("listitem").map((li) => li.textContent ?? "")
+    expect(rules.join(" ")).not.toMatch(/self-reported|report one|does not look right/i)
+  })
+
+  it("does not promise the log is better proof than a photo", () => {
+    // It is a text file. Editing it is easier than editing an image, and
+    // claiming otherwise would be selling a guarantee the board cannot keep.
+    render(<RulesPage />)
+    const rules = screen.getAllByRole("listitem").map((li) => li.textContent ?? "")
+    expect(rules.join(" ")).not.toMatch(/proof|proves|guarantee|tamper/i)
   })
 
   it("has no vocabulary left for a thing that no longer exists", () => {

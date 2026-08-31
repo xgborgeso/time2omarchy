@@ -49,4 +49,21 @@ describe("Hero", () => {
     render(<Hero counters={undefined} onAnalytics={() => {}} />)
     expect(screen.getByText("BE")).toBeInTheDocument()
   })
+
+  it("tells people who already installed that they can still enter", () => {
+    // Step one says to snap the boot screen, which reads as "too late for me"
+    // to everyone who installed before finding this board — and that is most
+    // of the audience. Without this line they leave from the hero, before the
+    // form has a chance to explain anything.
+    render(<Hero counters={counters()} />)
+    expect(screen.getByRole("button", { name: /already installed/i })).toBeVisible()
+  })
+
+  it("does not make them sign in to find out how", () => {
+    // The recovery path sits in the hero, not only behind the X gate on the
+    // rank dialog. Asking somebody to authorize an app to learn whether they
+    // are eligible is the wrong order.
+    render(<Hero counters={counters()} />)
+    expect(screen.queryByText(/sign in to see|connect x first/i)).toBeNull()
+  })
 })

@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
 } from "react"
+import { RecoverHint } from "@/components/RecoverHint"
 import { FIELD_ROW, SpecsFields } from "@/components/SpecsFields"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -298,6 +299,9 @@ export function RankForm({ onSuccess, className, onDone }: Props) {
           {error?.field === "bootScreen" ? (
             <FieldMessage id={errorId} text={error.message} />
           ) : null}
+          {/* Beside the field it rescues, where the question "what do I even
+              upload?" is actually being asked. */}
+          <RecoverHint label="Didn't snap it? Recover it from your install log" />
           <input
             ref={inputRef}
             type="file"
