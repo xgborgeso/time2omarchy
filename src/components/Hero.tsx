@@ -1,5 +1,6 @@
 import { HeroSteps } from "@/components/HeroSteps"
 import { LivePill } from "@/components/LivePill"
+import { RecoverHint } from "@/components/RecoverHint"
 import { StatStrip } from "@/components/StatStrip"
 import { heroSubline } from "@/lib/hero"
 import { formatTime } from "@/lib/time"
@@ -31,6 +32,14 @@ export function Hero({
           {heroSubline()}
         </p>
         <HeroSteps />
+        {/* Under the steps rather than inside them: the steps are what ranking
+            costs, and this is for the people who read step one and concluded
+            it was too late for them. Most Omarchy users installed before they
+            ever heard of this board. */}
+        <RecoverHint
+          label="Already installed? Your machine still remembers"
+          className="w-full max-w-[32rem]"
+        />
         <StatStrip counters={counters} />
       </div>
     </section>
