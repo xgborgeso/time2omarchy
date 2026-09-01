@@ -153,7 +153,7 @@ export function App() {
           </>
         ) : (
           <>
-            <Hero counters={data?.counters} audience={data?.audience} />
+            <Hero counters={data?.counters} />
             <RankDialog onSuccess={onSuccess} />
 
             {/* Flush with the board's own frame, not with an entry's inner

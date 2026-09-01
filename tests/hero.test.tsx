@@ -15,7 +15,7 @@ function counters(over: Partial<Counters> = {}): Counters {
 
 describe("Hero", () => {
   it("leads with the time to beat", () => {
-    render(<Hero counters={counters()} onAnalytics={() => {}} />)
+    render(<Hero counters={counters()} />)
     expect(screen.getByText("BEAT")).toBeInTheDocument()
     expect(screen.getByText("43s")).toBeInTheDocument()
   })
@@ -46,7 +46,7 @@ describe("Hero", () => {
   })
 
   it("survives having no counters at all, as on first paint", () => {
-    render(<Hero counters={undefined} onAnalytics={() => {}} />)
+    render(<Hero counters={undefined} />)
     expect(screen.getByText("BE")).toBeInTheDocument()
   })
 

@@ -1,5 +1,5 @@
 import { xUrl } from "@/lib/handle"
-import { ANALYTICS_URL, AUTHOR_HANDLE, OMARCHY_URL, REPO_URL } from "@/lib/links"
+import { AUTHOR_HANDLE, OMARCHY_URL, REPO_URL } from "@/lib/links"
 import type { View } from "@/lib/view"
 
 type Props = {
@@ -36,18 +36,6 @@ export function Footer({ onNavigate }: Props) {
       >
         Rules
       </button>
-      {/* After Rules, matching the header. Absent until there is a dashboard
-          to open. */}
-      {ANALYTICS_URL ? (
-        <a
-          href={ANALYTICS_URL}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex min-h-11 items-center hover:text-foreground"
-        >
-          Analytics ↗
-        </a>
-      ) : null}
       <a
         href={REPO_URL}
         target="_blank"

@@ -82,8 +82,8 @@ export function StatsPage() {
       ) : null}
 
       {/* Three, not four: the Online tile counted visitors, which is traffic
-          rather than the board. That lives on Analytics, and showing it in
-          both places made two tabs look like one subject. */}
+          rather than the board. Traffic is measured but never published — it
+          is the owner's to read, and it was never what this page is about. */}
       <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-3">
         <StatTile
           label="Ranked"

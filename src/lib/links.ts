@@ -14,18 +14,11 @@ export const REPO_URL = "https://github.com/xgborgeso/time2omarchy"
 export const NEW_CPU_ISSUE_URL = `${REPO_URL}/issues/new?template=add-cpu.yml&title=Add+CPU%3A+`
 
 /**
- * The hosted analytics dashboard, when there is one.
+ * The site Datafast records this traffic under.
  *
- * Empty until a *public share* url is configured, and with no development
- * fallback. It fell back to `https://datafa.st` once, which is worse than
- * nothing: signed in, that lands on the owner's private dashboard, so the link
- * looked like it worked while being a closed door to every visitor. The pill
- * and the nav read fine without it, so the honest default is absent.
- *
- * Must be the share link (`datafa.st/share/...`), not the dashboard. Read at
- * build time, so it is a plain string rather than a lookup.
+ * Collection only. The figures are private to the owner's dashboard and are
+ * never read back into the page, so there is deliberately no public share url
+ * here and nothing in the UI links out to one.
  */
-export const ANALYTICS_URL = process.env.NEXT_PUBLIC_ANALYTICS_URL?.trim() || ""
-
 export const DATAFAST_SITE_ID = "dfid_okBBZAhFhLC2mtjtSAfWo"
 export const DATAFAST_DOMAIN = "time2omarchy.com"

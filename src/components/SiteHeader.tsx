@@ -1,5 +1,5 @@
 import { xUrl } from "@/lib/handle"
-import { ANALYTICS_URL, OMARCHY_URL } from "@/lib/links"
+import { OMARCHY_URL } from "@/lib/links"
 import { cn } from "@/lib/utils"
 import type { View } from "@/lib/view"
 import { OmarchyLogo } from "./OmarchyLogo"
@@ -9,18 +9,11 @@ type Props = {
   onNavigate: (view: View) => void
 }
 
-/**
- * The nav, in order.
- *
- * Analytics is a `href` rather than a `view` because the dashboard is hosted
- * elsewhere, and it comes last because it is the only entry that leaves the
- * site. Dropped entirely when there is no dashboard to open.
- */
-const NAV: Array<{ view?: View; href?: string; label: string }> = [
+/** The nav, in order. Every entry is a view on this site. */
+const NAV: Array<{ view: View; label: string }> = [
   { view: "board", label: "Board" },
   { view: "stats", label: "Stats" },
   { view: "rules", label: "Rules" },
-  ...(ANALYTICS_URL ? [{ href: ANALYTICS_URL, label: "Analytics" }] : []),
 ]
 
 const ITEM = "inline-flex min-h-11 items-center hover:text-foreground"
@@ -66,23 +59,17 @@ export function SiteHeader({ active, onNavigate }: Props) {
             preflight resets text-transform on `button`, so it never reached
             any of these and only shouted at the one item that is a link. */}
         <nav className="flex items-center gap-4 font-medium text-muted-foreground text-xs sm:gap-5">
-          {NAV.map(({ view, href, label }) =>
-            href ? (
-              <a key={label} href={href} target="_blank" rel="noreferrer" className={ITEM}>
-                {label} ↗
-              </a>
-            ) : (
-              <button
-                key={label}
-                type="button"
-                onClick={() => view && onNavigate(view)}
-                className={cn(ITEM, active === view && "text-foreground")}
-                aria-current={active === view ? "page" : undefined}
-              >
-                {label}
-              </button>
-            ),
-          )}
+          {NAV.map(({ view, label }) => (
+            <button
+              key={label}
+              type="button"
+              onClick={() => onNavigate(view)}
+              className={cn(ITEM, active === view && "text-foreground")}
+              aria-current={active === view ? "page" : undefined}
+            >
+              {label}
+            </button>
+          ))}
         </nav>
       </div>
     </div>

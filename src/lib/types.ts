@@ -23,18 +23,6 @@ export type ActivityItem = {
   updatedAt: string
 }
 
-/**
- * Who is here, as Datafast counts them.
- *
- * Kept apart from `Counters` on purpose: those are the board's own figures,
- * these describe traffic, and mixing them was what made the old badge the one
- * place the two subjects met.
- */
-export type Audience = {
-  online: number
-  visitors: number
-}
-
 export type Counters = {
   fastestSeconds: number | null
   /** The middle time on the board. Null until anything is ranked. */
@@ -49,8 +37,6 @@ export type BoardResponse = {
   entries: BoardEntry[]
   activity: ActivityItem[]
   counters: Counters
-  /** Null whenever Datafast cannot be reached, or is not configured. */
-  audience: Audience | null
   /** Which page these entries are, and how many entries exist behind them. */
   page: number
   perPage: number

@@ -90,15 +90,6 @@ const checks: Check[] = [
           "exhaust the upload and report limits for everyone. Use x-forwarded-for " +
           "on Vercel, or cf-connecting-ip behind Cloudflare.",
   },
-  {
-    label: "NEXT_PUBLIC_ANALYTICS_URL",
-    fatal: false,
-    problem: () =>
-      value("NEXT_PUBLIC_ANALYTICS_URL")
-        ? null
-        : "Unset, so the Analytics page shows this app's own figures and no link " +
-          "out to the hosted dashboard. Optional.",
-  },
 ]
 
 const failures: Check[] = []
