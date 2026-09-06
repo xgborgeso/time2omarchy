@@ -1,6 +1,6 @@
 import { z } from "zod"
 import { searchCpus } from "../../lib/cpus"
-import { specsSchema } from "../../lib/specs"
+import { requireCpuName, specsSchema } from "../../lib/specs"
 import { handleSchema, timeSchema } from "../../lib/validation"
 import { loadBoard, loadStats, searchEntries } from "../board"
 import { identityFrom } from "../identity"
@@ -126,7 +126,10 @@ export const appRouter = router({
           bootScreenThumbUrl: z.string().min(1),
           bootScreenThumbKey: z.string().min(1).max(256),
         })
-        .extend(specsSchema.shape),
+        .extend(specsSchema.shape)
+        // The escape hatch has to say what it is standing in for. Checked here
+        // as well as in the form, because the form is not the only caller.
+        .superRefine(requireCpuName),
     )
     .mutation(async ({ ctx, input }) => {
       try {
@@ -149,6 +152,7 @@ export const appRouter = router({
           bootScreenThumbUrl: input.bootScreenThumbUrl,
           bootScreenThumbKey: input.bootScreenThumbKey,
           cpuId: input.cpuId,
+          cpuOther: input.cpuOther,
           ramGb: input.ramGb,
           storage: input.storage,
         })

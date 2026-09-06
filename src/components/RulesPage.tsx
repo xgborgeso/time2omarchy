@@ -29,6 +29,15 @@ export function RulesPage() {
             One entry per account. Only you can change your entry — beat your own time and
             it replaces the old one.
           </li>
+          {/* Placed before the screenshot rule rather than after it, so the
+              list still ends on an invitation. Hardware earns a rule because
+              it is the one thing the form asks for whose reason is not
+              self-evident: nobody wonders why a leaderboard wants a time. */}
+          <li className="pl-2">
+            Every entry names its machine. Install time is mostly hardware, so a time
+            without a CPU, memory and drive compares to nothing. If your chip is not in the
+            list, name it — that is how it gets there for the next person.
+          </li>
           {/* "Boot screen" stopped being literally true once a terminal
               screenshot became acceptable. Widened here rather than renamed in
               the schema: bootScreenUrl and friends still describe the common

@@ -7,7 +7,7 @@ describe("RulesPage", () => {
     // These were hand-rolled spans once and drifted out of alignment.
     render(<RulesPage />)
     expect(screen.getByRole("list")).toBeInTheDocument()
-    expect(screen.getAllByRole("listitem")).toHaveLength(5)
+    expect(screen.getAllByRole("listitem")).toHaveLength(6)
   })
 
   it("states the two rules the ranking code actually enforces", () => {
@@ -48,6 +48,24 @@ describe("RulesPage", () => {
     // boot screen now describes something narrower than what the form takes.
     render(<RulesPage />)
     expect(screen.getByText(/a screenshot is required/i)).toBeInTheDocument()
+  })
+
+  it("says why the machine is asked for, not just that it is", () => {
+    // The one field on the form whose reason is not self-evident: nobody
+    // wonders why a leaderboard wants a time. Left unexplained, the CPU picker
+    // reads as data collection rather than as the thing the board measures.
+    render(<RulesPage />)
+    const rules = screen.getAllByRole("listitem").map((li) => li.textContent ?? "")
+    expect(rules.join(" ")).toMatch(/install time is mostly hardware/i)
+  })
+
+  it("says an unlisted chip is named, and checked before it is added", () => {
+    // The escape hatch is required now, so the rules have to answer the
+    // question it raises: what happens to what I type. "Checked by hand" is
+    // the honest answer — some of it is too vague to become a chip.
+    render(<RulesPage />)
+    const rules = screen.getAllByRole("listitem").map((li) => li.textContent ?? "")
+    expect(rules.join(" ")).toMatch(/that is how it gets there for the next person/i)
   })
 
   it("names the log in the rule about what you upload", () => {

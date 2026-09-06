@@ -35,6 +35,16 @@ export function storageLabel(id: string): string | null {
 }
 
 /**
+ * How much of a model string is worth keeping.
+ *
+ * The longest line `lscpu` prints for a consumer chip is about seventy
+ * characters — `AMD Ryzen 7 PRO 7840U w/ Radeon 780M Graphics` is forty-five.
+ * Generous enough that nobody's real answer is cut, short enough that the
+ * column is not a place to write in.
+ */
+export const CPU_OTHER_MAX = 120
+
+/**
  * All three are required.
  *
  * Install time is dominated by hardware — reported times range from about 45
@@ -42,10 +52,20 @@ export function storageLabel(id: string): string | null {
  * comparable to anything, and partial data skews every aggregate built on it.
  *
  * `OTHER_CPU_ID` is accepted so that a chip missing from the catalogue cannot
- * lock someone out. Stats exclude that bucket rather than guessing.
+ * lock someone out. Stats exclude that bucket rather than guessing, and
+ * `cpuOther` is how the bucket gets smaller: the name that went with it, so
+ * the catalogue can be grown from what people actually have.
  */
 export const specsSchema = z.object({
   cpuId: z.enum([OTHER_CPU_ID, ...CPU_IDS] as [string, ...string[]]),
+  cpuOther: z
+    .string()
+    .trim()
+    .max(CPU_OTHER_MAX)
+    .nullish()
+    // An empty box and an absent one mean the same thing, and only one of
+    // them should ever reach the column.
+    .transform((text) => text || null),
   ramGb: z
     .number()
     .int()
@@ -53,8 +73,40 @@ export const specsSchema = z.object({
   storage: z.enum(STORAGE_IDS),
 })
 
+/**
+ * Refuses "Other" with nothing beside it.
+ *
+ * Applied where the input is assembled rather than on `specsSchema` itself,
+ * which has to stay a plain object for the router to spread its shape.
+ *
+ * The bucket is only worth having if it says what it holds. Left optional it
+ * collected eleven entries that named nothing, and eleven entries recording
+ * that the catalogue failed without recording what it failed at is a bucket
+ * that can never get smaller.
+ */
+export function requireCpuName(
+  value: { cpuId: string; cpuOther?: string | null },
+  ctx: z.RefinementCtx,
+): void {
+  if (value.cpuId !== OTHER_CPU_ID || value.cpuOther) return
+  ctx.addIssue({
+    code: "custom",
+    path: ["cpuOther"],
+    message: "Name your chip so the next person finds it.",
+  })
+}
+
 export type Specs = {
   cpuId: string | null
+  /**
+   * What the person called their chip, when they picked the escape hatch.
+   *
+   * Kept beside the id rather than replacing it: this is a note to whoever
+   * maintains the catalogue, never a second way to name a machine on the
+   * board. Optional because a board entry is a `Specs` too, and that one is
+   * read back from a query that never selects the column.
+   */
+  cpuOther?: string | null
   ramGb: number | null
   storage: string | null
 }

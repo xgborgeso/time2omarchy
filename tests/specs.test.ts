@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest"
+import { CPUS } from "@/lib/cpus"
 import {
   formatSpecs,
   formatSpecsShort,
   OTHER_CPU_ID,
   RAM_OPTIONS,
+  requireCpuName,
   STORAGE,
   specsSchema,
   storageLabel,
@@ -30,6 +32,47 @@ describe("specsSchema", () => {
     // requiring a *listed* answer would lock people out entirely.
     const r = specsSchema.safeParse({ cpuId: OTHER_CPU_ID, ramGb: 32, storage: "nvme" })
     expect(r.success).toBe(true)
+  })
+
+  it("refuses the not-listed bucket with nothing beside it", () => {
+    // The rule the whole catalogue queue rests on. Left optional the bucket
+    // collected eleven entries naming nothing — which records that the list
+    // failed without recording what it failed at, and can never get smaller.
+    const required = specsSchema.superRefine(requireCpuName)
+    const refused = required.safeParse({
+      cpuId: OTHER_CPU_ID,
+      ramGb: 32,
+      storage: "nvme",
+    })
+
+    expect(refused.success).toBe(false)
+    // Reported against the field, so the form can put the message beside it.
+    expect(refused.error?.issues[0]?.path).toEqual(["cpuOther"])
+  })
+
+  it("takes the not-listed bucket once it says what it is", () => {
+    const required = specsSchema.superRefine(requireCpuName)
+    expect(
+      required.safeParse({
+        cpuId: OTHER_CPU_ID,
+        cpuOther: "Intel(R) N100",
+        ramGb: 32,
+        storage: "nvme",
+      }).success,
+    ).toBe(true)
+  })
+
+  it("asks for no name when a catalogued chip was picked", () => {
+    // Only the escape hatch has anything to explain; everyone else already
+    // chose from the list.
+    const required = specsSchema.superRefine(requireCpuName)
+    expect(
+      required.safeParse({
+        cpuId: CPUS[0]!.id,
+        ramGb: 32,
+        storage: "nvme",
+      }).success,
+    ).toBe(true)
   })
 
   it("refuses a cpu that is not in the catalogue", () => {

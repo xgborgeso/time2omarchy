@@ -47,6 +47,20 @@ export const entries = pgTable(
      * free text, so they can be aggregated.
      */
     cpuId: text("cpu_id").notNull(),
+    /**
+     * The chip someone named when the catalogue did not have it.
+     *
+     * Null on every entry that picked a real id, and the whole reason the
+     * escape hatch is worth keeping: "other" on its own records that the list
+     * failed without recording what it failed at, so the list could never be
+     * grown from it. Read by `pnpm cpu-requests`, which is what decides the
+     * next chips to add.
+     *
+     * Write-only. It is typed by strangers, so it is never selected into a
+     * board or stats query and never reaches a page — which is what keeps it
+     * off the moderation surface that boot screens already occupy.
+     */
+    cpuOther: text("cpu_other"),
     ramGb: integer("ram_gb").notNull(),
     storage: text("storage").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

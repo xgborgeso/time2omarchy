@@ -1,4 +1,5 @@
 import { eq, or } from "drizzle-orm"
+import { OTHER_CPU_ID } from "../lib/cpus"
 import type { Identity } from "../lib/identity"
 import { decideEntry } from "../lib/ranking"
 import { keyMatchesUrl } from "../lib/storage-key"
@@ -20,6 +21,8 @@ export type RankInput = {
   bootScreenThumbKey: string
   /** Required hardware, validated against the catalogue by the router. */
   cpuId: string
+  /** What they called a chip the catalogue does not have, if they said. */
+  cpuOther?: string | null
   ramGb: number
   storage: string
   /**
@@ -83,6 +86,11 @@ export async function submitRank(input: RankInput): Promise<RankSuccess | RankFa
   const handle = identity.handle
   const specs = {
     cpuId: input.cpuId,
+    // Only ever stored beside the escape hatch. Someone who typed a name,
+    // then found their chip in the list, would otherwise leave a note behind
+    // contradicting the id next to it — and `cpu-requests` would go on asking
+    // for a chip the catalogue already has.
+    cpuOther: input.cpuId === OTHER_CPU_ID ? (input.cpuOther ?? null) : null,
     ramGb: input.ramGb,
     storage: input.storage,
   }
@@ -229,6 +237,7 @@ function toEntry(
   board: { entries: BoardEntry[] },
 ): BoardEntry {
   return {
+    /* v8 ignore next -- @preserve: only called after the same find already missed */
     rank: board.entries.find((e) => e.handle === row.handle)?.rank ?? 0,
     handle: row.handle,
     timeSeconds: row.timeSeconds,
