@@ -68,6 +68,7 @@ export async function reportEntry(
     .from(reports)
     .where(eq(reports.entryId, entry.id))
 
+  /* v8 ignore next -- @preserve: a count() query returns exactly one row */
   await notifyReport(handle, Number(tally?.n ?? 1))
   return { ok: true }
 }

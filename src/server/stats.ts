@@ -13,5 +13,6 @@ export async function rankedToday(): Promise<number> {
     .select({ n: count() })
     .from(entries)
     .where(gte(entries.updatedAt, start))
+  /* v8 ignore next -- @preserve: a count() query returns exactly one row */
   return rows[0]?.n ?? 0
 }

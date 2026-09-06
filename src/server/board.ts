@@ -11,6 +11,7 @@ import { rankedToday, utcDay } from "./stats"
 const DAILY_DAYS = 14
 
 function toIso(value: Date | string): string {
+  /* v8 ignore next -- @preserve: drizzle returns a Date for a timestamp column */
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString()
 }
 
@@ -113,6 +114,7 @@ export async function loadBoard(page = 1): Promise<BoardResponse> {
       createdAt: toIso(row.createdAt),
       updatedAt: toIso(row.updatedAt),
     })),
+    /* v8 ignore next -- @preserve: a count() query returns exactly one row, so the fallback cannot fire */
     Number(faster[0]?.n ?? 0) + 1,
   )
 
@@ -120,6 +122,7 @@ export async function loadBoard(page = 1): Promise<BoardResponse> {
     entries: ranked,
     page: current,
     perPage: PER_PAGE,
+    /* v8 ignore next -- @preserve: a count() query returns exactly one row, so the fallback cannot fire */
     total: total[0]?.n ?? ranked.length,
     activity: activityRows.map((row) => ({
       handle: row.handle,
@@ -133,7 +136,9 @@ export async function loadBoard(page = 1): Promise<BoardResponse> {
       medianSeconds:
         middle[0]?.seconds != null ? Math.round(Number(middle[0].seconds)) : null,
       leaderHandle: headline?.handle ?? null,
+      /* v8 ignore next -- @preserve: a count() query returns exactly one row, so the fallback cannot fire */
       leaderCount: Number(tied[0]?.n ?? 0),
+      /* v8 ignore next -- @preserve: a count() query returns exactly one row, so the fallback cannot fire */
       entries: total[0]?.n ?? ranked.length,
     },
   }
@@ -236,6 +241,7 @@ export async function findEntryByHandle(handle: string): Promise<BoardEntry | nu
     .where(and(visible, lt(entries.timeSeconds, row.timeSeconds)))
 
   return {
+    /* v8 ignore next -- @preserve: a count() query returns exactly one row, so the fallback cannot fire */
     rank: Number(faster[0]?.n ?? 0) + 1,
     handle: row.handle,
     timeSeconds: row.timeSeconds,
@@ -287,6 +293,7 @@ export async function searchEntries(query: string): Promise<BoardEntry[]> {
         .where(and(visible, lt(entries.timeSeconds, row.timeSeconds)))
 
       return {
+        /* v8 ignore next -- @preserve: a count() query returns exactly one row, so the fallback cannot fire */
         rank: Number(faster[0]?.n ?? 0) + 1,
         handle: row.handle,
         timeSeconds: row.timeSeconds,

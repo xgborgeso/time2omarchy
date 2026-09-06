@@ -1,41 +1,66 @@
-import { afterEach, describe, expect, it, vi } from "vitest"
-import { captureError } from "@/server/report"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const written: string[] = []
-vi.spyOn(console, "error").mockImplementation((...args) => {
-  written.push(args.map(String).join(" "))
+/**
+ * Where an unexpected error goes.
+ *
+ * Console only, deliberately: the shape is what matters, so choosing between
+ * a log drain, Sentry or anything else stays a change to this one function.
+ * The two branches exist because the reader differs — a machine in
+ * production, a person on a laptop — and the fields do not.
+ */
+const logged: string[] = []
+
+beforeEach(() => {
+  vi.resetModules()
+  vi.unstubAllEnvs()
+  logged.length = 0
+  vi.spyOn(console, "error").mockImplementation((m: string) => {
+    logged.push(m)
+  })
 })
 
-afterEach(() => {
-  written.length = 0
-})
+async function capture(nodeEnv: string, err: unknown) {
+  vi.stubEnv("NODE_ENV", nodeEnv)
+  const { captureError } = await import("../src/server/report")
+  await captureError(err)
+  return logged.join("\n")
+}
 
 describe("captureError", () => {
-  it("never writes what the error happened to be carrying", async () => {
-    // A DrizzleQueryError carries `query` and `params` — the values somebody
-    // just submitted. Handing the object to the console publishes them.
-    const err = Object.assign(new Error("Failed query"), {
-      query: "insert into entries (handle) values ($1)",
-      params: ["a-real-persons-handle"],
-    })
-
-    await captureError(err)
-
-    const said = written.join("\n")
-    expect(said).toContain("Failed query")
-    expect(said).not.toContain("a-real-persons-handle")
-    expect(said).not.toContain("insert into entries")
+  it("writes one parseable line in production", async () => {
+    // Where something might be reading it, a stack split across lines is not
+    // one event.
+    const out = await capture("production", new Error("boom"))
+    const parsed = JSON.parse(out)
+    expect(parsed).toMatchObject({ level: "error", name: "Error", message: "boom" })
+    expect(parsed.stack).toContain("boom")
   })
 
-  it("keeps the name and the stack, which are what a fix needs", async () => {
-    await captureError(new TypeError("nope"))
-    const said = written.join("\n")
-    expect(said).toContain("TypeError")
-    expect(said).toContain("nope")
+  it("writes a readable stack where a person is watching", async () => {
+    const out = await capture("development", new Error("boom"))
+    expect(out).toContain("[Error] boom")
+    expect(() => JSON.parse(out)).toThrow()
   })
 
-  it("survives being handed something that is not an error", async () => {
-    await expect(captureError("just a string")).resolves.toBeUndefined()
-    expect(written.join("\n")).toContain("just a string")
+  it("carries the same fields either way", async () => {
+    const prod = JSON.parse(await capture("production", new Error("boom")))
+    logged.length = 0
+    const dev = await capture("development", new Error("boom"))
+    expect(dev).toContain(prod.name)
+    expect(dev).toContain(prod.message)
+  })
+
+  it("takes something that was never an Error", async () => {
+    // Anything can be thrown, and a reporter that throws on the throw is the
+    // last thing a failing request needs.
+    const out = await capture("production", "just a string")
+    expect(JSON.parse(out)).toMatchObject({ message: "just a string" })
+  })
+
+  it("survives an error with no stack", async () => {
+    const bare = new Error("boom")
+    bare.stack = undefined
+    const out = await capture("development", bare)
+    expect(out).toContain("boom")
   })
 })

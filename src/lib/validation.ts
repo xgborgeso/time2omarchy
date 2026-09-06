@@ -47,10 +47,15 @@ export const timeSchema = z
       })
       return z.NEVER
     }
+    /* v8 ignore start -- @preserve: unreachable today. Every fractional path
+       through `parseTime` ends in Math.round, so a non-integer cannot arrive
+       here. Kept as defence for a future parseTime rather than deleted, and
+       pinned by "rounds a fraction rather than refusing it" in edges.test.ts. */
     if (!Number.isInteger(seconds)) {
       ctx.addIssue({ code: "custom", message: "Whole seconds only." })
       return z.NEVER
     }
+    /* v8 ignore stop */
     return seconds
   })
 
@@ -63,6 +68,7 @@ export const timeSchema = z
  */
 export function timeError(input: string): string | null {
   const result = timeSchema.safeParse(input)
+  /* v8 ignore next -- @preserve: a zod failure always carries at least one issue */
   return result.success ? null : (result.error.issues[0]?.message ?? "Add a time")
 }
 
@@ -79,6 +85,7 @@ export function validateBootScreen(
   if (!file || !(file instanceof Blob) || file.size === 0) {
     return { field: "bootScreen", error: "Add a boot screen" }
   }
+  /* v8 ignore next -- @preserve: the guard above proved it is a Blob, and every Blob has a type */
   const type = "type" in file ? file.type : ""
   if (type && !ALLOWED_IMAGE_TYPES.includes(type as (typeof ALLOWED_IMAGE_TYPES)[number])) {
     return { field: "bootScreen", error: "Use a png, jpg, webp, gif, or avif" }

@@ -62,8 +62,13 @@ export function formatError({
 }
 
 const t = initTRPC.context<Context>().create({
+  /* v8 ignore start -- @preserve: tRPC calls this only through the HTTP
+     handler, and `createCaller` — the only way a test reaches a procedure
+     in-process — skips it entirely. `formatError` itself is covered directly
+     in tests/router.local.test.ts. */
   errorFormatter: ({ shape, error }) =>
     formatError({ shape: shape as unknown as Shape, error }),
+  /* v8 ignore stop */
 })
 
 export const router = t.router

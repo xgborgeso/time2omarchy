@@ -35,6 +35,7 @@ export class Limiter {
 
     while (this.buckets.size > this.capacity) {
       const coldest = this.buckets.keys().next().value
+      /* v8 ignore next -- @preserve: the loop runs only while size > capacity, so a key always exists */
       if (coldest === undefined) break
       this.buckets.delete(coldest)
     }

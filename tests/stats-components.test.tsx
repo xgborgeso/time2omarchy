@@ -13,7 +13,14 @@ const buckets = TIME_BUCKETS.map((b, i) => ({ ...b, count: i === 0 ? 3 : 1 }))
 function stats(over: Partial<StatsResponse> = {}): StatsResponse {
   return {
     distribution: buckets,
-    hardware: { storage: [], cpu: [], cpuLevel: "vendor", cpuParent: null, ram: [] },
+    hardware: {
+      storage: [],
+      cpu: [],
+      cpuLevel: "vendor",
+      cpuParent: null,
+      cpuUnlisted: 0,
+      ram: [],
+    },
     daily: [
       { day: "2026-01-01", count: 2 },
       { day: "2026-01-02", count: 5 },
@@ -99,5 +106,32 @@ describe("YourRank", () => {
     render(<YourRank stats={stats()} />)
     await userEvent.type(screen.getByLabelText(/your time/i), "999999")
     expect(screen.queryByText(/faster than/i)).toBeNull()
+  })
+})
+
+describe("YourRank against an empty board", () => {
+  it("says the first time entered would be the record", async () => {
+    // "Shave 0s to match the record" describes a record that does not exist.
+    render(
+      <YourRank stats={stats({ fastestSeconds: null, medianSeconds: null, entries: 0 })} />,
+    )
+    const input = screen.getByPlaceholderText(/43s or 1:12/i)
+    await userEvent.setup().type(input, "43s")
+
+    expect(await screen.findByText(/no record set yet/i)).toBeVisible()
+  })
+})
+
+describe("YourRank before there is a percentile", () => {
+  it("still draws a bar rather than a zero-width sliver", async () => {
+    // The bar is the only thing on that row, and a bar of nothing looks like
+    // the component failed to render.
+    render(<YourRank stats={stats({ entries: 0, fastestSeconds: null })} />)
+    await userEvent.setup().type(screen.getByPlaceholderText(/43s or 1:12/i), "43s")
+
+    const bar = document.querySelector<HTMLElement>(
+      ".bg-primary.h-full, .h-full.bg-primary",
+    )
+    expect(bar?.style.width).toBeTruthy()
   })
 })

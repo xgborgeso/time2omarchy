@@ -1,6 +1,7 @@
 # time2omarchy
 
 [![Check](https://github.com/xgborgeso/time2omarchy/actions/workflows/check.yml/badge.svg?branch=main)](https://github.com/xgborgeso/time2omarchy/actions/workflows/check.yml)
+[![Coverage](https://img.shields.io/badge/coverage-100%25-brightgreen)](vitest.config.ts)
 
 A leaderboard for the fastest [Omarchy](https://omarchy.org) installs. Community
 project, not affiliated with Omarchy or DHH.
@@ -42,6 +43,8 @@ the other.
 | `pnpm dev` | development server |
 | `pnpm bootstrap` | dependencies + a freshly seeded database |
 | `pnpm test` | Vitest |
+| `pnpm test:coverage` | Vitest with coverage, held at 100% |
+| `pnpm cpu-requests` | chips people asked for, and what was decided |
 | `pnpm lint` | Biome |
 | `pnpm typecheck` | `tsc --noEmit` |
 | `pnpm db:fresh` | reset and reseed — the usual one |
@@ -49,13 +52,23 @@ the other.
 
 Postgres runs locally through PGlite, so there is no database to install.
 
+The badge above is a fixed number rather than a stale one: coverage thresholds
+sit at 100 in `vitest.config.ts` and CI runs `pnpm test:coverage`, so a drop
+fails the build instead of quietly rewriting the badge. The handful of lines
+that genuinely cannot be executed — a signal handler that would end the test
+run, a chart callback a headless DOM never fires, a `?? 0` on a query that
+always returns a row — carry a `v8 ignore` with the reason written beside them,
+so anything uncovered had to be argued for in the diff.
+
 ## Contributing
 
 Issues and pull requests welcome. Run `pnpm test && pnpm lint && pnpm typecheck`
 before opening one; CI runs the same three and production waits for them.
 
-A missing CPU goes through [its issue template](.github/ISSUE_TEMPLATE/add-cpu.yml)
-rather than a pull request, so the list stays one shape.
+A missing CPU needs no issue and no pull request. Choose **Other** on the rank
+form and name the chip: `pnpm cpu-requests` collects what people asked for into
+[`src/lib/cpu-requests.json`](src/lib/cpu-requests.json), each one is checked by
+hand against the vendor's own page, and `--apply` adds the ones that are real.
 
 ## Stack
 

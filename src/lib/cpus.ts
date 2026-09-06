@@ -1105,21 +1105,136 @@ export function cpusByVendor(cpus: readonly Cpu[] = CPUS): CpuGroup[] {
 }
 
 /**
- * Substring match over vendor, family and model.
+ * A model string reduced to the words that actually identify a chip.
+ *
+ * This picker is used by people with a terminal already open, so what lands in
+ * it is usually a line from `lscpu` or `/proc/cpuinfo` rather than a name
+ * typed from memory — and every one of those carries words no catalogue entry
+ * contains: a trademark sign, a core count, a clock speed, an integrated GPU.
+ * Matching used to require every word, so pasting
+ * `AMD Ryzen 9 7900X 12-Core Processor` found nothing at all, even though that
+ * exact chip is two hundred lines above. Anyone who did that reached for
+ * "Other", and the board recorded a machine it already had a name for.
+ *
+ * Applied to the catalogue as well as to the query, so the two are always
+ * compared on the same terms — separators included, which is what makes
+ * `i7 13700K` and `i7-13700K` the same search.
+ */
+export function normalizeCpuText(text: string): string {
+  return (
+    text
+      .toLowerCase()
+      // `grep 'model name' /proc/cpuinfo` prints the label beside the value.
+      .replace(/^\s*model name\s*:/, " ")
+      // Trademark marks, which say nothing about which chip this is.
+      .replace(/\((?:r|tm)\)|®|™/g, " ")
+      // "with Radeon 780M Graphics", "w/ Radeon Graphics". The integrated GPU
+      // is a different component, and nothing after it narrows a CPU search.
+      .replace(/\s(?:with|w\/)\s.*$/, " ")
+      // "CPU @ 3.40GHz" — a clock speed belongs to a moment, not to a model.
+      .replace(/@\s*[\d.]+\s*[gm]hz/g, " ")
+      // "16-Core Processor", "8 Core".
+      .replace(/\b\d+\s*-?\s*core\b/g, " ")
+      // `proc` as well as the whole word: people abbreviate it, and the
+      // truncation used to survive into the terms and fail every match on its
+      // own — "AMD AI Proc" found nothing while "AMD AI Processor" found all
+      // eight Ryzen AI parts. No model name contains it, so it is only noise.
+      .replace(/\bproc(essor)?\b|\bcpu\b/g, " ")
+      // Every separator becomes a space, on both sides, so a hyphen and a
+      // space stop being a difference the search can fail on.
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim()
+  )
+}
+
+/** Each chip flattened once, in the shape the search compares against. */
+type Searchable = {
+  cpu: Cpu
+  /** Vendor, family and model together — what a term has to appear in. */
+  text: string
+  /** The model alone, which is what decides how closely a hit answers. */
+  name: string
+  /** Vendor and model, the way `cpuLabel` writes it. */
+  label: string
+}
+
+const SEARCHABLE: readonly Searchable[] = CPUS.map((cpu) => ({
+  cpu,
+  text: normalizeCpuText(`${cpu.vendor} ${cpu.family} ${cpu.name}`),
+  name: normalizeCpuText(cpu.name),
+  label: normalizeCpuText(cpuLabel(cpu)),
+}))
+
+/**
+ * Whether a word is specific enough to find a chip on its own.
+ *
+ * Model numbers are: `7900x`, `13700k`, `m4`. Plain words are not — "ryzen"
+ * alone describes a hundred and twenty-three entries — and neither is a lone
+ * digit, which names a tier ("Ryzen 7") rather than a part.
+ */
+function isModelTerm(term: string): boolean {
+  return term.length > 1 && /\d/.test(term)
+}
+
+/**
+ * Whether a string carries anything that could be a model number.
+ *
+ * What separates a usable answer from one nobody can act on. "AMD AI Proc"
+ * names a range, not a part — no amount of looking it up can say whether it
+ * was a Ryzen AI 5 340 or an AI Max+ 395 — so the picker asks for more before
+ * it is submitted, rather than leaving it for review to throw away.
+ */
+export function namesAModel(text: string): boolean {
+  return normalizeCpuText(text).split(" ").some(isModelTerm)
+}
+
+/**
+ * How directly a chip answers the search. Lower is closer.
+ *
+ * Without this the order was the order of the file, so searching `7900` put
+ * the 7900X3D above the 7900 that was typed. Exact first, then the names that
+ * merely begin with it, then the ones that mention it somewhere.
+ */
+function closeness(row: Searchable, needle: string): number {
+  if (row.name === needle || row.label === needle) return 0
+  if (row.name.startsWith(needle)) return 1
+  if (row.name.includes(needle)) return 2
+  return 3
+}
+
+/**
+ * The catalogue, searched the way people actually ask for a chip.
  *
  * Lives here rather than in the component so the server can run it: the
  * catalogue is only needed by people who open the specs picker, and shipping
  * all of it to every visitor would be waste.
  */
 export function searchCpus(query: string, limit = 40): Cpu[] {
-  const needle = query.trim().toLowerCase()
+  const needle = normalizeCpuText(query)
   // Nothing until asked. 227 chips is a wall rather than a menu, and any
   // opening selection is arbitrary — the search is the way in.
   if (!needle) return []
 
-  const terms = needle.split(/\s+/)
-  return CPUS.filter((cpu) => {
-    const haystack = `${cpu.vendor} ${cpu.family} ${cpu.name}`.toLowerCase()
-    return terms.every((term) => haystack.includes(term))
-  }).slice(0, limit)
+  const terms = needle.split(" ")
+  const matching = (words: readonly string[]) =>
+    words.length === 0
+      ? []
+      : SEARCHABLE.filter((row) => words.every((word) => row.text.includes(word)))
+
+  // Every word first: that is what stops "intel ultra 9" answering with the
+  // whole Intel range. Only when it finds nothing does the model number get
+  // to answer alone — and by then the words that failed are exactly the ones
+  // the catalogue was never going to carry: "pro", a codename, a laptop brand.
+  const strict = matching(terms)
+  const hits = strict.length > 0 ? strict : matching(terms.filter(isModelTerm))
+
+  return hits
+    .sort(
+      (a, b) =>
+        closeness(a, needle) - closeness(b, needle) ||
+        a.name.length - b.name.length ||
+        a.cpu.id.localeCompare(b.cpu.id),
+    )
+    .slice(0, limit)
+    .map((row) => row.cpu)
 }

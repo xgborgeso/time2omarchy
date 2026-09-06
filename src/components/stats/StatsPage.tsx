@@ -31,12 +31,16 @@ export function StatsPage() {
    * CPU chart changes level as you drill, so its dimension is not a key.
    */
   const chosen = filter
-    ? ([
+    ? /* v8 ignore start -- @preserve: the `?? []` arms need `data` to be
+         undefined while a filter is set, and a filter can only be set from a
+         chart that has already loaded. React Query keeps the previous data
+         across refetches, so the pair never coincides. */
+      ([
         ...(data?.hardware.storage ?? []),
         ...(data?.hardware.cpu ?? []),
         ...(data?.hardware.ram ?? []),
       ].find((bucket) => bucket.id === filter.id)?.label ?? filter.id)
-    : null
+    : /* v8 ignore stop */ null
 
   if (isLoading) {
     return (

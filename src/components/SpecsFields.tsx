@@ -12,6 +12,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command"
+import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import {
@@ -21,9 +22,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { type Cpu, cpuLabel, cpusByVendor, OTHER_CPU_ID } from "@/lib/cpus"
-import { NEW_CPU_ISSUE_URL } from "@/lib/links"
-import { RAM_OPTIONS, type Specs, STORAGE } from "@/lib/specs"
+import { type Cpu, cpuLabel, cpusByVendor, namesAModel, OTHER_CPU_ID } from "@/lib/cpus"
+import { CPU_OTHER_MAX, RAM_OPTIONS, type Specs, STORAGE } from "@/lib/specs"
 import { useTRPC } from "@/lib/trpc"
 import { useDebounced } from "@/lib/use-debounced"
 import { cn } from "@/lib/utils"
@@ -64,6 +64,8 @@ export const FIELD_ROW = "grid gap-3 sm:grid-cols-[minmax(0,1fr)_8.5rem_10.5rem]
  */
 export function SpecsFields({ value, onChange }: Props) {
   const cpuFieldId = useId()
+  const cpuOtherId = useId()
+  const cpuOtherHintId = useId()
   const ramId = useId()
   const storageId = useId()
   const [open, setOpen] = useState(false)
@@ -85,6 +87,28 @@ export function SpecsFields({ value, onChange }: Props) {
 
   // The chosen chip may not be in the current results, so remember it.
   const [selected, setSelected] = useState<Cpu | null>(null)
+
+  /**
+   * The chip the typed name turns out to be, if it is one after all.
+   *
+   * The first real request the board received was "AMD AI Proc", which the
+   * catalogue answers eight ways — the person was two words from a listed
+   * chip and reached for the escape hatch instead. Offered rather than
+   * applied: what goes on an entry is still their choice, and a machine
+   * guessing wrong is worse than a bucket.
+   */
+  const typed = value.cpuOther?.trim() ?? ""
+  const debouncedTyped = useDebounced(typed, 300)
+  const { data: nearby = [] } = useQuery({
+    ...trpc.cpus.queryOptions({ query: debouncedTyped }),
+    staleTime: Number.POSITIVE_INFINITY,
+    // Only worth asking once the escape hatch is actually taken, and once
+    // there is enough typed for an answer to mean anything.
+    enabled: value.cpuId === OTHER_CPU_ID && debouncedTyped.length > 2,
+  })
+  // One suggestion, not a list. A second field offering its own results is a
+  // picker beside the picker, and the one above is the place to browse.
+  const near = nearby[0] ?? null
 
   return (
     <div className={FIELD_ROW}>
@@ -145,7 +169,10 @@ export function SpecsFields({ value, onChange }: Props) {
                           // can be undone without reloading.
                           const next = cpu.id === value.cpuId ? null : cpu
                           setSelected(next)
-                          onChange({ ...value, cpuId: next?.id ?? null })
+                          // The note belongs to the escape hatch alone; a
+                          // chip found on the second try must not leave one
+                          // behind asking for a chip that is already listed.
+                          onChange({ ...value, cpuId: next?.id ?? null, cpuOther: null })
                           setOpen(false)
                         }}
                       >
@@ -169,7 +196,14 @@ export function SpecsFields({ value, onChange }: Props) {
                     value={OTHER_CPU_ID}
                     onSelect={() => {
                       setSelected(null)
-                      onChange({ ...value, cpuId: OTHER_CPU_ID })
+                      onChange({
+                        ...value,
+                        cpuId: OTHER_CPU_ID,
+                        // Prefilled with whatever was searched for. They have
+                        // already written the name once, and asking a second
+                        // time is how a field ends up empty.
+                        cpuOther: value.cpuOther ?? (query.trim() || null),
+                      })
                       setOpen(false)
                     }}
                   >
@@ -185,20 +219,104 @@ export function SpecsFields({ value, onChange }: Props) {
               </CommandList>
             </Command>
             {/* Outside CommandList on purpose: cmdk only renders CommandEmpty
-                when nothing matches, and "Other" always does, so a link in
+                when nothing matches, and "Other" always does, so anything in
                 there could never be seen. */}
             <div className="border-border border-t px-3 py-2">
-              <a
-                href={`${NEW_CPU_ISSUE_URL}${encodeURIComponent(query)}`}
-                target="_blank"
-                rel="noreferrer"
-                className="text-muted-foreground text-xs underline underline-offset-4 hover:text-foreground"
-              >
-                Didn't find your CPU? Ask for it on GitHub
-              </a>
+              <p className="text-muted-foreground text-xs">
+                Not listed? Choose <span className="text-foreground">Other</span> and name
+                it — that is what the list grows from.
+              </p>
             </div>
           </PopoverContent>
         </Popover>
+
+        {/* Only once the escape hatch is taken. Asking everyone to name a chip
+            they already picked from a list would be a second field for no
+            answer, and this one exists for exactly the people the list failed.
+
+            Required, because the bucket is only worth having if it says what
+            it holds — left optional it collected eleven entries naming nothing,
+            which records that the catalogue failed without recording what it
+            failed at. What makes that safe is the line underneath: it offers
+            the real chip whenever the text finds one, so nobody is cornered
+            into inventing an answer. */}
+        {value.cpuId === OTHER_CPU_ID && (
+          <div className="flex flex-col gap-1.5">
+            <Input
+              id={cpuOtherId}
+              value={value.cpuOther ?? ""}
+              onChange={(event) =>
+                onChange({ ...value, cpuOther: event.target.value || null })
+              }
+              maxLength={CPU_OTHER_MAX}
+              placeholder="e.g. Intel Core i7-8550U"
+              aria-label="Which CPU"
+              aria-describedby={cpuOtherHintId}
+              autoComplete="off"
+              spellCheck={false}
+              className="h-11"
+            />
+
+            {/* The reason stays put, and guidance stacks under it. Swapping
+                the reason out for the nudge, which is what three exclusive
+                states did, meant the answer to "why must I fill this in"
+                disappeared at exactly the moment somebody was struggling to.
+
+                The reason itself says why being required is fair rather than
+                what we do next: "checked by hand, then added to the list",
+                which this used to say, describes our queue, and nobody
+                filling in a form wants to hear about that. A found chip is
+                the one case that replaces everything — there is nothing to
+                explain once the answer is one click away.
+
+                The second line shows from the empty field rather than after a
+                keystroke: it is instructions, not a correction, and it is
+                worth more before somebody types "AMD AI Proc" than after they
+                already have. It clears itself the moment the answer carries a
+                model number, so it reads as something to satisfy rather than a
+                complaint.
+
+                Phrased the way `RecoverHint` phrases its command — the machine
+                already holds the answer, here is how to ask it. "That needs
+                the model number, not just the range", which this used to say,
+                spent its words correcting an answer nobody had typed yet, and
+                "the exact name" carries the same precision without the
+                lecture. The placeholder shows the shape. */}
+            <div
+              id={cpuOtherHintId}
+              className="flex flex-col gap-1 text-[11px] text-muted-foreground leading-relaxed"
+            >
+              {near ? (
+                <p>
+                  That looks like{" "}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelected(near)
+                      onChange({ ...value, cpuId: near.id, cpuOther: null })
+                    }}
+                    className="font-medium text-foreground underline underline-offset-4"
+                  >
+                    {cpuLabel(near)}
+                  </button>
+                  . Use it?
+                </p>
+              ) : (
+                <>
+                  <p>So the next person with this chip finds it in the list.</p>
+                  {namesAModel(typed) ? null : (
+                    <p>
+                      Your machine knows the exact name — run{" "}
+                      <code className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">
+                        lscpu | grep 'Model name'
+                      </code>
+                    </p>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col gap-1.5">

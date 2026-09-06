@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { errorText } from "@/lib/error-text"
 import { reencodeBootScreen } from "@/lib/reencode"
-import type { Specs, StorageId } from "@/lib/specs"
+import { OTHER_CPU_ID, type Specs, type StorageId } from "@/lib/specs"
 import { formatTime, isTimeInRange, parseTime } from "@/lib/time"
 import { useTRPC } from "@/lib/trpc"
 import type { RankFailure, RankSuccess } from "@/lib/types"
@@ -41,6 +41,7 @@ type FieldError = { message: string; field?: RankFailure["field"] }
  * appears, the second answers "which field?" for anyone who arrives later.
  */
 function FieldMessage({ id, text }: { id: string; text: string | null }) {
+  /* v8 ignore next -- @preserve: only rendered from an error that always carries a message */
   if (!text) return null
   return (
     <p id={id} role="alert" className="text-[11px] text-destructive">
@@ -85,7 +86,12 @@ export function RankForm({ onSuccess, className, onDone }: Props) {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<FieldError | null>(null)
   const [placed, setPlaced] = useState<RankSuccess | null>(null)
-  const [specs, setSpecs] = useState<Specs>({ cpuId: null, ramGb: null, storage: null })
+  const [specs, setSpecs] = useState<Specs>({
+    cpuId: null,
+    cpuOther: null,
+    ramGb: null,
+    storage: null,
+  })
 
   useEffect(() => {
     if (!file) {
@@ -148,6 +154,12 @@ export function RankForm({ onSuccess, className, onDone }: Props) {
       setError({ message: "Pick your CPU, memory and drive.", field: "form" })
       return
     }
+    if (specs.cpuId === OTHER_CPU_ID && !specs.cpuOther?.trim()) {
+      // Same round trip saved, and the server refuses it too — "Other" that
+      // does not say what it stands for records nothing anyone can act on.
+      setError({ message: "Name your chip so the next person finds it.", field: "form" })
+      return
+    }
     setBusy(true)
     setError(null)
     setPlaced(null)
@@ -185,6 +197,7 @@ export function RankForm({ onSuccess, className, onDone }: Props) {
         bootScreenThumbUrl: thumb.url,
         bootScreenThumbKey: thumb.key,
         cpuId: specs.cpuId,
+        cpuOther: specs.cpuOther,
         ramGb: specs.ramGb,
         // The guard above proved these are set, and the select can only ever
         // produce an id the schema accepts.
@@ -312,9 +325,14 @@ export function RankForm({ onSuccess, className, onDone }: Props) {
         </div>
       </div>
 
-      {/* Only what belongs to no single field; the rest is rendered beside
-          the input it names. */}
-      {error && (!error.field || error.field === "form") ? (
+      {/* Everything that has no input of its own to sit beside.
+          Written as "not one of the two fields that render their own" rather
+          than as a list of the ones that land here: listing them meant
+          `field: "handle"` — which the server returns when an account was
+          renamed into a handle another entry already holds — matched no
+          branch at all and was shown nowhere. The person got a form that
+          appeared to do nothing. */}
+      {error && error.field !== "time" && error.field !== "bootScreen" ? (
         <p role="alert" className="mt-3 text-xs text-destructive">
           {error.message}
         </p>

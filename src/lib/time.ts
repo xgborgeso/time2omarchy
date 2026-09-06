@@ -46,6 +46,7 @@ export function parseTime(input: string): number | null {
       const h = named[1] ? Number(named[1]) : 0
       const m = named[2] ? Number(named[2]) : 0
       const s = named[3] ? Number(named[3]) : 0
+      /* v8 ignore next -- @preserve: unreachable; the block is inside `if (/[hms]/.test(compact))` */
       if (h === 0 && m === 0 && s === 0 && !/[hms]/.test(compact)) return null
       return Math.round(h * 3600 + m * 60 + s)
     }

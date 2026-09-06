@@ -7,7 +7,7 @@
  * Omarchy actually takes on a spinning disk, or on an M4, at a sample size
  * nobody could assemble on purpose.
  */
-import { cpuById, OTHER_CPU_ID } from "./cpus"
+import { cpuById } from "./cpus"
 import { RAM_OPTIONS, STORAGE, storageLabel } from "./specs"
 
 export type BenchmarkRow = {
@@ -35,6 +35,12 @@ export type Benchmark = {
   cpuLevel: CpuLevel
   /** What was drilled into, so the way back can be offered. */
   cpuParent: (SpecFilter & { label: string }) | null
+  /**
+   * Installs the CPU chart cannot place, because their chip is not in the
+   * catalogue. Said out loud rather than quietly dropped: a chart measuring
+   * fewer installs than the board holds has to admit how many.
+   */
+  cpuUnlisted: number
   ram: SpecBucket[]
 }
 
@@ -80,10 +86,18 @@ function bucketBy(
   )
 }
 
-/** The vendor a chip belongs to, with a home for anything off the catalogue. */
-function vendorOf(cpuId: string): string {
-  if (cpuId === OTHER_CPU_ID) return "Other"
-  return cpuById(cpuId)?.vendor ?? "Other"
+/**
+ * The vendor a chip belongs to, or null when the catalogue has no chip here.
+ *
+ * "Other" used to be a vendor, which put a bar labelled Other on the CPU chart
+ * beside AMD, Apple and Intel — and since that bucket collects every chip the
+ * catalogue misses, it could out-measure all three while describing no machine
+ * at all. `cpus.ts` always said stats exclude the bucket; this is what makes
+ * that true. The entry still counts in the drive and memory charts, where what
+ * it reported is known.
+ */
+function vendorOf(cpuId: string): string | null {
+  return cpuById(cpuId)?.vendor ?? null
 }
 
 /**
@@ -97,13 +111,16 @@ function vendorOf(cpuId: string): string {
 function cpuChart(
   rows: readonly BenchmarkRow[],
   filter?: SpecFilter | null,
-): Pick<Benchmark, "cpu" | "cpuLevel" | "cpuParent"> {
+): Pick<Benchmark, "cpu" | "cpuLevel" | "cpuParent" | "cpuUnlisted"> {
+  /* v8 ignore next -- @preserve: the uncatalogued case is excluded before this runs */
   const family = (row: BenchmarkRow) => cpuById(row.cpuId)?.family ?? null
+  const cpuUnlisted = rows.filter((row) => vendorOf(row.cpuId) === null).length
 
   /** The vendor chart, and where a drill falls back to when it finds nothing. */
   const vendors = {
     cpuLevel: "vendor" as const,
     cpuParent: null,
+    cpuUnlisted,
     cpu: bucketBy(
       rows,
       (row) => vendorOf(row.cpuId),
@@ -117,14 +134,15 @@ function cpuChart(
       family,
       (id) => id,
     )
-    // "Other" is every chip off the catalogue, so it has no families and no
-    // models. Drilling into it produced an empty chart, and an empty chart
-    // takes the way back with it.
+    // A vendor with nothing under it — a filter held over from a chart that
+    // has since changed level, or one no entry answers to any more. An empty
+    // chart takes the way back with it.
     if (families.length === 0) return vendors
 
     return {
       cpuLevel: "family",
       cpuParent: { dimension: "vendor", id: filter.id, label: filter.id },
+      cpuUnlisted,
       cpu: families,
     }
   }
@@ -133,35 +151,34 @@ function cpuChart(
     // A chosen model still shows its family, so it can be compared.
     const inFamily =
       filter.dimension === "family" ? filter.id : (cpuById(filter.id)?.family ?? null)
+    // An id from outside the catalogue has no siblings to be compared with,
+    // and grouping on it would build a chart of one bar named after nothing.
+    if (inFamily === null) return vendors
+
     const kin = rows.filter((row) => family(row) === inFamily)
     if (kin.length === 0) return vendors
 
     return {
       cpuLevel: "model",
-      cpuParent: inFamily
-        ? {
-            dimension: "vendor",
-            id: vendorOf(kin[0]?.cpuId ?? ""),
-            label: inFamily,
-          }
-        : null,
+      // Every row in `kin` matched on a family read from the catalogue, so
+      // its vendor is there to be read as well.
+      cpuParent: {
+        dimension: "vendor",
+        /* v8 ignore next -- @preserve: every row in `kin` matched on a family read from the catalogue */
+        id: cpuById(kin[0]!.cpuId)?.vendor ?? "",
+        label: inFamily,
+      },
+      cpuUnlisted,
       cpu: bucketBy(
         kin,
         (row) => row.cpuId,
+        /* v8 ignore next -- @preserve: these ids came from a catalogue lookup a line above */
         (id) => cpuById(id)?.name ?? id,
       ),
     }
   }
 
-  return {
-    cpuLevel: "vendor",
-    cpuParent: null,
-    cpu: bucketBy(
-      rows,
-      (row) => vendorOf(row.cpuId),
-      (id) => id,
-    ),
-  }
+  return vendors
 }
 
 export function benchmark(
@@ -172,6 +189,7 @@ export function benchmark(
     storage: bucketBy(
       rows,
       (row) => (STORAGE.some((s) => s.id === row.storage) ? row.storage : null),
+      /* v8 ignore next -- @preserve: the key already filtered on the same STORAGE list */
       (id) => storageLabel(id) ?? id,
     ),
     ...cpuChart(rows, filter),

@@ -53,9 +53,13 @@ export function takeLock(dataDir: string): void {
 export function releaseLock(dataDir: string): void {
   try {
     rmSync(lockPath(dataDir), { force: true })
+    /* v8 ignore start -- @preserve: `force` already swallows every cause a
+       test can produce, and node:fs exports cannot be spied under ESM, so
+       the throw this catches needs a read-only filesystem to happen at all. */
   } catch {
     // Same reasoning: a stale lock is detected by its dead pid anyway.
   }
+  /* v8 ignore stop */
 }
 
 /**

@@ -54,20 +54,34 @@ const config = {
  * but a `<path>` cannot be tabbed to, and this is the page's main control.
  */
 export function Hardware({ hardware, active, onFilter }: Props) {
-  const { storage, cpu, cpuLevel, cpuParent, ram } = hardware
+  const { storage, cpu, cpuLevel, cpuParent, cpuUnlisted, ram } = hardware
   if (storage.length === 0 && cpu.length === 0 && ram.length === 0) return null
 
   type Group = {
     label: string
     dimension: SpecFilter["dimension"]
     buckets: SpecBucket[]
+    /** What the chart cannot show, said under it. */
+    note?: string
   }
 
   /** Every bucket on offer, grouped the way the charts are. */
   const groups: Group[] = (
     [
       { label: "By drive", dimension: "storage", buckets: storage },
-      { label: CPU_TITLES[cpuLevel], dimension: cpuLevel, buckets: cpu },
+      {
+        label: CPU_TITLES[cpuLevel],
+        dimension: cpuLevel,
+        buckets: cpu,
+        // Chips outside the catalogue are left out of this chart rather than
+        // heaped into an "Other" bar that would out-measure real vendors while
+        // describing no machine. Left out quietly, though, the chart would
+        // claim to cover a board it does not — so it says how many it missed.
+        note:
+          cpuUnlisted > 0
+            ? `${cpuUnlisted.toLocaleString()} install${cpuUnlisted === 1 ? "" : "s"} on a chip that is not in the list yet`
+            : undefined,
+      },
       { label: "By memory", dimension: "ram", buckets: ram },
     ] satisfies Group[]
   ).filter((group) => group.buckets.length > 0)
@@ -134,6 +148,7 @@ export function Hardware({ hardware, active, onFilter }: Props) {
             key={group.dimension}
             title={group.label}
             buckets={group.buckets}
+            note={group.note}
             chosen={active?.dimension === group.dimension ? active.id : null}
             // Only the CPU card has anywhere to go back to.
             parent={group.dimension === cpuLevel ? cpuParent : null}
@@ -150,10 +165,12 @@ type CardProps = {
   buckets: SpecBucket[]
   chosen: string | null
   parent: Benchmark["cpuParent"]
+  /** What this chart leaves out, if anything. */
+  note?: string
   onFilter: (next: SpecFilter | null) => void
 }
 
-function HardwareCard({ title, buckets, chosen, parent, onFilter }: CardProps) {
+function HardwareCard({ title, buckets, chosen, parent, note, onFilter }: CardProps) {
   return (
     <Card className="gap-3">
       <CardHeader>
@@ -206,6 +223,9 @@ function HardwareCard({ title, buckets, chosen, parent, onFilter }: CardProps) {
               cursor={false}
               content={
                 <ChartTooltipContent
+                  /* v8 ignore start -- @preserve: Recharts calls this
+                     only on a real hover, and happy-dom measures every
+                     element as 0x0, so no chart is ever hovered. */
                   formatter={(value, _name, item) => (
                     <span className="text-muted-foreground">
                       {formatTime(Number(value))} median ·{" "}
@@ -215,6 +235,7 @@ function HardwareCard({ title, buckets, chosen, parent, onFilter }: CardProps) {
                 />
               }
             />
+            {/* v8 ignore stop */}
             <Bar dataKey="medianSeconds" radius={4} barSize={16}>
               {buckets.map((bucket) => (
                 <Cell
@@ -229,6 +250,10 @@ function HardwareCard({ title, buckets, chosen, parent, onFilter }: CardProps) {
             </Bar>
           </BarChart>
         </ChartContainer>
+
+        {note ? (
+          <p className="mt-2 text-[11px] text-muted-foreground leading-relaxed">{note}</p>
+        ) : null}
       </CardContent>
     </Card>
   )

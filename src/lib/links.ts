@@ -8,12 +8,6 @@ export const AUTHOR_HANDLE = "xgborgeso"
 export const REPO_URL = "https://github.com/xgborgeso/time2omarchy"
 
 /**
- * A prefilled request to add a chip, for when the catalogue misses one.
- * Append the search text to prefill the title.
- */
-export const NEW_CPU_ISSUE_URL = `${REPO_URL}/issues/new?template=add-cpu.yml&title=Add+CPU%3A+`
-
-/**
  * The site Datafast records this traffic under.
  *
  * Collection only. The figures are private to the owner's dashboard and are

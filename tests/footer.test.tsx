@@ -58,3 +58,19 @@ describe("Footer order", () => {
     expect(screen.getByText(/built by/i)).toBeVisible()
   })
 })
+
+describe("the footer's own navigation", () => {
+  it("goes where each link says", async () => {
+    // The same views the header offers, at the end of a long board — where
+    // somebody has scrolled past the header to get to.
+    const onNavigate = vi.fn()
+    render(<Footer onNavigate={onNavigate} />)
+    const user = userEvent.setup()
+
+    await user.click(screen.getByRole("button", { name: /^stats$/i }))
+    expect(onNavigate).toHaveBeenCalledWith("stats")
+
+    await user.click(screen.getByRole("button", { name: /^rules$/i }))
+    expect(onNavigate).toHaveBeenCalledWith("rules")
+  })
+})

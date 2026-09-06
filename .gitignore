@@ -26,3 +26,6 @@ public/uploads/*
 .claude/skills/
 skills-lock.json
 .neon
+
+# Written by `pnpm test:coverage`.
+coverage
