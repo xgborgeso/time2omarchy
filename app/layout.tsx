@@ -23,6 +23,20 @@ const DESCRIPTION =
   "Public leaderboard of the fastest Omarchy installs. Community project, not affiliated with Omarchy or DHH."
 const SITE = "https://time2omarchy.com"
 
+/**
+ * The card image, with the size declared rather than left to be discovered.
+ *
+ * A crawler that has the dimensions can lay the card out before it has the
+ * bytes; one that does not has to wait for the image, and some clients fall
+ * back to the small side-by-side card in the meantime — which is what a shared
+ * post looked like in the X timeline while the large card rendered correctly
+ * once opened. Slack and LinkedIn are stricter about it than X is.
+ *
+ * Kept as one constant because both cards must name the same image: two
+ * literals is how one of them ends up pointing at a file that moved.
+ */
+const OG_IMAGE = { url: "/og.png", width: 1200, height: 630, alt: TITLE }
+
 export const metadata: Metadata = {
   metadataBase: new URL(SITE),
   title: TITLE,
@@ -38,13 +52,13 @@ export const metadata: Metadata = {
     title: TITLE,
     description: "A single-page leaderboard of the fastest Omarchy installs.",
     url: "/",
-    images: ["/og.png"],
+    images: [OG_IMAGE],
   },
   twitter: {
     card: "summary_large_image",
     title: TITLE,
     description: "A single-page leaderboard of the fastest Omarchy installs.",
-    images: ["/og.png"],
+    images: [OG_IMAGE],
   },
 }
 
