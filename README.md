@@ -70,6 +70,14 @@ form and name the chip: `pnpm cpu-requests` collects what people asked for into
 [`src/lib/cpu-requests.json`](src/lib/cpu-requests.json), each one is checked by
 hand against the vendor's own page, and `--apply` adds the ones that are real.
 
+The [Catalogue workflow](.github/workflows/catalogue.yml) does the collecting
+weekly and opens a pull request when there is something new. It reads the
+board, so it wants a `DATABASE_URL_READONLY` secret holding a **read-only**
+role — a scheduled job nobody is watching should not be able to write. It is a
+CI secret rather than a deploy one, so it is not in `.env.example` and
+`preflight` does not ask for it; the workflow refuses to start without it and
+says so.
+
 ## Stack
 
 Next.js, tRPC, Drizzle, Better Auth, UploadThing, and Postgres on Neon, deployed
