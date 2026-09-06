@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest"
-import { CPU_IDS, CPUS, cpuById, cpuLabel, cpusByVendor, searchCpus } from "@/lib/cpus"
+import {
+  CPU_IDS,
+  CPUS,
+  cpuById,
+  cpuLabel,
+  cpusByVendor,
+  normalizeCpuText,
+  searchCpus,
+} from "@/lib/cpus"
 
 describe("the catalogue", () => {
   it("is not empty", () => {
@@ -117,5 +125,78 @@ describe("searchCpus", () => {
     // list only invites scrolling past the answer.
     expect(searchCpus("")).toHaveLength(0)
     expect(searchCpus("   ")).toHaveLength(0)
+  })
+})
+
+describe("searchCpus on what a terminal actually prints", () => {
+  /**
+   * The strings people paste, and the chip each one is.
+   *
+   * Every one of these used to find nothing, because matching required every
+   * word and `lscpu` supplies several the catalogue was never going to have.
+   * Anyone who pasted reached for "Other", so the board filled with entries
+   * for chips it already had names for.
+   */
+  const pastes: [string, string][] = [
+    ["AMD Ryzen 9 7900X 12-Core Processor", "amd-ryzen-9-7900x"],
+    ["AMD Ryzen 7 PRO 7840U w/ Radeon 780M Graphics", "amd-ryzen-7-7840u"],
+    ["Intel(R) Core(TM) i7-13700K CPU @ 3.40GHz", "intel-core-i7-13700k"],
+    ["13th Gen Intel(R) Core(TM) i7-1360P", "intel-core-i7-1360p"],
+    ["model name\t: AMD Ryzen 9 9950X3D 16-Core Processor", "amd-ryzen-9-9950x3d"],
+    ["AMD Ryzen 7 5800X3D 8-Core Processor", "amd-ryzen-7-5800x3d"],
+  ]
+
+  for (const [paste, id] of pastes) {
+    it(`finds ${id} in ${JSON.stringify(paste)}`, () => {
+      expect(searchCpus(paste)[0]?.id).toBe(id)
+    })
+  }
+
+  it("treats a hyphen and a space as the same separator", () => {
+    // Nobody should have to remember which side Intel puts the hyphen on.
+    expect(searchCpus("i7 13700K")[0]?.id).toBe("intel-core-i7-13700k")
+    expect(searchCpus("i7-13700K")[0]?.id).toBe("intel-core-i7-13700k")
+  })
+
+  it("answers with the closest name first, not the first one in the file", () => {
+    // Searching for the 7900 used to offer the 7900X3D above it, because the
+    // order was the order of the catalogue.
+    expect(searchCpus("Ryzen 9 7900")[0]?.id).toBe("amd-ryzen-9-7900")
+    expect(searchCpus("M4")[0]?.id).toBe("apple-m4")
+  })
+
+  it("still refuses a chip the catalogue genuinely does not have", () => {
+    // The escape hatch exists for exactly these, and a matcher loose enough
+    // to answer them would put the wrong chip on somebody's entry.
+    expect(searchCpus("Intel(R) N100")).toHaveLength(0)
+    expect(searchCpus("Intel(R) Core(TM) i7-8550U CPU @ 1.80GHz")).toHaveLength(0)
+  })
+
+  it("does not let one loose word answer for the whole vendor", () => {
+    // "intel ultra 9" must not return every Intel chip: a model number gets
+    // to answer alone only when every word together found nothing.
+    const found = searchCpus("intel ultra 9")
+    expect(found.length).toBeGreaterThan(0)
+    expect(found.every((c) => c.name.toLowerCase().includes("ultra 9"))).toBe(true)
+  })
+})
+
+describe("normalizeCpuText", () => {
+  it("strips what a kernel adds and a catalogue never carries", () => {
+    expect(normalizeCpuText("AMD Ryzen 9 7900X 12-Core Processor")).toBe(
+      "amd ryzen 9 7900x",
+    )
+    expect(normalizeCpuText("Intel(R) Core(TM) i7-13700K CPU @ 3.40GHz")).toBe(
+      "intel core i7 13700k",
+    )
+    expect(normalizeCpuText("AMD Ryzen 7 7840U w/ Radeon 780M Graphics")).toBe(
+      "amd ryzen 7 7840u",
+    )
+  })
+
+  it("comes back empty when there was nothing to say", () => {
+    // What `searchCpus` leans on to decide it has not been asked anything.
+    expect(normalizeCpuText("   ")).toBe("")
+    expect(normalizeCpuText("(R)")).toBe("")
   })
 })
