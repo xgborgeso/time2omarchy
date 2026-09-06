@@ -1,0 +1,72 @@
+name: Catalogue
+
+# Weekly, plus a button. The queue moves at the speed people rank on unusual
+# hardware, which is slow — a daily run would open the same empty pull request
+# six times before anything changed.
+on:
+  schedule:
+    - cron: "0 8 * * 1"
+  workflow_dispatch:
+
+# Only what opening the pull request needs. This job reads the production
+# database, so anything it can also write is worth not granting.
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: catalogue
+  cancel-in-progress: false
+
+jobs:
+  requests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      # Collects only. Nothing here decides a verdict, and nothing here writes
+      # to an entry — --sync reads the database and appends to the log, which
+      # is why this step wants a read-only role rather than the deploy url.
+      - run: pnpm cpu-requests --sync
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL_READONLY }}
+
+      - uses: peter-evans/create-pull-request@v7
+        with:
+          add-paths: src/lib/cpu-requests.json
+          branch: catalogue/requests
+          title: "Catalogue: CPUs people asked for"
+          commit-message: "chore: collect the chips people asked for"
+          body: |
+            Chips someone chose "Other" for, collected from the board.
+
+            Every new entry is `pending`. For each one, check the vendor's own
+            page — Intel ARK, AMD's product pages, Apple's tech specs — and set
+            its status in `src/lib/cpu-requests.json`:
+
+            **Real, and missing** — add the vendor's exact spelling:
+
+            ```json
+            "status": "approved",
+            "cpu": { "vendor": "Intel", "family": "Core N-series", "name": "N100" }
+            ```
+
+            **Not a chip anyone can identify** — say why, so it is never
+            re-decided:
+
+            ```json
+            "status": "rejected",
+            "note": "Cannot tell which Ryzen AI part this is."
+            ```
+
+            Merging records the decisions and nothing else. Adding the chips and
+            moving entries off `other` is `pnpm cpu-requests --apply`, run
+            deliberately — it rewrites other people's rows.
+
+            🤖 Generated with [Claude Code](https://claude.com/claude-code)
