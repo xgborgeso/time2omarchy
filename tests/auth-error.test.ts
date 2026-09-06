@@ -59,7 +59,7 @@ describe("authErrorFrom", () => {
   it("does not choke on a hostile query string", () => {
     // It reads whatever is in the address bar, so it is reachable by anyone.
     expect(authErrorFrom("?error=%E2%9C%93&error_description=%00")).not.toBeNull()
-    expect(authErrorFrom("?error=" + "x".repeat(5000))?.message).toBeTruthy()
+    expect(authErrorFrom(`?error=${"x".repeat(5000)}`)?.message).toBeTruthy()
     expect(authErrorFrom("?error=<script>alert(1)</script>")?.message).not.toMatch(/script/)
   })
 })

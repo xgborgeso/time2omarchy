@@ -63,6 +63,9 @@ export function Distribution({ buckets, total, medianSeconds }: Props) {
             <ChartTooltip
               content={
                 <ChartTooltipContent
+                  /* v8 ignore start -- @preserve: Recharts calls this
+                     only on a real hover, and happy-dom measures every
+                     element as 0x0, so no chart is ever hovered. */
                   formatter={(value, _name, item) => (
                     <span className="text-muted-foreground">
                       {Number(value).toLocaleString()}{" "}
@@ -72,6 +75,7 @@ export function Distribution({ buckets, total, medianSeconds }: Props) {
                 />
               }
             />
+            {/* v8 ignore stop */}
             {/* The median sits between buckets, so it is drawn as a position
                 along the axis rather than snapped to one of them. */}
             {median != null ? (

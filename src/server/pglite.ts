@@ -55,6 +55,10 @@ export async function openDatabase(dataDir?: string): Promise<Opened> {
  * In-memory databases are exempt: tests have nothing to persist, and adding a
  * listener per test file would leak them.
  */
+/* v8 ignore start -- @preserve: covering this means delivering SIGINT to the
+   test process, which ends the run rather than asserting anything. The lock
+   and checkpoint it protects are covered directly in tests/pglite.local.test.ts
+   and tests/db-lock.test.ts. */
 function closeOnShutdown(client: PGlite, dataDir: string): void {
   let closing = false
   const close = async (signal: NodeJS.Signals) => {
@@ -73,3 +77,4 @@ function closeOnShutdown(client: PGlite, dataDir: string): void {
     })
   }
 }
+/* v8 ignore stop */

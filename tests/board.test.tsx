@@ -112,3 +112,36 @@ describe("Board", () => {
     expect(screen.queryByRole("link")).toBeNull()
   })
 })
+
+describe("a row whose machine is unknown", () => {
+  it("draws the time alone, with no empty separator beside it", async () => {
+    // Rows predating the required specs carry none, and a dot with nothing on
+    // one side of it reads as something failing to load.
+    const { formatSpecsShort } = await import("@/lib/specs")
+    expect(formatSpecsShort({ cpuId: null, ramGb: null, storage: null })).toBeNull()
+
+    render(
+      <Board
+        entries={[
+          {
+            rank: 1,
+            handle: "ada",
+            timeSeconds: 43,
+            bootScreenUrl: "/a.png",
+            bootScreenThumbUrl: null,
+            cpuId: null as unknown as string,
+            ramGb: null as unknown as number,
+            storage: null as unknown as string,
+            createdAt: "2026-01-01T00:00:00.000Z",
+            updatedAt: "2026-01-01T00:00:00.000Z",
+          },
+        ]}
+        loading={false}
+        onOpen={() => {}}
+      />,
+    )
+
+    expect(screen.getByText("@ada")).toBeVisible()
+    expect(screen.queryByText("·")).toBeNull()
+  })
+})

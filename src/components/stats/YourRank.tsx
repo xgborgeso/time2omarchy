@@ -75,6 +75,7 @@ export function YourRank({ stats }: { stats: StatsResponse }) {
             <div className="h-1.5 overflow-hidden rounded-full bg-background">
               <div
                 className="h-full rounded-full bg-primary"
+                /* v8 ignore next -- @preserve: the bar renders only once a time parsed, which is what produces the percentile */
                 style={{ width: `${Math.max(2, 100 - (percentile ?? 0))}%` }}
               />
             </div>

@@ -96,6 +96,7 @@ export function App() {
    */
   async function onReport(entry: BoardEntry) {
     setReported((current) =>
+      /* v8 ignore next -- @preserve: the button goes quiet on the first press */
       current.includes(entry.handle) ? current : [...current, entry.handle],
     )
     const result = await report.mutateAsync({ handle: entry.handle }).catch(() => null)

@@ -28,7 +28,9 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
-      - run: pnpm test
+      # With coverage, so a suite that quietly stops covering a file fails
+      # here rather than shipping. The thresholds are in vitest.config.ts.
+      - run: pnpm test:coverage
       - run: pnpm typecheck
 
       # No build step, deliberately. Vercel builds every push and every pull
