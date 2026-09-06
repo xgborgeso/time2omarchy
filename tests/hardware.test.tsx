@@ -16,6 +16,7 @@ const hardware: Benchmark = {
   ],
   cpuLevel: "vendor",
   cpuParent: null,
+  cpuUnlisted: 0,
   ram: [{ id: "32", label: "32 GB", entries: 50, fastestSeconds: 26, medianSeconds: 44 }],
 }
 
@@ -113,11 +114,104 @@ describe("Hardware", () => {
   it("says nothing at all when there is nothing measured yet", () => {
     const { container } = render(
       <Hardware
-        hardware={{ storage: [], cpu: [], cpuLevel: "vendor", cpuParent: null, ram: [] }}
+        hardware={{
+          storage: [],
+          cpu: [],
+          cpuLevel: "vendor",
+          cpuParent: null,
+          cpuUnlisted: 0,
+          ram: [],
+        }}
         onFilter={() => {}}
         active={null}
       />,
     )
     expect(container).toBeEmptyDOMElement()
+  })
+})
+
+/** The same board, one level into AMD. */
+const drilled: Benchmark = {
+  ...hardware,
+  cpu: [
+    {
+      id: "Ryzen 9000",
+      label: "Ryzen 9000",
+      entries: 30,
+      fastestSeconds: 26,
+      medianSeconds: 40,
+    },
+  ],
+  cpuLevel: "family",
+  cpuParent: { dimension: "vendor", id: "AMD", label: "AMD" },
+}
+
+describe("drilling back out of a CPU", () => {
+  it("offers the way back only where there is one to offer", () => {
+    // Only the CPU card can be a level deep, so only it gets the button.
+    render(<Hardware hardware={drilled} active={null} onFilter={() => {}} />)
+    expect(screen.getAllByRole("button", { name: /all cpus/i })).toHaveLength(1)
+  })
+
+  it("titles the card after where the drill landed", () => {
+    render(<Hardware hardware={drilled} active={null} onFilter={() => {}} />)
+    expect(screen.getByText("AMD")).toBeVisible()
+  })
+
+  it("clears the filter when the way back is taken", async () => {
+    // An empty chart would otherwise take the only route out with it.
+    const onFilter = vi.fn()
+    render(<Hardware hardware={drilled} active={null} onFilter={onFilter} />)
+
+    await userEvent.setup().click(screen.getByRole("button", { name: /all cpus/i }))
+    expect(onFilter).toHaveBeenCalledWith(null)
+  })
+
+  it("says how many installs the CPU chart could not place", () => {
+    // A chart measuring fewer installs than the board holds has to admit it.
+    render(
+      <Hardware
+        hardware={{ ...hardware, cpuUnlisted: 11 }}
+        active={null}
+        onFilter={() => {}}
+      />,
+    )
+    expect(
+      screen.getByText(/11 installs on a chip that is not in the list yet/i),
+    ).toBeVisible()
+  })
+
+  it("stays quiet when every chip is accounted for", () => {
+    render(<Hardware hardware={hardware} active={null} onFilter={() => {}} />)
+    expect(screen.queryByText(/not in the list yet/i)).toBeNull()
+  })
+})
+
+describe("naming a filter nothing on screen still carries", () => {
+  it("falls back to the bucket id when no chart and no breadcrumb has it", async () => {
+    // Drilling swaps the CPU group for the level below, so the item holding
+    // the current value can be gone from the list entirely — and Radix then
+    // has no label to resolve, which is what left the trigger blank.
+    render(
+      <Hardware
+        hardware={{ ...hardware, cpu: [], cpuParent: null }}
+        active={{ dimension: "model", id: "amd-ryzen-9-9950x" }}
+        onFilter={() => {}}
+      />,
+    )
+    expect(screen.getByText("amd-ryzen-9-9950x")).toBeVisible()
+  })
+})
+
+describe("counting the installs the CPU chart cannot place", () => {
+  it("says install, not installs, when there is exactly one", () => {
+    render(
+      <Hardware
+        hardware={{ ...hardware, cpuUnlisted: 1 }}
+        active={null}
+        onFilter={() => {}}
+      />,
+    )
+    expect(screen.getByText(/1 install on a chip/i)).toBeVisible()
   })
 })

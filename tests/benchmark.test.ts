@@ -47,10 +47,17 @@ describe("benchmark", () => {
     expect(vendors.find((b) => b.id === "Intel")?.entries).toBe(1)
   })
 
-  it("names the bucket a chip outside the catalogue falls into", () => {
-    // "other" is a real answer people pick, and dropping it would quietly
-    // shrink the sample the rest of the table is measured against.
-    expect(benchmark(rows).cpu.find((b) => b.id === "Other")?.entries).toBe(1)
+  it("keeps a chip outside the catalogue off the CPU chart", () => {
+    // "Other" collects every chip the catalogue misses, so as a bar it could
+    // out-measure AMD and Intel while describing no machine at all. It is a
+    // failure of the list, not a vendor, and it is not plotted as one.
+    expect(benchmark(rows).cpu.map((b) => b.id)).not.toContain("Other")
+  })
+
+  it("says how many installs the CPU chart could not place", () => {
+    // Dropped quietly, the chart would claim to measure a board it does not.
+    expect(benchmark(rows).cpuUnlisted).toBe(1)
+    expect(benchmark(rows).cpu.every((b) => b.id !== "Other")).toBe(true)
   })
 
   it("groups by memory too, so all three specs are answerable", () => {
@@ -71,6 +78,7 @@ describe("benchmark", () => {
       cpu: [],
       cpuLevel: "vendor",
       cpuParent: null,
+      cpuUnlisted: 0,
       ram: [],
     })
   })
@@ -145,15 +153,16 @@ describe("drilling into the CPU", () => {
   })
 
   it("stays put when a vendor has no level below it", () => {
-    // "Other" is every chip outside the catalogue, so it has no families and
-    // no models. Drilling in produced an empty chart and the card vanished,
-    // taking the only way back with it.
+    // A filter naming a vendor no entry answers to any more. Drilling in
+    // produced an empty chart and the card vanished, taking the only way back
+    // with it.
     const mixed = [...rows, row(400, "other", 8, "hdd")]
     const b = benchmark(mixed, { dimension: "vendor", id: "Other" })
 
     expect(b.cpuLevel).toBe("vendor")
     expect(b.cpuParent).toBeNull()
-    expect(b.cpu.map((c) => c.id)).toContain("Other")
+    expect(b.cpu.map((c) => c.id)).toEqual(expect.arrayContaining(["AMD", "Intel"]))
+    expect(b.cpu.map((c) => c.id)).not.toContain("Other")
   })
 
   it("stays at the vendor when the filter is not about CPUs at all", () => {
