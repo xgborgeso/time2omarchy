@@ -30,6 +30,20 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
 
+      # Without a url the app opens PGlite, and `chooseDriver` only refuses
+      # that when NODE_ENV is production — which it is not in a runner. So a
+      # missing secret would sync against an empty ephemeral database, find
+      # nothing, open no pull request, and pass. The queue would look empty
+      # forever with nothing anywhere saying why.
+      - name: Refuse to run against anything but the real database
+        run: |
+          if [ -z "${{ secrets.DATABASE_URL_READONLY }}" ]; then
+            echo "::error::DATABASE_URL_READONLY is not set. Add a read-only" \
+                 "Neon role as a repository secret; without it this job would" \
+                 "quietly report that nobody has asked for a chip."
+            exit 1
+          fi
+
       # Collects only. Nothing here decides a verdict, and nothing here writes
       # to an entry — --sync reads the database and appends to the log, which
       # is why this step wants a read-only role rather than the deploy url.
